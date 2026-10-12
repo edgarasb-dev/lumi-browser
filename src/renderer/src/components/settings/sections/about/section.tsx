@@ -1,7 +1,17 @@
+import { useState, useEffect } from "react";
 import { BrowserInfoCard } from "./browser-info-card";
 import { GitFork, ExternalLink, ShieldCheck } from "lucide-react";
 
 export function AboutSettings() {
+  const [version, setVersion] = useState<string>("");
+
+  useEffect(() => {
+    flow.app
+      .getAppInfo()
+      .then((info) => setVersion(info.app_version))
+      .catch((err) => console.error("Failed to load app version:", err));
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Lumi Hero Banner */}
@@ -17,9 +27,11 @@ export function AboutSettings() {
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-2xl font-bold tracking-tight text-foreground">Lumi Browser</h2>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
-                v0.12.0
-              </span>
+              {version ? (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                  v{version}
+                </span>
+              ) : null}
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground border border-border/40">
                 Open Source
               </span>

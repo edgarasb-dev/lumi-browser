@@ -23,7 +23,7 @@ import {
 import { useAppUpdates } from "@/components/providers/app-updates-provider";
 import { cn } from "@/lib/utils";
 
-const DOWNLOAD_PAGE = "https://flow-browser.com/download/";
+const DOWNLOAD_PAGE = "https://github.com/edgarasb-dev/lumi-browser/releases";
 
 interface UpdateState {
   currentVersion: string;

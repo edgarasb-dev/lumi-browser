@@ -1,7 +1,7 @@
 {
   "name": "lumi-browser",
   "productName": "Lumi",
-  "version": "0.12.0",
+  "version": "0.1.0",
   "description": "A modern privacy-focused browser with a minimalistic design. Fork of Flow.",
   "main": "./out/main/index.js",
   "author": {

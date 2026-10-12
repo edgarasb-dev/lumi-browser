@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { LucideIcon, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 export interface Section {
   id: string;
@@ -35,6 +35,14 @@ export function SettingsSidebar({
   onSearchChange
 }: SettingsSidebarProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [appVersion, setAppVersion] = useState<string>("");
+
+  useEffect(() => {
+    flow.app
+      .getAppInfo()
+      .then((info) => setAppVersion(info.app_version))
+      .catch((err) => console.error("Failed to fetch app info:", err));
+  }, []);
 
   const handleSearch = (val: string) => {
     setLocalSearch(val);
@@ -152,7 +160,7 @@ export function SettingsSidebar({
           <div className="flex items-center gap-1.5 font-medium">
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-foreground/90 font-semibold">Lumi</span>
-            <span>v0.12.0</span>
+            {appVersion ? <span>v{appVersion}</span> : null}
           </div>
           <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md border border-primary/20">
             Lumi
