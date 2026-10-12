@@ -39,7 +39,7 @@ jobs:
           bun-version: 1.3.10
 
       - name: Install Dependencies
-        run: bun install --development --frozen-lockfile
+        run: bun install --development
 
       - name: Run Type Check
         run: bun run typecheck
@@ -64,7 +64,7 @@ jobs:
           bun-version: 1.3.10
 
       - name: Install Dependencies
-        run: bun install --development --frozen-lockfile
+        run: bun install --development
 
       - name: Format Code
         run: bun run format

@@ -33,7 +33,7 @@ jobs:
           bun-version: 1.3.10
 
       - name: Install Dependencies
-        run: bun install --development --frozen-lockfile
+        run: bun install --development
 
       - name: Run Electron Current Major Version Upgrade Script
         id: upgrade-current-major
@@ -96,7 +96,7 @@ jobs:
           bun-version: 1.3.10
 
       - name: Install Dependencies
-        run: bun install --development --frozen-lockfile
+        run: bun install --development
 
       - name: Run Electron Next Major Version Upgrade Script
         id: upgrade-next-major
