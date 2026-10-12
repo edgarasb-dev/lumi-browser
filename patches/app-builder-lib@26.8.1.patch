@@ -1,5 +1,5 @@
 diff --git a/out/macPackager.js b/out/macPackager.js
-index 3738c0023feec567c29f31b194252968a5b3b0d4..c3cb19a73a397fef4c59fa45dadc2e51abb20c4a 100644
+index 3738c00..c3cb19a 100644
 --- a/out/macPackager.js
 +++ b/out/macPackager.js
 @@ -296,7 +296,6 @@ class MacPackager extends platformPackager_1.PlatformPackager {
@@ -11,14 +11,30 @@ index 3738c0023feec567c29f31b194252968a5b3b0d4..c3cb19a73a397fef4c59fa45dadc2e51
                      file.includes("/node_modules/playwright-firefox/.local-browsers") ||
                      file.includes("/node_modules/playwright/.local-browsers"));
 diff --git a/out/util/NodeModuleCopyHelper.js b/out/util/NodeModuleCopyHelper.js
+index be9e1a5..e82a4b2 100644
 --- a/out/util/NodeModuleCopyHelper.js
 +++ b/out/util/NodeModuleCopyHelper.js
-@@ -72,3 +72,3 @@
+@@ -11,7 +11,7 @@ const AppFileWalker_1 = require("./AppFileWalker");
+ const resolve_1 = require("./resolve");
+ const excludedFiles = new Set([
+     ".DS_Store",
+-    "node_modules" /* already in the queue */,
++    "node_modules",
+     "CHANGELOG.md",
+     "ChangeLog",
+     "changelog.md",
+@@ -69,7 +69,7 @@ class NodeModuleCopyHelper extends AppFileWalker_1.FileCopyHelper {
+             const sortedFilePaths = await (0, tiny_async_pool_1.default)(builder_util_1.MAX_FILE_REQUESTS, childNames, async (name) => {
+                 const filePath = path.join(dirPath, name);
+                 const forceIncluded = onNodeModuleFile != null && !!onNodeModuleFile(filePath);
 -                if (excludedFiles.has(name) || name.startsWith("._")) {
 +                if ((excludedFiles.has(name) && !(name === "node_modules" && dirPath.endsWith("sharp"))) || name.startsWith("._")) {
                      return null;
                  }
-@@ -85,2 +85,17 @@
+                 // check if filematcher matches the files array as more important than the default excluded files.
+@@ -84,6 +84,25 @@ class NodeModuleCopyHelper extends AppFileWalker_1.FileCopyHelper {
+                     if (isTopLevel && (topLevelExcludedFiles.has(name) || (moduleName === "libui-node" && (name === "build" || name === "docs" || name === "src")))) {
+                         return null;
                      }
 +                    if (name.endsWith(".d.ts") || name.endsWith(".d.cts") || name.endsWith(".d.mts") || name.endsWith(".map") || name.endsWith(".md") || name.endsWith(".markdown")) {
 +                        return null;
@@ -31,8 +47,14 @@ diff --git a/out/util/NodeModuleCopyHelper.js b/out/util/NodeModuleCopyHelper.js
 +                    )) {
 +                        return null;
 +                    }
++                    if (moduleName === "knex" && dirPath.includes("dialects") && (
++                        name === "oracle" || name === "mssql" || name === "postgres" || name === "redshift" || name === "cockroachdb"
++                    )) {
++                        return null;
++                    }
 +                    if (moduleName === "better-sqlite3" && (name === "deps" || name === "src" || name === "obj" || name === "obj.target")) {
 +                        return null;
 +                    }
                      if (dirPath.endsWith("build")) {
-
+                         if (name === "gyp-mac-tool" || name === "Makefile" || name.endsWith(".mk") || name.endsWith(".gypi") || name.endsWith(".Makefile")) {
+                             return null;
