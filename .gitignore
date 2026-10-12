@@ -1,0 +1,12 @@
+node_modules
+dist
+dist.nosync
+*.nosync
+out
+.DS_Store
+.eslintcache
+*.log*
+.env
+.yalc
+yalc.lock
+test.sh

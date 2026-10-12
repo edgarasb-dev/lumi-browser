@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Prismatic Primary Ribbon Gradient (Cyan -> Electric Blue -> Indigo -> Magenta -> Hot Rose) -->
+    <linearGradient id="markRibbonFront" x1="15%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="25%" stop-color="#6366F1" />
+      <stop offset="55%" stop-color="#8B5CF6" />
+      <stop offset="80%" stop-color="#D946EF" />
+      <stop offset="100%" stop-color="#F43F5E" />
+    </linearGradient>
+
+    <!-- Secondary Ribbon Gradient (Deep Ultraviolet -> Indigo Glow) -->
+    <linearGradient id="markRibbonBack" x1="85%" y1="20%" x2="20%" y2="80%">
+      <stop offset="0%" stop-color="#C084FC" />
+      <stop offset="40%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#312E81" />
+    </linearGradient>
+
+    <!-- Overlapping Loop Gradient -->
+    <linearGradient id="markRibbonLoop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE" />
+      <stop offset="50%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#A855F7" />
+    </linearGradient>
+
+    <!-- Luminescent Photon Core Accent -->
+    <radialGradient id="markPhotonCore" cx="42%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="25%" stop-color="#818CF8" stop-opacity="0.6" />
+      <stop offset="60%" stop-color="#6366F1" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#6366F1" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Inner Highlight Sheen on Ribbon -->
+    <linearGradient id="markSheenStroke" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8" />
+      <stop offset="35%" stop-color="#FFFFFF" stop-opacity="0.3" />
+      <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0" />
+      <stop offset="100%" stop-color="#F472B6" stop-opacity="0.4" />
+    </linearGradient>
+
+    <!-- Ambient Glow Filter -->
+    <filter id="markAmbientBloom" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="60" result="blur" />
+    </filter>
+
+    <filter id="markCoreGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="25" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ambient Light Emission -->
+  <g filter="url(#markAmbientBloom)" opacity="0.65">
+    <circle cx="480" cy="460" r="220" fill="#6366F1" />
+    <circle cx="580" cy="580" r="190" fill="#EC4899" />
+    <circle cx="360" cy="420" r="160" fill="#06B6D4" />
+  </g>
+
+  <!-- The "LUMI" Prismatic Light Emblem -->
+  <g filter="url(#markCoreGlow)">
+    <!-- Back Loop -->
+    <path
+      d="M 470 240 
+         C 580 240, 680 320, 680 440 
+         C 680 540, 610 610, 520 650 
+         C 430 690, 340 680, 290 620 
+         C 240 560, 260 460, 330 390 
+         C 380 340, 440 310, 510 300"
+      fill="none"
+      stroke="url(#markRibbonBack)"
+      stroke-width="76"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.75"
+    />
+
+    <!-- Main Front Ribbon defining 'L' -->
+    <path
+      d="M 370 230 
+         C 370 420, 360 540, 380 620 
+         C 400 700, 470 750, 560 750 
+         C 630 750, 700 730, 750 680"
+      fill="none"
+      stroke="url(#markRibbonFront)"
+      stroke-width="96"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Overlapping Aurora Blade -->
+    <path
+      d="M 330 330 
+         C 430 310, 540 350, 610 430 
+         C 680 510, 690 610, 630 690 
+         C 590 740, 530 760, 470 760"
+      fill="none"
+      stroke="url(#markRibbonLoop)"
+      stroke-width="54"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.88"
+    />
+
+    <!-- Highlight Sheen -->
+    <path
+      d="M 370 245 
+         C 370 410, 362 530, 380 610 
+         C 395 670, 440 715, 520 730"
+      fill="none"
+      stroke="url(#markSheenStroke)"
+      stroke-width="20"
+      stroke-linecap="round"
+    />
+
+    <!-- Radiant Photon Spark -->
+    <circle cx="370" cy="235" r="28" fill="url(#markPhotonCore)" />
+    <circle cx="370" cy="235" r="14" fill="#FFFFFF" />
+
+    <!-- Radiant Accent Star -->
+    <circle cx="750" cy="680" r="18" fill="#FFFFFF" opacity="0.9" />
+    <circle cx="750" cy="680" r="32" fill="url(#markPhotonCore)" />
+  </g>
+</svg>

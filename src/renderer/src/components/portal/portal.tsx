@@ -1,0 +1,176 @@
+import { PlatformConsumer } from "@/components/main/platform";
+import { usePortalsProvider } from "@/components/portal/provider";
+import { useBoundingRect } from "@/hooks/use-bounding-rect";
+import { useCopyStyles } from "@/hooks/use-copy-styles";
+import { mergeRefs } from "@/lib/merge-refs";
+import { cn } from "@/lib/utils";
+import { type LayerType } from "~/layers";
+import { createContext, RefObject, useContext, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
+
+type PortalBodyRef = RefObject<HTMLElement | null> | ((body: HTMLElement | null) => void);
+
+interface PortalComponentProps extends React.ComponentProps<"div"> {
+  portalBodyRef?: PortalBodyRef;
+  visible?: boolean;
+  layerType?: LayerType;
+  autoFocus?: boolean;
+}
+
+type PortalContextValue = {
+  x: number | null;
+  y: number | null;
+  width: number | null;
+  height: number | null;
+};
+
+const PortalContext = createContext<PortalContextValue>({
+  x: null,
+  y: null,
+  width: null,
+  height: null
+});
+
+export function usePortalContext() {
+  const context = useContext(PortalContext);
+  return context;
+}
+
+export function PortalComponent({
+  visible = true,
+  layerType = "floatingSidebar",
+  autoFocus = false,
+  className,
+  children,
+  ref,
+  portalBodyRef,
+  ...args
+}: PortalComponentProps) {
+  const { usePortal } = usePortalsProvider();
+  const portal = usePortal();
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+
+  const holderRef = useRef<HTMLDivElement>(null);
+  const mergedRef = mergeRefs([ref, holderRef]);
+
+  const boundsRect = useBoundingRect(holderRef);
+  const bounds = useMemo(() => {
+    return {
+      x: Math.round(boundsRect?.x ?? 0),
+      y: Math.round(boundsRect?.y ?? 0),
+      width: Math.round(boundsRect?.width ?? 0),
+      height: Math.round(boundsRect?.height ?? 0)
+    };
+  }, [boundsRect]);
+
+  // Copy styles from parent window to portal window
+  useCopyStyles(portal?.window ?? null);
+
+  // Keep portalBodyRef in sync with the portal window's document body
+  useEffect(() => {
+    if (!portal?.window) return;
+    if (!portalBodyRef) return;
+    const body = portal.window.document.body;
+    if (typeof portalBodyRef === "function") {
+      portalBodyRef(body);
+      return () => portalBodyRef(null);
+    }
+    portalBodyRef.current = body;
+    return () => {
+      portalBodyRef.current = null;
+    };
+  }, [portal, portalBodyRef]);
+
+  const portalChildren = useMemo(() => {
+    const contextValue: PortalContextValue = {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height
+    };
+
+    return (
+      <PortalContext.Provider key="portal-context" value={contextValue}>
+        <PlatformConsumer>
+          <div key="portal-children" className="w-screen h-screen">
+            {children}
+          </div>
+        </PlatformConsumer>
+      </PortalContext.Provider>
+    );
+  }, [children, bounds]);
+
+  useLayoutEffect(() => {
+    if (!portal?.window || portal.window.closed) return;
+
+    try {
+      // layerType is fixed for the lifetime of an allocated portal window.
+      flow.interface.allocateComponentWindow(portal.id, layerType, visibleRef.current);
+    } catch (error) {
+      console.warn("Failed to allocate portal:", error);
+    }
+  }, [portal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update visibility of the portal
+  useLayoutEffect(() => {
+    if (!portal?.window || portal.window.closed) return;
+
+    try {
+      flow.interface.setComponentWindowVisible(portal.id, visible);
+    } catch (error) {
+      console.warn("Failed to set portal visibility:", error);
+    }
+  }, [portal, visible]);
+
+  // Focus the portal's webContents when visible and autoFocus is enabled
+  const hasAutoFocusedRef = useRef(false);
+  useEffect(() => {
+    if (!portal?.window || portal.window.closed) return;
+    if (!visible || !autoFocus) return;
+    if (hasAutoFocusedRef.current) return;
+
+    hasAutoFocusedRef.current = true;
+    try {
+      flow.interface.focusComponentWindow(portal.id);
+    } catch (error) {
+      console.warn("Failed to focus portal:", error);
+    }
+  }, [portal, visible, autoFocus]);
+
+  // Update bounds of the portal
+  useLayoutEffect(() => {
+    if (!portal?.window || portal.window.closed) return;
+    if (!bounds) return;
+
+    try {
+      flow.interface.setComponentWindowBounds(portal.id, {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height
+      });
+    } catch (error) {
+      console.warn("Failed to set portal bounds:", error);
+    }
+  }, [portal, bounds]);
+
+  const sizer = createPortal(
+    <div {...args} ref={mergedRef} className={cn("pointer-events-none", className)} />,
+    window.document.body,
+    "portal-sizer"
+  );
+
+  const wrapper =
+    portal &&
+    portal.window &&
+    !portal.window.closed &&
+    createPortal(portalChildren, portal.window.document.body, "portal-wrapper");
+
+  return (
+    <>
+      {sizer}
+      {wrapper}
+    </>
+  );
+}
