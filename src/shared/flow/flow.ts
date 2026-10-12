@@ -70,4 +70,9 @@ declare global {
     openExternal: FlowOpenExternalAPI;
     onboarding: FlowOnboardingAPI;
   };
+
+  /**
+   * Alias for the Flow API instance under the Lumi namespace.
+   */
+  const lumi: typeof flow;
 }

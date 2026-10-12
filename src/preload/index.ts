@@ -931,3 +931,4 @@ const flowAPI: typeof flow = {
   onboarding: wrapAPI(onboardingAPI, "settings")
 };
 contextBridge.exposeInMainWorld("flow", flowAPI);
+contextBridge.exposeInMainWorld("lumi", flowAPI);
