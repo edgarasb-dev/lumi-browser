@@ -47,7 +47,16 @@ export default defineConfig({
     build: {
       ...commonOptions.build,
       rollupOptions: {
-        external: ["electron", /^electron\/.*/, "@electron-webauthn/macos", "objc-js"]
+        external: [
+          "electron",
+          /^electron\/.*/,
+          "better-sqlite3",
+          "bindings",
+          "sharp",
+          "node-gyp-build",
+          "@electron-webauthn/macos",
+          "objc-js"
+        ]
       },
       externalizeDeps: {
         exclude: [

@@ -85,7 +85,7 @@ const electronBuilderConfig: Configuration = {
       role: "Viewer"
     }
   ],
-  asarUnpack: ["assets/**", "node_modules/@img/**"],
+  asarUnpack: ["assets/**", "node_modules/@img/**", "node_modules/better-sqlite3/**", "node_modules/sharp/**"],
   extraResources: [
     {
       from: "drizzle",
@@ -121,7 +121,32 @@ const electronBuilderConfig: Configuration = {
   dmg: {
     artifactName: "Lumi-v${version}-${arch}.${ext}",
     background: "./build/dmg-background.tiff",
-    icon: "./build/icon.icns"
+    icon: "./build/icon.icns",
+    contents: [
+      {
+        x: 130,
+        y: 220,
+        type: "file"
+      },
+      {
+        x: 410,
+        y: 220,
+        type: "link",
+        path: "/Applications"
+      },
+      {
+        x: 2000,
+        y: 2000,
+        type: "position",
+        path: ".background.tiff"
+      },
+      {
+        x: 2000,
+        y: 2100,
+        type: "position",
+        path: ".VolumeIcon.icns"
+      }
+    ]
   },
   linux: {
     target: ["AppImage", "deb"],
