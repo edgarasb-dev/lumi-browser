@@ -24,12 +24,13 @@ jobs:
       - name: Ensure GitHub Release exists
         continue-on-error: true
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
           TAG="v$VERSION"
           echo "Ensuring release exists for $TAG..."
           gh release view "$TAG" || gh release create "$TAG" --title "Lumi $TAG" --prerelease --generate-notes || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     needs: create-release
