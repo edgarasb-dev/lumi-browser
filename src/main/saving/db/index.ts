@@ -2,13 +2,35 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import path from "path";
+import fs from "fs";
 import { app } from "electron";
-import { FLOW_DATA_DIR } from "@/modules/paths";
+import { LUMI_DATA_DIR, FLOW_DATA_DIR } from "@/modules/paths";
 import { debugPrint, debugError } from "@/modules/output";
 import { pruneBrowsingHistory } from "@/saving/history/browsing-history";
 import * as schema from "./schema";
 
-const DB_PATH = path.join(FLOW_DATA_DIR, "flow.db");
+const LEGACY_DB_PATH = path.join(FLOW_DATA_DIR, "flow.db");
+const DB_PATH = path.join(LUMI_DATA_DIR, "lumi.db");
+
+/**
+ * Automatically migrate legacy flow.db files to lumi.db on first launch.
+ */
+function migrateLegacyDatabaseFiles(): void {
+  try {
+    if (fs.existsSync(LEGACY_DB_PATH) && !fs.existsSync(DB_PATH)) {
+      debugPrint("DB", `Migrating legacy flow.db to ${DB_PATH}`);
+      fs.renameSync(LEGACY_DB_PATH, DB_PATH);
+      if (fs.existsSync(`${LEGACY_DB_PATH}-wal`)) {
+        fs.renameSync(`${LEGACY_DB_PATH}-wal`, `${DB_PATH}-wal`);
+      }
+      if (fs.existsSync(`${LEGACY_DB_PATH}-shm`)) {
+        fs.renameSync(`${LEGACY_DB_PATH}-shm`, `${DB_PATH}-shm`);
+      }
+    }
+  } catch (error) {
+    debugError("DB", "Failed to migrate legacy flow.db:", error);
+  }
+}
 
 let sqlite: Database.Database | null = null;
 let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
@@ -32,6 +54,7 @@ function getMigrationsPath(): string {
 function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
   if (db) return db;
 
+  migrateLegacyDatabaseFiles();
   debugPrint("DB", `Initializing database at ${DB_PATH}`);
 
   sqlite = new Database(DB_PATH);

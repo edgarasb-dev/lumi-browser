@@ -94,15 +94,17 @@ const electronBuilderConfig: Configuration = {
   ],
   win: {
     executableName: "lumi",
+    artifactName: "Lumi-v${version}-win-${arch}.${ext}",
     verifyUpdateCodeSignature: false
   },
   nsis: {
-    artifactName: "${name}-${version}-setup.${ext}",
+    artifactName: "Lumi-v${version}-setup.${ext}",
     shortcutName: "${productName}",
     uninstallDisplayName: "${productName}",
     createDesktopShortcut: "always"
   },
   mac: {
+    artifactName: "Lumi-v${version}-${arch}-mac.${ext}",
     category: "public.app-category.productivity",
     entitlements: "./build/entitlements.mac.plist",
     notarize: Boolean(process.env.APPLE_API_KEY_DATA || process.env.APPLE_ID || process.env.APPLE_API_KEY),
@@ -117,7 +119,7 @@ const electronBuilderConfig: Configuration = {
     }
   },
   dmg: {
-    artifactName: "${name}-${version}-${arch}.${ext}",
+    artifactName: "Lumi-v${version}-${arch}.${ext}",
     background: "./build/dmg-background.tiff",
     icon: "./build/icon.icns"
   },
@@ -128,7 +130,7 @@ const electronBuilderConfig: Configuration = {
     icon: "icon.png"
   },
   appImage: {
-    artifactName: "${name}-${version}-${arch}.${ext}"
+    artifactName: "Lumi-v${version}-${arch}.${ext}"
   },
   npmRebuild: false,
   publish: {

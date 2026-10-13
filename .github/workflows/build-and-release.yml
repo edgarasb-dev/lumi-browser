@@ -26,8 +26,19 @@ jobs:
         run: |
           VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
           TAG="v$VERSION"
-          echo "Ensuring release exists for $TAG..."
-          gh release view "$TAG" || gh release create "$TAG" --title "Lumi $TAG" --prerelease --generate-notes || true
+          CODENAME=$(python3 -c "
+          import json
+          v = json.load(open('package.json'))['version']
+          codenames = {'0.1.0': 'Spark', '0.2.0': 'Glow', '0.3.0': 'Prism', '0.4.0': 'Flare', '0.5.0': 'Aurora', '1.0.0': 'Lumina', '2.0.0': 'Sol'}
+          print(codenames.get(v, ''))
+          ")
+          if [ -n "$CODENAME" ]; then
+            TITLE="Lumi $TAG \"$CODENAME\""
+          else
+            TITLE="Lumi $TAG"
+          fi
+          echo "Ensuring release exists for $TAG with title: $TITLE..."
+          gh release view "$TAG" || gh release create "$TAG" --title "$TITLE" --prerelease --generate-notes || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

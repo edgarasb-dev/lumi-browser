@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Loader2, Cpu, ShieldCheck, Terminal, Layers, Globe } from "lucide-react";
+import { getReleaseCodename } from "~/version";
 
 const getAppInfo = flow.app.getAppInfo;
 
@@ -59,7 +60,15 @@ export function BrowserInfoCard() {
       ) : appInfo ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
           <SpecChip icon={<Globe className="size-4" />} label="Browser Name" value="Lumi Browser" />
-          <SpecChip icon={<Layers className="size-4" />} label="Lumi Version" value={`v${appInfo.app_version}`} />
+          <SpecChip
+            icon={<Layers className="size-4" />}
+            label="Lumi Version"
+            value={
+              getReleaseCodename(appInfo.app_version)
+                ? `v${appInfo.app_version} (${getReleaseCodename(appInfo.app_version)})`
+                : `v${appInfo.app_version}`
+            }
+          />
           <SpecChip icon={<Cpu className="size-4" />} label="Engine" value={`Chromium ${appInfo.chrome_version}`} />
           <SpecChip icon={<Terminal className="size-4" />} label="Platform" value={appInfo.os} />
           <SpecChip

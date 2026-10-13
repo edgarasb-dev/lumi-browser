@@ -79,7 +79,7 @@ On first database access, Flow Browser runs Drizzle's migrator against the `driz
 The local SQLite database file is stored at:
 
 ```text
-app.getPath("userData")/flow.db
+app.getPath("userData")/lumi.db
 ```
 
 ### 5. Verify the change

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { BrowserInfoCard } from "./browser-info-card";
-import { GitFork, ExternalLink, ShieldCheck } from "lucide-react";
+import { GitFork, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
+import { getReleaseCodename } from "~/version";
 
 export function AboutSettings() {
   const [version, setVersion] = useState<string>("");
@@ -11,6 +12,8 @@ export function AboutSettings() {
       .then((info) => setVersion(info.app_version))
       .catch((err) => console.error("Failed to load app version:", err));
   }, []);
+
+  const codename = version ? getReleaseCodename(version) : undefined;
 
   return (
     <div className="space-y-6">
@@ -30,6 +33,12 @@ export function AboutSettings() {
               {version ? (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
                   v{version}
+                </span>
+              ) : null}
+              {codename ? (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/25 flex items-center gap-1 shadow-xs">
+                  <Sparkles className="size-3" />
+                  {codename}
                 </span>
               ) : null}
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground border border-border/40">
