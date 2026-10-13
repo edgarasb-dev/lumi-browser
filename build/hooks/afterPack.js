@@ -80,6 +80,24 @@ export async function handler(context) {
     } catch {
       // Ignored if xattr is unavailable or fails on non-essential metadata
     }
+
+    // When building without a commercial Apple certificate, ad-hoc sign the bundle
+    // with clean entitlements so macOS marks it valid and seals all resources.
+    if (!process.env.CSC_LINK && !process.env.CSC_NAME) {
+      try {
+        const appContents = fs.readdirSync(context.appOutDir);
+        const appName = appContents.find((item) => item.endsWith(".app"));
+        if (appName) {
+          const appPath = path.join(context.appOutDir, appName);
+          const entitlementsPath = path.join(process.cwd(), "build", "entitlements.mac.plist");
+          console.log(`Ad-hoc signing ${appName} with entitlements...`);
+          childProcess.execSync(`codesign --force --deep --sign - --entitlements "${entitlementsPath}" "${appPath}"`);
+          console.log(`Successfully ad-hoc signed ${appName}`);
+        }
+      } catch (err) {
+        console.error("Ad-hoc codesign failed:", err);
+      }
+    }
   }
 
   // Footer
