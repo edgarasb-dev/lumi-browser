@@ -21,7 +21,7 @@ const electronBuilderConfig: Configuration = {
   productName: "Lumi",
   ...(customAppVersion && { buildVersion: customAppVersion, extraMetadata: { version: customAppVersion } }),
   directories: {
-    output: "dist.nosync",
+    output: "dist",
     buildResources: "build"
   },
   files: [
