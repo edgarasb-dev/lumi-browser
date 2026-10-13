@@ -47,7 +47,7 @@ export default defineConfig({
     build: {
       ...commonOptions.build,
       rollupOptions: {
-        external: ["@electron-webauthn/macos"]
+        external: ["@electron-webauthn/macos", "objc-js"]
       },
       externalizeDeps: {
         exclude: [

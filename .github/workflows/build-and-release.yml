@@ -76,10 +76,6 @@ jobs:
         run: |
           flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - name: Configure node-gyp (Windows)
-        if: matrix.os == 'windows-2022'
-        run: npm config set msvs_version 2022
-
       - name: Install Dependencies
         run: bun install --development
         env:
