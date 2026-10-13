@@ -108,7 +108,7 @@ const electronBuilderConfig: Configuration = {
     notarize: Boolean(process.env.APPLE_API_KEY_DATA || process.env.APPLE_ID || process.env.APPLE_API_KEY),
     ...(process.env.CSC_LINK || process.env.CSC_NAME || process.env.CSC_KEY_PASSWORD
       ? { provisioningProfile: "build/profile.provisionprofile" }
-      : { identity: null }),
+      : { identity: "-" }),
     binaries: ["Contents/PlugIns/DockTilePlugIn.plugin"],
     extendInfo: {
       CFBundleIconName: "AppIcon",
