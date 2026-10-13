@@ -137,13 +137,13 @@ const electronBuilderConfig: Configuration = {
       {
         x: 2000,
         y: 2000,
-        type: "position",
+        type: "file",
         path: ".background.tiff"
       },
       {
         x: 2000,
         y: 2100,
-        type: "position",
+        type: "file",
         path: ".VolumeIcon.icns"
       }
     ]
