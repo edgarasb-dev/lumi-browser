@@ -119,7 +119,7 @@ const electronBuilderConfig: Configuration = {
   dmg: {
     artifactName: "${name}-${version}-${arch}.${ext}",
     background: "./build/dmg-background.tiff",
-    icon: "./build/volume-icon.icns"
+    icon: "./build/icon.icns"
   },
   linux: {
     target: ["AppImage", "deb"],
