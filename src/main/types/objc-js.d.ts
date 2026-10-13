@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "objc-js" {
   export class NobjcLibrary {
     constructor(path: string);
