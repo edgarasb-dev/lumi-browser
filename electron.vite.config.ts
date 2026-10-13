@@ -46,6 +46,9 @@ export default defineConfig({
     ...commonOptions,
     build: {
       ...commonOptions.build,
+      rollupOptions: {
+        external: ["@electron-webauthn/macos"]
+      },
       externalizeDeps: {
         exclude: [
           "@ghostery/adblocker-electron",
@@ -63,7 +66,7 @@ export default defineConfig({
           "hono",
           "objcjs-types"
         ],
-        include: ["objc-js", "better-sqlite3", "sharp"]
+        include: ["objc-js", "better-sqlite3", "sharp", "@electron-webauthn/macos"]
       }
     },
     resolve: {

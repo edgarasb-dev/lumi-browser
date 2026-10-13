@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-2022]
 
     steps:
       - name: Check out Git repository
@@ -76,13 +76,18 @@ jobs:
         run: |
           flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
+      - name: Configure node-gyp (Windows)
+        if: matrix.os == 'windows-2022'
+        run: npm config set msvs_version 2022
+
       - name: Install Dependencies
         run: bun install --development
         env:
           SHARP_IGNORE_GLOBAL_LIBVIPS: 1
+          GYP_MSVS_VERSION: 2022
 
       - name: Install Castlabs EVS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel' || matrix.os == 'windows-latest'
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel' || matrix.os == 'windows-2022'
         run: python3 -m pip install castlabs-evs==1.1.5 --break-system-packages
 
       - name: Login to Castlabs EVS (macOS)
@@ -94,7 +99,7 @@ jobs:
           PASSWD: ${{ secrets.CASTLABS_EVS_PASSWORD }}
 
       - name: Login to Castlabs EVS (Windows)
-        if: matrix.os == 'windows-latest' && env.ACCOUNT_NAME != '' && env.PASSWD != ''
+        if: matrix.os == 'windows-2022' && env.ACCOUNT_NAME != '' && env.PASSWD != ''
         continue-on-error: true
         shell: cmd
         run: python3 -m castlabs_evs.account --no-ask reauth -A "%ACCOUNT_NAME%" -P "%PASSWD%"
@@ -127,13 +132,14 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
 
       - name: Build for Windows
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2022'
         run: bun run build:win -p always
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}
           EP_GH_IGNORE_TIME: "true"
+          GYP_MSVS_VERSION: 2022
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
