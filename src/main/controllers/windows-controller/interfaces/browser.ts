@@ -15,16 +15,23 @@ function warnWidevineLoadFailed() {
   }
 }
 
-async function waitUntilReady() {
-  // Wait for electron to finish initializing
-  await app.whenReady();
+let readyPromise: Promise<void> | null = null;
 
-  // Wait for WidevineCDM to be ready
-  // Could fail when Widevine is not available, but we don't care
-  const isReady = await waitForElectronComponentsToBeReady();
-  if (!isReady) {
-    warnWidevineLoadFailed();
+async function waitUntilReady() {
+  if (!readyPromise) {
+    readyPromise = (async () => {
+      // Wait for electron to finish initializing
+      await app.whenReady();
+
+      // Wait for WidevineCDM to be ready with timeout
+      // Could fail when Widevine is not available, but we don't care
+      const isReady = await waitForElectronComponentsToBeReady();
+      if (!isReady) {
+        warnWidevineLoadFailed();
+      }
+    })();
   }
+  return readyPromise;
 }
 
 export const browserWindowsController = {
