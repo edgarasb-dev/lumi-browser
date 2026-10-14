@@ -59,16 +59,11 @@
   </requires>
 
   <releases>
-    <release version="0.1.0" date="2026-10-12">
+    <release version="0.1.1" date="2026-10-14">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases</url>
     </release>
-    <release version="0.11.0" date="2026-03-22">
-      <url type="details">https://flow-browser.com/updates/0.11.0</url>
-    </release>
-    <release version="0.10.1" date="2026-03-01">
-      <description>
-        <p>Latest release of Lumi Browser.</p>
-      </description>
+    <release version="0.1.0" date="2026-10-12">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases</url>
     </release>
   </releases>
 
