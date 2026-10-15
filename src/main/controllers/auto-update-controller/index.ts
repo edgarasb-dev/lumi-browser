@@ -1,4 +1,4 @@
-import { debugPrint } from "@/modules/output";
+import { debugError, debugPrint } from "@/modules/output";
 import { TypedEventEmitter } from "@/modules/typed-event-emitter";
 import { sleep } from "@/modules/utils";
 import { getVersionUpdatedFrom, markUpdateStarted } from "@/saving/ephemeral";
@@ -40,6 +40,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   private availableUpdate: UpdateInfo | null = null;
   private downloadProgress: ProgressInfo | null = null;
   private updateDownloaded: boolean = false;
+  private lastError: string | null = null;
+  private lastChecked: number | null = null;
   private mockDownloadIntervalId: NodeJS.Timeout | null = null;
   private mockBytesDownloaded: number = 0;
 
@@ -69,6 +71,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
         // Add other fields required by UpdateInfo if necessary, e.g., releaseName, releaseNotes
       };
       this.availableUpdate = mockUpdateInfo;
+      this.lastError = null;
+      this.lastChecked = Date.now();
       this.emit("status-changed");
       debugPrint("AUTO_UPDATER", "[MOCK] Update Available", mockUpdateInfo);
       return Promise.resolve({
@@ -78,24 +82,52 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       });
     }
 
-    const result: UpdateCheckResult | null = await autoUpdater.checkForUpdates();
-    return result;
+    try {
+      this.lastError = null;
+      debugPrint("AUTO_UPDATER", "Checking for updates...");
+      const result: UpdateCheckResult | null = await autoUpdater.checkForUpdates();
+      this.lastChecked = Date.now();
+      if (!result?.isUpdateAvailable) {
+        this.availableUpdate = null;
+      }
+      this.emit("status-changed");
+      return result;
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      debugError("AUTO_UPDATER", "Check for updates failed:", errorMsg);
+      this.lastError = errorMsg;
+      this.lastChecked = Date.now();
+      this.emit("status-changed");
+      return null;
+    }
   }
 
   private connectUpdaterListeners() {
+    autoUpdater.on("error", (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      debugError("AUTO_UPDATER", "Auto-updater error:", message);
+      this.lastError = message;
+      this.emit("status-changed");
+    });
+
     autoUpdater.on("update-available", (updateInfo) => {
       debugPrint("AUTO_UPDATER", "Update Available", updateInfo);
       this.availableUpdate = updateInfo;
+      this.lastError = null;
       this.emit("status-changed");
     });
 
     autoUpdater.on("update-not-available", (updateInfo) => {
       debugPrint("AUTO_UPDATER", "Update Not Available", updateInfo);
+      this.availableUpdate = null;
+      this.lastError = null;
+      this.emit("status-changed");
     });
 
     autoUpdater.on("download-progress", (progress) => {
       debugPrint("AUTO_UPDATER", "Download Progress", progress);
       this.downloadProgress = progress;
+      this.lastError = null;
       this.emit("status-changed");
     });
 
@@ -104,6 +136,7 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       this.availableUpdate = updateInfo;
       this.downloadProgress = null;
       this.updateDownloaded = true;
+      this.lastError = null;
       this.emit("status-changed");
     });
   }
@@ -112,7 +145,9 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     return {
       availableUpdate: this.availableUpdate,
       downloadProgress: this.downloadProgress,
-      updateDownloaded: this.updateDownloaded
+      updateDownloaded: this.updateDownloaded,
+      error: this.lastError,
+      lastChecked: this.lastChecked
     };
   }
 
@@ -196,6 +231,33 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   }
 
   public async initialize() {
+    // Configure autoUpdater logger
+    autoUpdater.logger = {
+      info: (msg: string) => debugPrint("AUTO_UPDATER", msg),
+      warn: (msg: string) => debugPrint("AUTO_UPDATER", `[WARN] ${msg}`),
+      error: (msg: string) => debugError("AUTO_UPDATER", msg),
+      debug: (msg: string) => debugPrint("AUTO_UPDATER", `[DEBUG] ${msg}`)
+    };
+
+    // Configure update settings
+    autoUpdater.allowPrerelease = true;
+    autoUpdater.allowDowngrade = false;
+
+    if (!app.isPackaged) {
+      autoUpdater.forceDevUpdateConfig = true;
+    }
+
+    try {
+      autoUpdater.setFeedURL({
+        provider: "github",
+        owner: "edgarasb-dev",
+        repo: "lumi-browser",
+        releaseType: "prerelease"
+      });
+    } catch (err) {
+      debugError("AUTO_UPDATER", "Failed to set default feed URL:", err);
+    }
+
     await onSettingsCached();
 
     // Update Auto Updater Config

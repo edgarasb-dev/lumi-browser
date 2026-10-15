@@ -78,11 +78,13 @@ export function UpdateCard() {
 
   const isDownloaded = updateStatus?.updateDownloaded === true;
   const updateProgress = updateStatus?.downloadProgress?.percent || 0;
-  const hasChecked = updateStatus !== null;
+  const hasChecked =
+    updateStatus !== null && Boolean(updateStatus.lastChecked || updateStatus.availableUpdate || updateStatus.error);
   const hasUpdate = updateStatus?.availableUpdate !== null;
   const availableVersion = updateStatus?.availableUpdate?.version || "";
   const downloadFailed = updateStatus?.downloadProgress?.percent === -1;
-  const isUpToDate = hasChecked && !hasUpdate && !isCheckingForUpdates && !isDownloadingUpdate;
+  const hasError = Boolean(updateStatus?.error);
+  const isUpToDate = hasChecked && !hasUpdate && !hasError && !isCheckingForUpdates && !isDownloadingUpdate;
 
   const renderStatusIconAndText = () => {
     if (isCheckingForUpdates) {
@@ -125,6 +127,22 @@ export function UpdateCard() {
         </>
       );
     }
+    if (hasError) {
+      const isNotFound = updateStatus?.error?.includes("404");
+      return (
+        <>
+          <AlertCircle className="h-5 w-5 mr-2 text-amber-500 shrink-0" />{" "}
+          <div className="flex flex-col">
+            <span className="text-sm text-amber-500 font-medium">Update check failed</span>
+            <span className="text-xs text-muted-foreground line-clamp-1" title={updateStatus?.error || undefined}>
+              {isNotFound
+                ? "Release feed returned 404 (check repository visibility)"
+                : updateStatus?.error || "Network error"}
+            </span>
+          </div>
+        </>
+      );
+    }
     if (isUpToDate) {
       return (
         <>
@@ -156,6 +174,19 @@ export function UpdateCard() {
         <Button variant="default" size="sm" onClick={downloadUpdate} className="min-w-[140px]">
           <RefreshCw className="h-4 w-4 mr-2" /> Retry Download
         </Button>
+      );
+    }
+
+    if (hasError) {
+      return (
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={openDownloadPage} className="min-w-[90px]">
+            <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Releases
+          </Button>
+          <Button variant="default" size="sm" onClick={checkForUpdates} className="min-w-[110px]">
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Try Again
+          </Button>
+        </div>
       );
     }
 
@@ -203,9 +234,14 @@ export function UpdateCard() {
 
     if (hasUpdate && isAutoUpdateSupported) {
       return (
-        <Button variant="default" size="sm" onClick={downloadUpdate} className="min-w-[140px]">
-          <ArrowDownToLine className="h-4 w-4 mr-2" /> Download v{availableVersion}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={openDownloadPage} title="View Release on GitHub">
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="default" size="sm" onClick={downloadUpdate} className="min-w-[140px]">
+            <ArrowDownToLine className="h-4 w-4 mr-2" /> Download v{availableVersion}
+          </Button>
+        </div>
       );
     }
 
@@ -242,6 +278,56 @@ export function UpdateCard() {
             <Progress value={updateProgress} className="w-full h-2" />
             <div className="flex justify-end text-xs text-muted-foreground mt-1">
               <span>{Math.round(updateProgress)}%</span>
+            </div>
+          </div>
+        )}
+
+        {/* Update Available notification */}
+        {hasUpdate && !isDownloadingUpdate && !isDownloaded && (
+          <div className={cn("rounded-md border p-3 mt-4 text-xs", "bg-primary/10 border-primary/30 text-foreground")}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <InfoIcon className="h-4 w-4 text-primary shrink-0" />
+                <span className="font-medium">A new version (v{availableVersion}) of Lumi is available!</span>
+              </div>
+              <Button
+                variant="link"
+                size="sm"
+                className="p-0 h-auto text-xs text-primary underline hover:no-underline shrink-0"
+                onClick={openDownloadPage}
+              >
+                Release Notes <ExternalLink className="h-3 w-3 ml-1 inline" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Error informative notice */}
+        {hasError && updateStatus?.error?.includes("404") && (
+          <div
+            className={cn(
+              "rounded-md border p-3 mt-4 text-xs",
+              "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+            )}
+          >
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                <span>
+                  GitHub Releases returned 404 Not Found. If the GitHub repository is private, unauthenticated update
+                  checks cannot access releases until the repository is made public.
+                </span>
+                <div className="mt-1">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-xs text-amber-700 dark:text-amber-400 underline hover:no-underline"
+                    onClick={openDownloadPage}
+                  >
+                    View GitHub Releases <ExternalLink className="h-3 w-3 ml-1 inline" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

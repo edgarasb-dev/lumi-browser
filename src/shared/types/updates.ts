@@ -4,4 +4,6 @@ export interface UpdateStatus {
   availableUpdate: UpdateInfo | null;
   downloadProgress: ProgressInfo | null;
   updateDownloaded: boolean;
+  error?: string | null;
+  lastChecked?: number | null;
 }

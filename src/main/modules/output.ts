@@ -17,7 +17,7 @@ const DEBUG_AREAS = {
   SPACES: false, // @/controllers/spaces-controller (originally @/sessions/spaces.ts)
   ICONS: false, // @/modules/icons.ts
   PORTAL_COMPONENTS: false, // @/browser/components/portal-component-windows.ts
-  AUTO_UPDATER: false, // @/modules/auto-update.ts
+  AUTO_UPDATER: true, // @/controllers/auto-update-controller
   CONTENT_BLOCKER: false, // @/modules/content-blocker.ts
   WEB_REQUESTS_INTERCEPTION: false, // @/browser/utility/web-requests.ts
   WEB_REQUESTS: false, // @/browser/utility/web-requests.ts
