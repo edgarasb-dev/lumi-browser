@@ -6,7 +6,7 @@ import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } fro
 import { cn } from "@/lib/utils";
 import { ArchiveIcon, HistoryIcon, LucideIcon, SettingsIcon, StarIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Favourite } from "~/flow/interfaces/browser/favourites";
+import type { Favourite } from "~/lumi/interfaces/browser/favourites";
 
 function BottomExtrasMenuItem({
   id,
@@ -36,15 +36,15 @@ export function BottomExtrasMenu() {
 
   useEffect(() => {
     if (open) {
-      flow.favourites.getAllFavourites().then(setFavourites);
+      lumi.favourites.getAllFavourites().then(setFavourites);
     }
   }, [open]);
 
   const onItemSelected = useCallback((url: string) => {
     if (url === "internal://settings") {
-      flow.windows.openSettingsWindow();
+      lumi.windows.openSettingsWindow();
     } else {
-      flow.tabs.newTab(url, true);
+      lumi.tabs.newTab(url, true);
     }
     setOpen(false);
   }, []);
@@ -66,7 +66,7 @@ export function BottomExtrasMenu() {
               id="history"
               Icon={HistoryIcon}
               label="History"
-              url="flow://history"
+              url="lumi://history"
               onItemSelected={onItemSelected}
             />
             <BottomExtrasMenuItem

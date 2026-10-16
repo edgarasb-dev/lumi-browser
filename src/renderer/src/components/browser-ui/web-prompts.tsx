@@ -35,13 +35,13 @@ function JavaScriptDialogCard({ prompt }: { prompt: JsDialogActivePrompt }) {
   const cancel = useCallback(() => {
     switch (type) {
       case "prompt":
-        flow.prompts.confirmPrompt(prompt.id, null, suppressChecked);
+        lumi.prompts.confirmPrompt(prompt.id, null, suppressChecked);
         break;
       case "confirm":
-        flow.prompts.confirmPrompt(prompt.id, false, suppressChecked);
+        lumi.prompts.confirmPrompt(prompt.id, false, suppressChecked);
         break;
       case "alert":
-        flow.prompts.confirmPrompt(prompt.id, undefined, suppressChecked);
+        lumi.prompts.confirmPrompt(prompt.id, undefined, suppressChecked);
         break;
     }
   }, [type, prompt.id, suppressChecked]);
@@ -50,13 +50,13 @@ function JavaScriptDialogCard({ prompt }: { prompt: JsDialogActivePrompt }) {
     const value = inputRef.current?.value;
     switch (type) {
       case "prompt":
-        flow.prompts.confirmPrompt(prompt.id, value, suppressChecked);
+        lumi.prompts.confirmPrompt(prompt.id, value, suppressChecked);
         break;
       case "confirm":
-        flow.prompts.confirmPrompt(prompt.id, true, suppressChecked);
+        lumi.prompts.confirmPrompt(prompt.id, true, suppressChecked);
         break;
       case "alert":
-        flow.prompts.confirmPrompt(prompt.id, undefined, suppressChecked);
+        lumi.prompts.confirmPrompt(prompt.id, undefined, suppressChecked);
         break;
     }
   }, [type, prompt.id, suppressChecked]);
@@ -154,14 +154,14 @@ function BasicAuthCard({ prompt }: { prompt: BasicAuthActivePrompt }) {
   const passwordRef = useRef<HTMLInputElement | null>(null);
 
   const cancel = useCallback(() => {
-    flow.prompts.confirmPrompt(prompt.id, null, false);
+    lumi.prompts.confirmPrompt(prompt.id, null, false);
   }, [prompt.id]);
 
   const confirm = useCallback(() => {
     const username = usernameRef.current?.value ?? "";
     const password = passwordRef.current?.value ?? "";
     const credentials: BasicAuthCredentials = { username, password };
-    flow.prompts.confirmPrompt(prompt.id, credentials, false);
+    lumi.prompts.confirmPrompt(prompt.id, credentials, false);
   }, [prompt.id]);
 
   useEffect(() => {

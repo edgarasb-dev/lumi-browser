@@ -138,7 +138,7 @@ export function primeOpenTabsCache(
     return Promise.resolve();
   }
 
-  const refreshPromise = flow.tabs
+  const refreshPromise = lumi.tabs
     .getData()
     .then((tabsData) => {
       openTabsCache.set(currentSpaceId, {

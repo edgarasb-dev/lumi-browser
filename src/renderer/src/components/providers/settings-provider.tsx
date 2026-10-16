@@ -35,14 +35,14 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   const [settingsValues, setSettingsValues] = useState<Record<string, unknown>>({});
 
   const fetchSettings = useCallback(async () => {
-    if (!flow) return;
+    if (!lumi) return;
 
-    const { settings: fetchedSettings, cards: fetchedCards } = await flow.settings.getBasicSettings();
+    const { settings: fetchedSettings, cards: fetchedCards } = await lumi.settings.getBasicSettings();
     setSettings(fetchedSettings);
     setCards(fetchedCards);
 
     const promises = fetchedSettings.map(async (setting) => {
-      const value = await flow.settings.getSetting(setting.id);
+      const value = await lumi.settings.getSetting(setting.id);
       setSettingsValues((prev) => ({ ...prev, [setting.id]: value }));
     });
 
@@ -58,7 +58,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   }, [fetchSettings]);
 
   useEffect(() => {
-    const unsub = flow.settings.onSettingsChanged(() => {
+    const unsub = lumi.settings.onSettingsChanged(() => {
       revalidate();
     });
     return () => unsub();
@@ -72,7 +72,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   );
 
   const setSetting = useCallback((settingId: string, value: unknown) => {
-    return flow.settings.setSetting(settingId, value);
+    return lumi.settings.setSetting(settingId, value);
   }, []);
 
   return (

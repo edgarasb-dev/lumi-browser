@@ -1,12 +1,12 @@
-import { registerFlowProtocol } from "./_protocols/flow";
-import { registerFlowInternalProtocol } from "./_protocols/flow-internal";
-import { registerFlowExternalProtocol } from "./_protocols/flow-external";
+import { registerLumiProtocol } from "./_protocols/lumi";
+import { registerLumiInternalProtocol } from "./_protocols/lumi-internal";
+import { registerLumiExternalProtocol } from "./_protocols/lumi-external";
 import { protocol, Session } from "electron";
 import type { CustomProtocol } from "./types";
 
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: "flow",
+    scheme: "lumi",
     privileges: {
       standard: true,
       secure: true,
@@ -19,7 +19,7 @@ protocol.registerSchemesAsPrivileged([
     }
   },
   {
-    scheme: "flow-internal",
+    scheme: "lumi-internal",
     privileges: {
       standard: true,
       secure: true,
@@ -32,7 +32,7 @@ protocol.registerSchemesAsPrivileged([
     }
   },
   {
-    scheme: "flow-external",
+    scheme: "lumi-external",
     privileges: {
       standard: true,
       secure: true,
@@ -50,13 +50,13 @@ protocol.registerSchemesAsPrivileged([
 export function registerProtocolsWithSession(session: Session, protocols: CustomProtocol[]) {
   const protocol = session.protocol;
 
-  if (protocols.includes("flow")) {
-    registerFlowProtocol(protocol);
+  if (protocols.includes("lumi")) {
+    registerLumiProtocol(protocol);
   }
-  if (protocols.includes("flow-internal")) {
-    registerFlowInternalProtocol(protocol);
+  if (protocols.includes("lumi-internal")) {
+    registerLumiInternalProtocol(protocol);
   }
-  if (protocols.includes("flow-external")) {
-    registerFlowExternalProtocol(protocol);
+  if (protocols.includes("lumi-external")) {
+    registerLumiExternalProtocol(protocol);
   }
 }

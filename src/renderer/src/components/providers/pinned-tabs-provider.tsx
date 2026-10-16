@@ -45,11 +45,11 @@ export const PinnedTabsProvider = ({ children }: PinnedTabsProviderProps) => {
   // before getData resolves, the stale getData result is discarded.
   useEffect(() => {
     let settled = false;
-    const unsub = flow.pinnedTabs.onChanged((data) => {
+    const unsub = lumi.pinnedTabs.onChanged((data) => {
       settled = true;
       setPinnedTabsByProfile(data);
     });
-    flow.pinnedTabs.getData().then((data) => {
+    lumi.pinnedTabs.getData().then((data) => {
       if (!settled) {
         setPinnedTabsByProfile(data);
       }
@@ -65,19 +65,19 @@ export const PinnedTabsProvider = ({ children }: PinnedTabsProviderProps) => {
   );
 
   const createFromTab = useCallback(async (tabId: number, position?: number) => {
-    return flow.pinnedTabs.createFromTab(tabId, position);
+    return lumi.pinnedTabs.createFromTab(tabId, position);
   }, []);
 
   const click = useCallback(async (pinnedTabId: string) => {
-    return flow.pinnedTabs.click(pinnedTabId);
+    return lumi.pinnedTabs.click(pinnedTabId);
   }, []);
 
   const doubleClick = useCallback(async (pinnedTabId: string) => {
-    return flow.pinnedTabs.doubleClick(pinnedTabId);
+    return lumi.pinnedTabs.doubleClick(pinnedTabId);
   }, []);
 
   const unpinToTabList = useCallback(async (pinnedTabId: string, position?: number) => {
-    return flow.pinnedTabs.unpinToTabList(pinnedTabId, position);
+    return lumi.pinnedTabs.unpinToTabList(pinnedTabId, position);
   }, []);
 
   const reorder = useCallback(async (pinnedTabId: string, newPosition: number) => {
@@ -99,11 +99,11 @@ export const PinnedTabsProvider = ({ children }: PinnedTabsProviderProps) => {
       return next;
     });
 
-    return flow.pinnedTabs.reorder(pinnedTabId, newPosition);
+    return lumi.pinnedTabs.reorder(pinnedTabId, newPosition);
   }, []);
 
   const showContextMenu = useCallback((pinnedTabId: string) => {
-    flow.pinnedTabs.showContextMenu(pinnedTabId);
+    lumi.pinnedTabs.showContextMenu(pinnedTabId);
   }, []);
 
   const contextValue = useMemo(

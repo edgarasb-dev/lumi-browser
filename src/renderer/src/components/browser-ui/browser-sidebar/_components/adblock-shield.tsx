@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ShieldCheck, ShieldAlert, Shield, RefreshCw, ChevronDown, ChevronUp, Globe, Lock } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import type { TabBlockerStats } from "~/flow/interfaces/browser/content-blocker";
+import type { TabBlockerStats } from "~/lumi/interfaces/browser/content-blocker";
 
 function getTypeBadgeColor(type: string) {
   switch (type.toLowerCase()) {
@@ -43,8 +43,8 @@ export const AdblockShield = memo(function AdblockShield() {
   const hostname = useMemo(() => {
     if (!addressUrl) return "";
     if (
-      addressUrl.startsWith("flow:") ||
-      addressUrl.startsWith("flow-internal:") ||
+      addressUrl.startsWith("lumi:") ||
+      addressUrl.startsWith("lumi-internal:") ||
       addressUrl.startsWith("about:") ||
       addressUrl.startsWith("chrome:")
     ) {
@@ -74,11 +74,11 @@ export const AdblockShield = memo(function AdblockShield() {
 
     setNeedsReload(false);
 
-    flow.contentBlocker.getTabStats(tabId).then((data) => {
+    lumi.contentBlocker.getTabStats(tabId).then((data) => {
       setStats(data);
     });
 
-    const unsubStats = flow.contentBlocker.onStatsUpdated((update) => {
+    const unsubStats = lumi.contentBlocker.onStatsUpdated((update) => {
       if (update.tabId === tabId) {
         setStats((prev) => {
           if (!prev) return null;
@@ -91,7 +91,7 @@ export const AdblockShield = memo(function AdblockShield() {
       }
     });
 
-    const unsubWhitelist = flow.contentBlocker.onWhitelistChanged((domains) => {
+    const unsubWhitelist = lumi.contentBlocker.onWhitelistChanged((domains) => {
       const cleanHost = hostname.toLowerCase().trim();
       const isWhitelisted = domains.some((d) => {
         const cd = d.toLowerCase().trim();
@@ -109,7 +109,7 @@ export const AdblockShield = memo(function AdblockShield() {
   // When popover opens, refresh full stats (to get latest blockedRequests list)
   useEffect(() => {
     if (open && tabId) {
-      flow.contentBlocker.getTabStats(tabId).then((data) => {
+      lumi.contentBlocker.getTabStats(tabId).then((data) => {
         setStats(data);
       });
     }
@@ -121,7 +121,7 @@ export const AdblockShield = memo(function AdblockShield() {
       // checked === true -> shields UP (blocking enabled, not whitelisted)
       // checked === false -> shields DOWN (whitelisted)
       const targetWhitelisted = !checked;
-      await flow.contentBlocker.toggleDomainWhitelist(cleanDomain, targetWhitelisted);
+      await lumi.contentBlocker.toggleDomainWhitelist(cleanDomain, targetWhitelisted);
       setStats((prev) => (prev ? { ...prev, isWhitelisted: targetWhitelisted } : null));
       setNeedsReload(true);
     },
@@ -130,7 +130,7 @@ export const AdblockShield = memo(function AdblockShield() {
 
   const handleReload = useCallback(() => {
     if (tabId) {
-      flow.navigation.reloadTab(tabId);
+      lumi.navigation.reloadTab(tabId);
       setNeedsReload(false);
     }
   }, [tabId]);

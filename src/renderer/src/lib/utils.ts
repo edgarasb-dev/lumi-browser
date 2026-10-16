@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // Sometimes we cannot use `navigator.clipboard`, as this requires the webContents to be focused & active, which it might not be.
 export async function copyTextToClipboardFallback(text: string) {
-  flow.app.writeTextToClipboard(text);
+  lumi.app.writeTextToClipboard(text);
   return true;
 }
 
@@ -72,7 +72,7 @@ export function craftActiveFaviconURL(tabId: number, faviconURL: string | null) 
     return faviconURL ?? undefined;
   }
 
-  const urlObj = new URL("flow-internal://active-favicon");
+  const urlObj = new URL("lumi-internal://active-favicon");
 
   // Tab ID is used to identify the tab and grab the favicon
   urlObj.searchParams.set("tabId", tabId.toString());

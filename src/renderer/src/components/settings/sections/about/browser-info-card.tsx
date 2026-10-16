@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Cpu, ShieldCheck, Terminal, Layers, Globe } from "lucide-react";
 import { getReleaseCodename } from "~/version";
 
-const getAppInfo = flow.app.getAppInfo;
+const getAppInfo = lumi.app.getAppInfo;
 
 interface SpecChipProps {
   icon: React.ReactNode;

@@ -14,7 +14,6 @@ interface Paths {
 }
 
 export const LUMI_DATA_DIR = app.getPath("userData");
-export const FLOW_DATA_DIR = LUMI_DATA_DIR;
 
 export const PATHS: Paths = {
   ROOT: ROOT_DIR,

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/popover";
-import { Space } from "~/flow/interfaces/sessions/spaces";
+import { Space } from "~/lumi/interfaces/sessions/spaces";
 import { SpaceIcon } from "@/lib/phosphor-icons";
 import { cn } from "@/lib/utils";
 import { Palette, Shuffle, Check, Sparkles } from "lucide-react";
@@ -82,7 +82,7 @@ export function SpaceThemePopover({
   const applyUpdates = useCallback(
     async (updates: Partial<Space>) => {
       try {
-        await flow.spaces.updateSpace(space.profileId, space.id, updates);
+        await lumi.spaces.updateSpace(space.profileId, space.id, updates);
       } catch (err) {
         console.error("Failed to update space theme:", err);
       }

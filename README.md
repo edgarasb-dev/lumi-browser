@@ -8,7 +8,7 @@
  _A modern, privacy-focused browser with fluid vertical spaces, tab previews, and full Chrome extension support._
 
   <p align="center">
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.0-blue?style=flat-square&logo=github" alt="Release v0.1.0" /></a>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.2-blue?style=flat-square&logo=github" alt="Release v0.1.2" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-emerald?style=flat-square" alt="License GPL-3.0" /></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-purple?style=flat-square" alt="Platforms" />
     <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -40,7 +40,7 @@ Mainstream browsers are bloated, distraction-heavy, and cluttered with telemetry
 - 🧩 **Chrome Extension Support**: Full compatibility with the Chrome Web Store. Install your favorite ad blockers, password managers, and productivity extensions.
 - 🛡️ **Native Ad & Tracker Protection**: Built-in adblocker powered by Ghostery engine keeping your browsing fast, private, and lightweight.
 - 🎬 **DRM & Streaming Ready**: Bundled with Widevine DRM support for Netflix, Spotify, Disney+, and YouTube playback.
-- 🎮 **Built-in Offline Essentials**: Lightweight internal utilities and offline games for quick mental breaks (`flow://games`).
+- 🎮 **Built-in Offline Essentials**: Lightweight internal utilities and offline games for quick mental breaks (`lumi://games`).
 
 ---
 
@@ -66,12 +66,12 @@ Lumi comes with native, high-performance internal views:
 
 | Protocol            | Description                                                  |
 | :------------------ | :----------------------------------------------------------- |
-| `flow://new-tab`    | Minimalist start screen with quick bookmarks                 |
-| `flow://settings`   | Granular customization, theme accents, and update management |
-| `flow://extensions` | Extension manager and Chrome Web Store installer             |
-| `flow://history`    | Fast, searchable browsing timeline with privacy controls     |
-| `flow://games`      | Offline casual games hub                                     |
-| `flow://about`      | System specs, Chromium version, and open source heritage     |
+| `lumi://new-tab`    | Minimalist start screen with quick bookmarks                 |
+| `lumi://settings`   | Granular customization, theme accents, and update management |
+| `lumi://extensions` | Extension manager and Chrome Web Store installer             |
+| `lumi://history`    | Fast, searchable browsing timeline with privacy controls     |
+| `lumi://games`      | Offline casual games hub                                     |
+| `lumi://about`      | System specs, Chromium version, and open source heritage     |
 
 ---
 

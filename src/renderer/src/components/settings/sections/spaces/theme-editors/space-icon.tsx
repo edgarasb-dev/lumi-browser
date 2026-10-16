@@ -1,4 +1,4 @@
-import { Space } from "~/flow/interfaces/sessions/spaces";
+import { Space } from "~/lumi/interfaces/sessions/spaces";
 import { SpaceIconPicker } from "../icon-picker";
 import { motion } from "motion/react";
 

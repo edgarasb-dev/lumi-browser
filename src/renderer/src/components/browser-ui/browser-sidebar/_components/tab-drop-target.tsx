@@ -1,7 +1,7 @@
 import { TabGroupSourceData } from "@/components/browser-ui/browser-sidebar/_components/tab-group";
 import { DropIndicator } from "@/components/browser-ui/browser-sidebar/_components/drop-indicator";
 import { useEffect, useRef, useState } from "react";
-import { Space } from "~/flow/interfaces/sessions/spaces";
+import { Space } from "~/lumi/interfaces/sessions/spaces";
 import {
   dropTargetForElements,
   ElementDropTargetEventBasePayload
@@ -25,7 +25,7 @@ export function TabDropTarget({ spaceData, isSpaceLight, moveTab, biggestIndex }
 
   const handleDoubleClick = () => {
     if (hasDraggedRef.current) return;
-    flow.newTab.open();
+    lumi.newTab.open();
   };
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function TabDropTarget({ spaceData, isSpaceLight, moveTab, biggestIndex }
         if (tabGroupData.profileId !== spaceData.profileId) {
           // TODO: @MOVE_TABS_BETWEEN_PROFILES not supported yet
         } else {
-          flow.tabs.moveTabToWindowSpace(sourceTabId, spaceData.id, newPos);
+          lumi.tabs.moveTabToWindowSpace(sourceTabId, spaceData.id, newPos);
         }
       } else {
         moveTab(sourceTabId, newPos);

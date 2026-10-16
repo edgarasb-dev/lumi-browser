@@ -10,7 +10,7 @@ import { app, nativeTheme } from "electron";
 import path from "path";
 import fs from "fs";
 import { debugError, debugPrint } from "@/modules/output";
-import { FLOW_DATA_DIR } from "@/modules/paths";
+import { LUMI_DATA_DIR } from "@/modules/paths";
 import { NobjcLibrary, NobjcObject, callFunction } from "objc-js";
 
 // Lazily initialize Objective-C frameworks to prevent issues on non-macOS or during testing
@@ -57,9 +57,9 @@ function NSClassFromString(aClassName: NobjcObject): NobjcObject | null {
 // Shared-file path for DockTilePlugin communication
 // ---------------------------------------------------------------------------
 
-const SHARED_DIR = FLOW_DATA_DIR;
+const SHARED_DIR = LUMI_DATA_DIR;
 const SHARED_FILE = path.join(SHARED_DIR, "dock-tile-icon-path");
-const DOCK_TILE_UPDATE_NOTIFICATIONS = ["dev.lumi.browser.dock-tile.update", "dev.iamevan.flow.dock-tile.update"];
+const DOCK_TILE_UPDATE_NOTIFICATIONS = ["dev.lumi.browser.dock-tile.update"];
 
 // ---------------------------------------------------------------------------
 // App-bundle path resolution

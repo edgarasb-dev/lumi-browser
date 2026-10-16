@@ -18,12 +18,12 @@ export const FavouriteButton = memo(function FavouriteButton() {
       return;
     }
 
-    flow.favourites.isFavourite(addressUrl).then((favorited) => {
+    lumi.favourites.isFavourite(addressUrl).then((favorited) => {
       setIsFav(favorited);
     });
 
-    const unsub = flow.favourites.onFavouritesChanged(() => {
-      flow.favourites.isFavourite(addressUrl).then((favorited) => {
+    const unsub = lumi.favourites.onFavouritesChanged(() => {
+      lumi.favourites.isFavourite(addressUrl).then((favorited) => {
         setIsFav(favorited);
       });
     });
@@ -42,10 +42,10 @@ export const FavouriteButton = memo(function FavouriteButton() {
       setTimeout(() => setIsAnimating(false), 300);
 
       if (isFav) {
-        await flow.favourites.removeFavourite(addressUrl);
+        await lumi.favourites.removeFavourite(addressUrl);
         setIsFav(false);
       } else {
-        await flow.favourites.addFavourite(focusedTab?.title || addressUrl, addressUrl, focusedTab?.faviconURL);
+        await lumi.favourites.addFavourite(focusedTab?.title || addressUrl, addressUrl, focusedTab?.faviconURL);
         setIsFav(true);
       }
     },
@@ -61,9 +61,9 @@ export const FavouriteButton = memo(function FavouriteButton() {
           setIsAnimating(true);
           setTimeout(() => setIsAnimating(false), 300);
           if (isFav) {
-            flow.favourites.removeFavourite(addressUrl).then(() => setIsFav(false));
+            lumi.favourites.removeFavourite(addressUrl).then(() => setIsFav(false));
           } else {
-            flow.favourites
+            lumi.favourites
               .addFavourite(focusedTab?.title || addressUrl, addressUrl, focusedTab?.faviconURL)
               .then(() => setIsFav(true));
           }

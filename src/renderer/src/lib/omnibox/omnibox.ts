@@ -75,27 +75,27 @@ export class Omnibox {
   public openMatch(autocompleteMatch: AutocompleteMatch, whereToOpen: "current" | "new_tab"): void {
     if (autocompleteMatch.type === "open-tab") {
       const [, tabId] = autocompleteMatch.destinationUrl.split(":");
-      flow.tabs.switchToTab(parseInt(tabId));
+      lumi.tabs.switchToTab(parseInt(tabId));
     } else if (autocompleteMatch.type === "pedal") {
       const pedalAction = autocompleteMatch.destinationUrl;
       // Execute the pedal action
       if (pedalAction === "open_settings") {
-        flow.windows.openSettingsWindow();
+        lumi.windows.openSettingsWindow();
       } else if (pedalAction === "open_new_window") {
-        flow.browser.createWindow();
+        lumi.browser.createWindow();
       } else if (pedalAction === "open_incognito_window") {
-        flow.browser.createIncognitoWindow();
+        lumi.browser.createIncognitoWindow();
       } else if (pedalAction === "open_extensions") {
-        flow.tabs.newTab("flow://extensions", true);
+        lumi.tabs.newTab("lumi://extensions", true);
       } else if (pedalAction === "open_history") {
-        flow.tabs.newTab("flow://history", true);
+        lumi.tabs.newTab("lumi://history", true);
       }
     } else {
       const url = autocompleteMatch.destinationUrl;
       if (whereToOpen === "current") {
-        flow.navigation.goTo(url, undefined, true);
+        lumi.navigation.goTo(url, undefined, true);
       } else {
-        flow.tabs.newTab(url, true, undefined, true);
+        lumi.tabs.newTab(url, true, undefined, true);
       }
     }
   }

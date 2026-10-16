@@ -8,7 +8,7 @@ import { NewTabButton } from "./new-tab-button";
 import { TabGroup } from "./tab-group";
 import { TabDropTarget } from "./tab-drop-target";
 import { AnimatePresence } from "motion/react";
-import type { Space } from "~/flow/interfaces/sessions/spaces";
+import type { Space } from "~/lumi/interfaces/sessions/spaces";
 import { cn, hex_is_light } from "@/lib/utils";
 import { PinGrid } from "@/components/browser-ui/browser-sidebar/_components/pin-grid/normal/pin-grid";
 import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
@@ -138,7 +138,7 @@ export function SpacePagesCarousel() {
   }, []);
 
   const moveTab = useCallback((tabId: number, newPosition: number) => {
-    flow.tabs.moveTab(tabId, newPosition);
+    lumi.tabs.moveTab(tabId, newPosition);
   }, []);
 
   const currentIndex = useMemo(() => {

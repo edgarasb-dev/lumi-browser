@@ -1,7 +1,7 @@
 import { browserWindowsManager, windowsController } from "@/controllers/windows-controller";
 import { debugPrint } from "@/modules/output";
 import { ipcMain } from "electron";
-import type { OmniboxOpenParams } from "~/flow/interfaces/browser/omnibox";
+import type { OmniboxOpenParams } from "~/lumi/interfaces/browser/omnibox";
 
 ipcMain.on("omnibox:show", (event, bounds: Electron.Rectangle | null, params: OmniboxOpenParams | null) => {
   debugPrint(

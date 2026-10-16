@@ -15,7 +15,7 @@ const execFileAsync = promisify(execFile);
  * @param {string} appOutDir - The output directory containing the .app
  */
 export async function compileDockTilePlugin(appOutDir) {
-  console.log("\nCompiling FlowDockTilePlugin");
+  console.log("\nCompiling LumiDockTilePlugin");
 
   const dirname = process.cwd();
 
@@ -29,7 +29,7 @@ export async function compileDockTilePlugin(appOutDir) {
   const appPath = path.join(appOutDir, appName);
 
   // Source paths
-  const sourceFile = path.join(dirname, "build", "dock-tile-plugin", "FlowDockTilePlugin.m");
+  const sourceFile = path.join(dirname, "build", "dock-tile-plugin", "LumiDockTilePlugin.m");
   const infoPlist = path.join(dirname, "build", "dock-tile-plugin", "Info.plist");
 
   // Target bundle structure
@@ -73,9 +73,9 @@ export async function compileDockTilePlugin(appOutDir) {
     const { stdout, stderr } = await execFileAsync("clang", clangArgs);
     if (stdout) console.log(stdout);
     if (stderr) console.warn(stderr);
-    console.log(`Successfully compiled FlowDockTilePlugin to ${targetBinary}`);
+    console.log(`Successfully compiled LumiDockTilePlugin to ${targetBinary}`);
   } catch (error) {
-    console.error(`Failed to compile FlowDockTilePlugin: ${error.message}`);
+    console.error(`Failed to compile LumiDockTilePlugin: ${error.message}`);
     if (error.stderr) console.error(error.stderr);
     throw error;
   }

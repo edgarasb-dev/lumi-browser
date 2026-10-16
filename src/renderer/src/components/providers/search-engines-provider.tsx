@@ -33,10 +33,10 @@ export const SearchEnginesProvider = ({ children }: SearchEnginesProviderProps) 
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchEngines = useCallback(async () => {
-    if (!flow || !flow.searchEngines) return;
+    if (!lumi || !lumi.searchEngines) return;
     try {
-      const engines = await flow.searchEngines.getSearchEngines();
-      const def = await flow.searchEngines.getDefaultSearchEngine();
+      const engines = await lumi.searchEngines.getSearchEngines();
+      const def = await lumi.searchEngines.getDefaultSearchEngine();
       setSearchEngines(engines);
       setDefaultSearchEngineState(def);
     } catch (error) {
@@ -49,8 +49,8 @@ export const SearchEnginesProvider = ({ children }: SearchEnginesProviderProps) 
   useEffect(() => {
     fetchEngines();
 
-    if (flow && flow.searchEngines) {
-      const unsub = flow.searchEngines.onSearchEnginesChanged((engines) => {
+    if (lumi && lumi.searchEngines) {
+      const unsub = lumi.searchEngines.onSearchEnginesChanged((engines) => {
         setSearchEngines(engines);
         const def = engines.find((e) => e.isDefault) || engines[0] || null;
         setDefaultSearchEngineState(def);
@@ -62,8 +62,8 @@ export const SearchEnginesProvider = ({ children }: SearchEnginesProviderProps) 
 
   const setDefaultSearchEngine = useCallback(
     async (id: string) => {
-      if (!flow?.searchEngines) return false;
-      const success = await flow.searchEngines.setDefaultSearchEngine(id);
+      if (!lumi?.searchEngines) return false;
+      const success = await lumi.searchEngines.setDefaultSearchEngine(id);
       if (success) {
         await fetchEngines();
       }
@@ -74,8 +74,8 @@ export const SearchEnginesProvider = ({ children }: SearchEnginesProviderProps) 
 
   const addSearchEngine = useCallback(
     async (engine: SearchEngineInput) => {
-      if (!flow?.searchEngines) return null;
-      const newEngine = await flow.searchEngines.addSearchEngine(engine);
+      if (!lumi?.searchEngines) return null;
+      const newEngine = await lumi.searchEngines.addSearchEngine(engine);
       if (newEngine) {
         await fetchEngines();
       }
@@ -86,8 +86,8 @@ export const SearchEnginesProvider = ({ children }: SearchEnginesProviderProps) 
 
   const updateSearchEngine = useCallback(
     async (id: string, engine: Partial<SearchEngineInput>) => {
-      if (!flow?.searchEngines) return false;
-      const success = await flow.searchEngines.updateSearchEngine(id, engine);
+      if (!lumi?.searchEngines) return false;
+      const success = await lumi.searchEngines.updateSearchEngine(id, engine);
       if (success) {
         await fetchEngines();
       }
@@ -98,8 +98,8 @@ export const SearchEnginesProvider = ({ children }: SearchEnginesProviderProps) 
 
   const deleteSearchEngine = useCallback(
     async (id: string) => {
-      if (!flow?.searchEngines) return false;
-      const success = await flow.searchEngines.deleteSearchEngine(id);
+      if (!lumi?.searchEngines) return false;
+      const success = await lumi.searchEngines.deleteSearchEngine(id);
       if (success) {
         await fetchEngines();
       }
@@ -109,8 +109,8 @@ export const SearchEnginesProvider = ({ children }: SearchEnginesProviderProps) 
   );
 
   const resetSearchEngines = useCallback(async () => {
-    if (!flow?.searchEngines) return false;
-    const success = await flow.searchEngines.resetSearchEngines();
+    if (!lumi?.searchEngines) return false;
+    const success = await lumi.searchEngines.resetSearchEngines();
     if (success) {
       await fetchEngines();
     }

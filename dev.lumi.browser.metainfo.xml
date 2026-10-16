@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.lumi.browser</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Lumi</name>
+  <summary>Cleaner browsing, sharper focus</summary>
+
+  <description>
+    <p>
+      Lumi is an opinionated modern browser focused on productivity and privacy. With a clean, minimalistic user interface, it helps you focus on your work and get things done quickly.
+    </p>
+    <p>Features that make it stand out:</p>
+    <ul>
+      <li>Clean, collapsible sidebar and horizontal topbar layouts</li>
+      <li>Spaces to organise your work</li>
+      <li>Command palette to quickly open a new tab, bookmark, or history</li>
+      <li>Supports streaming services via Widevine DRM</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">dev.lumi.browser.desktop</launchable>
+
+  <url type="homepage">https://github.com/edgarasb-dev/lumi-browser</url>
+  <url type="bugtracker">https://github.com/edgarasb-dev/lumi-browser/issues</url>
+  <url type="vcs-browser">https://github.com/edgarasb-dev/lumi-browser</url>
+
+  <developer id="dev.lumi">
+    <name>Lumi Contributors</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <branding>
+    <color type="primary" scheme_preference="light">#f5f5f5</color>
+    <color type="primary" scheme_preference="dark">#1a1a2e</color>
+  </branding>
+
+  <requires>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <display_length compare="ge">768</display_length>
+  </requires>
+
+  <releases>
+    <release version="0.1.2" date="2026-10-16">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.2</url>
+      <description>
+        <p>Complete legacy Flow protocol eradication, window.lumi API exclusive namespace, zero-alias refactor, and AppStream metadata.</p>
+      </description>
+    </release>
+    <release version="0.1.1" date="2026-10-14">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases</url>
+    </release>
+    <release version="0.1.0" date="2026-10-12">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases</url>
+    </release>
+  </releases>
+
+  <categories>
+    <category>Network</category>
+    <category>WebBrowser</category>
+  </categories>
+
+  <provides>
+    <binary>lumi</binary>
+  </provides>
+</component>

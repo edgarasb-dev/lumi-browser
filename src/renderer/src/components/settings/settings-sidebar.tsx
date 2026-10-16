@@ -38,7 +38,7 @@ export function SettingsSidebar({
   const [appVersion, setAppVersion] = useState<string>("");
 
   useEffect(() => {
-    flow.app
+    lumi.app
       .getAppInfo()
       .then((info) => setAppVersion(info.app_version))
       .catch((err) => console.error("Failed to fetch app info:", err));

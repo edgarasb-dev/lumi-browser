@@ -6,8 +6,8 @@ import { SpaceCard } from "./space-card";
 import { UILayer } from "~/layers";
 import { SpaceEditor } from "./space-editor";
 import { CreateSpaceDialog } from "./space-dialogs";
-import type { Space } from "~/flow/interfaces/sessions/spaces";
-import type { Profile } from "~/flow/interfaces/sessions/profiles";
+import type { Space } from "~/lumi/interfaces/sessions/spaces";
+import type { Profile } from "~/lumi/interfaces/sessions/profiles";
 import { Reorder, useDragControls } from "motion/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -42,8 +42,8 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
     setIsLoading(true);
     try {
       const [fetchedProfiles, fetchedSpaces] = await Promise.all([
-        flow.profiles.getProfiles(),
-        flow.spaces.getSpaces()
+        lumi.profiles.getProfiles(),
+        lumi.spaces.getSpaces()
       ]);
       const internalProfileIds = new Set(
         fetchedProfiles.filter((profile) => profile.internal).map((profile) => profile.id)
@@ -101,7 +101,7 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
         icon: "Globe"
       };
 
-      const result = await flow.spaces.createSpace(selectedProfile, spaceData.name);
+      const result = await lumi.spaces.createSpace(selectedProfile, spaceData.name);
       console.log("Space creation result:", result);
 
       // Clear the form and close the dialog
@@ -130,7 +130,7 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
 
     try {
       // Call the API to persist the new order
-      await flow.spaces.reorderSpaces(orderMap);
+      await lumi.spaces.reorderSpaces(orderMap);
     } catch (error) {
       console.error("Failed to reorder spaces:", error);
     }

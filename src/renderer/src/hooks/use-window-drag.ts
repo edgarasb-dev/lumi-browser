@@ -34,7 +34,7 @@ export function useWindowDrag(options?: UseWindowDragOptions) {
           hasDraggedRef.current = true;
           optionsRef.current?.onDragStart?.();
         }
-        flow.interface.moveWindowBy(dx, dy);
+        lumi.interface.moveWindowBy(dx, dy);
         startPosRef.current = { x: e.screenX, y: e.screenY };
       }
     };

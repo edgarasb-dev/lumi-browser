@@ -6,13 +6,13 @@ import path from "path";
 import Database from "better-sqlite3";
 import { net, Session } from "electron";
 import { createHash } from "crypto";
-import { FLOW_DATA_DIR } from "./paths";
+import { LUMI_DATA_DIR } from "./paths";
 import sharp from "sharp";
 import { debugError, debugPrint } from "./output";
 import { FLAGS } from "@/modules/flags";
 import { parseICO } from "icojs";
 
-const dbPath = path.join(FLOW_DATA_DIR, "favicons.db");
+const dbPath = path.join(LUMI_DATA_DIR, "favicons.db");
 let db: Database.Database | null = null;
 
 function getDb(): Database.Database {

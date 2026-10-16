@@ -3,22 +3,22 @@ import type { SearchEngine } from "~/types/search-engines";
 let currentDefaultEngine: SearchEngine | null = null;
 let allSearchEngines: SearchEngine[] = [];
 
-if (typeof window !== "undefined" && typeof flow !== "undefined" && flow?.searchEngines) {
-  flow.searchEngines
+if (typeof window !== "undefined" && typeof lumi !== "undefined" && lumi?.searchEngines) {
+  lumi.searchEngines
     .getDefaultSearchEngine()
     .then((engine) => {
       currentDefaultEngine = engine;
     })
     .catch(() => {});
 
-  flow.searchEngines
+  lumi.searchEngines
     .getSearchEngines()
     .then((engines) => {
       allSearchEngines = engines;
     })
     .catch(() => {});
 
-  flow.searchEngines.onSearchEnginesChanged((engines) => {
+  lumi.searchEngines.onSearchEnginesChanged((engines) => {
     allSearchEngines = engines;
     const def = engines.find((e) => e.isDefault) || engines[0] || null;
     currentDefaultEngine = def;

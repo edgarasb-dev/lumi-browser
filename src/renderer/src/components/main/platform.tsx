@@ -98,7 +98,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     // Because of electron preload scripts not running in iframes
     // https://www.google.com/search?q=electron+preload+not+working+in+iframe
     try {
-      const foundPlatform = flow.app.getPlatform();
+      const foundPlatform = lumi.app.getPlatform();
 
       if (foundPlatform === "win32") {
         setPlatform("win32");

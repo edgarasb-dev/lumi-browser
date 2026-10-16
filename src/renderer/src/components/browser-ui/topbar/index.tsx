@@ -30,26 +30,26 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
   const noFavicon = !tab.faviconURL || isFaviconError;
 
   const handleClick = useCallback(() => {
-    flow.tabs.switchToTab(tab.id);
+    lumi.tabs.switchToTab(tab.id);
   }, [tab.id]);
 
   const handleClose = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       setIsPreviewOpen(false);
-      flow.tabs.closeTab(tab.id);
+      lumi.tabs.closeTab(tab.id);
     },
     [tab.id]
   );
 
   const handleContextMenu = useCallback(() => {
-    flow.tabs.showContextMenu(tab.id);
+    lumi.tabs.showContextMenu(tab.id);
   }, [tab.id]);
 
   const handleToggleMute = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      flow.tabs.setTabMuted(tab.id, !tab.muted);
+      lumi.tabs.setTabMuted(tab.id, !tab.muted);
     },
     [tab.id, tab.muted]
   );
@@ -156,10 +156,10 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
         }}
         onCloseTab={() => {
           setIsPreviewOpen(false);
-          if (tab.id) flow.tabs.closeTab(tab.id);
+          if (tab.id) lumi.tabs.closeTab(tab.id);
         }}
         onToggleMute={() => {
-          if (tab.id) flow.tabs.setTabMuted(tab.id, !tab.muted);
+          if (tab.id) lumi.tabs.setTabMuted(tab.id, !tab.muted);
         }}
       />
     </>
@@ -199,9 +199,9 @@ export function TopbarLayout() {
 
   const handleNewTab = useCallback(() => {
     if (currentSpace) {
-      flow.tabs.newTab(undefined, true, currentSpace.id);
+      lumi.tabs.newTab(undefined, true, currentSpace.id);
     } else {
-      flow.newTab.open();
+      lumi.newTab.open();
     }
   }, [currentSpace]);
 

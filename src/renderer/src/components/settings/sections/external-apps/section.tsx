@@ -12,7 +12,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { WebsiteFavicon } from "@/components/main/website-favicon";
-import { ExternalAppPermission } from "~/flow/interfaces/settings/openExternal";
+import { ExternalAppPermission } from "~/lumi/interfaces/settings/openExternal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -141,7 +141,7 @@ export function ExternalAppsSettings() {
   const revalidatePermissions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedPermissions = await flow.openExternal.getAlwaysOpenExternal();
+      const fetchedPermissions = await lumi.openExternal.getAlwaysOpenExternal();
       setPermissions(fetchedPermissions);
     } catch (error) {
       console.error("Failed to fetch permissions:", error);
@@ -155,7 +155,7 @@ export function ExternalAppsSettings() {
   const revokePermission = useCallback(
     async (url: string, protocol: string) => {
       try {
-        const success = await flow.openExternal.unsetAlwaysOpenExternal(url, protocol);
+        const success = await lumi.openExternal.unsetAlwaysOpenExternal(url, protocol);
         if (success) {
           toast.success("Permission revoked!");
           revalidatePermissions();

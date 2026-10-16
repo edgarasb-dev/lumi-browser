@@ -16,39 +16,39 @@ import type { SharedExtensionData } from "~/types/extensions";
 import type { TabData, WindowTabsData } from "~/types/tabs";
 import type { PinnedTabData } from "~/types/pinned-tabs";
 import type { UpdateStatus } from "~/types/updates";
-import type { WindowState } from "~/flow/types";
+import type { WindowState } from "~/lumi/types";
 
 // API TYPES //
-import { FlowBrowserAPI } from "~/flow/interfaces/browser/browser";
-import { FlowPageAPI } from "~/flow/interfaces/browser/page";
-import { FlowNavigationAPI } from "~/flow/interfaces/browser/navigation";
-import { FlowInterfaceAPI } from "~/flow/interfaces/browser/interface";
-import { FlowProfilesAPI } from "~/flow/interfaces/sessions/profiles";
-import { FlowSpacesAPI } from "~/flow/interfaces/sessions/spaces";
-import { FlowAppAPI } from "~/flow/interfaces/app/app";
-import { FlowIconsAPI } from "~/flow/interfaces/settings/icons";
-import { FlowNewTabAPI } from "~/flow/interfaces/browser/newTab";
-import { FlowOpenExternalAPI } from "~/flow/interfaces/settings/openExternal";
-import { FlowOnboardingAPI } from "~/flow/interfaces/settings/onboarding";
-import { FlowSearchEnginesAPI } from "~/flow/interfaces/settings/search-engines";
+import { LumiBrowserAPI } from "~/lumi/interfaces/browser/browser";
+import { LumiPageAPI } from "~/lumi/interfaces/browser/page";
+import { LumiNavigationAPI } from "~/lumi/interfaces/browser/navigation";
+import { LumiInterfaceAPI } from "~/lumi/interfaces/browser/interface";
+import { LumiProfilesAPI } from "~/lumi/interfaces/sessions/profiles";
+import { LumiSpacesAPI } from "~/lumi/interfaces/sessions/spaces";
+import { LumiAppAPI } from "~/lumi/interfaces/app/app";
+import { LumiIconsAPI } from "~/lumi/interfaces/settings/icons";
+import { LumiNewTabAPI } from "~/lumi/interfaces/browser/newTab";
+import { LumiOpenExternalAPI } from "~/lumi/interfaces/settings/openExternal";
+import { LumiOnboardingAPI } from "~/lumi/interfaces/settings/onboarding";
+import { LumiSearchEnginesAPI } from "~/lumi/interfaces/settings/search-engines";
 import type { SearchEngine, SearchEngineInput } from "~/types/search-engines";
-import type { FlowOmniboxAPI, OmniboxOpenParams } from "~/flow/interfaces/browser/omnibox";
-import { FlowSettingsAPI } from "~/flow/interfaces/settings/settings";
-import { FlowWindowsAPI } from "~/flow/interfaces/app/windows";
-import { FlowExtensionsAPI } from "~/flow/interfaces/app/extensions";
-import { FlowTabsAPI } from "~/flow/interfaces/browser/tabs";
-import { FlowPinnedTabsAPI } from "~/flow/interfaces/browser/pinned-tabs";
-import { FlowUpdatesAPI } from "~/flow/interfaces/app/updates";
-import { FlowActionsAPI } from "~/flow/interfaces/app/actions";
-import { FlowShortcutsAPI, ShortcutsData } from "~/flow/interfaces/app/shortcuts";
-import { FlowFindInPageAPI, FindInPageResult } from "~/flow/interfaces/browser/find-in-page";
-import { FlowHistoryAPI } from "~/flow/interfaces/browser/history";
-import { FlowPasskeyAPI } from "~/flow/interfaces/browser/passkey";
+import type { LumiOmniboxAPI, OmniboxOpenParams } from "~/lumi/interfaces/browser/omnibox";
+import { LumiSettingsAPI } from "~/lumi/interfaces/settings/settings";
+import { LumiWindowsAPI } from "~/lumi/interfaces/app/windows";
+import { LumiExtensionsAPI } from "~/lumi/interfaces/app/extensions";
+import { LumiTabsAPI } from "~/lumi/interfaces/browser/tabs";
+import { LumiPinnedTabsAPI } from "~/lumi/interfaces/browser/pinned-tabs";
+import { LumiUpdatesAPI } from "~/lumi/interfaces/app/updates";
+import { LumiActionsAPI } from "~/lumi/interfaces/app/actions";
+import { LumiShortcutsAPI, ShortcutsData } from "~/lumi/interfaces/app/shortcuts";
+import { LumiFindInPageAPI, FindInPageResult } from "~/lumi/interfaces/browser/find-in-page";
+import { LumiHistoryAPI } from "~/lumi/interfaces/browser/history";
+import { LumiPasskeyAPI } from "~/lumi/interfaces/browser/passkey";
 import type { ConditionalPasskeyRequest, PasskeyCredential } from "~/types/passkey";
-import { FlowPromptsAPI } from "~/flow/interfaces/browser/prompts";
+import { LumiPromptsAPI } from "~/lumi/interfaces/browser/prompts";
 import type { ActivePrompt } from "~/types/prompts";
-import { FlowContentBlockerAPI } from "~/flow/interfaces/browser/content-blocker";
-import { FlowFavouritesAPI, Favourite } from "~/flow/interfaces/browser/favourites";
+import { LumiContentBlockerAPI } from "~/lumi/interfaces/browser/content-blocker";
+import { LumiFavouritesAPI, Favourite } from "~/lumi/interfaces/browser/favourites";
 
 // const isIFrame = !process.isMainFrame;
 
@@ -64,25 +64,25 @@ function isLocation(protocol: string, hostname: string) {
 type Permission = "all" | "app" | "browser" | "session" | "settings";
 
 function hasPermission(permission: Permission) {
-  const isFlowProtocol = isProtocol("flow:");
-  const isFlowInternalProtocol = isProtocol("flow-internal:");
+  const isLumiProtocol = isProtocol("lumi:");
+  const isLumiInternalProtocol = isProtocol("lumi-internal:");
 
-  const isInternalProtocols = isFlowInternalProtocol || isFlowProtocol;
+  const isInternalProtocols = isLumiInternalProtocol || isLumiProtocol;
 
   // Browser UI
-  const isMainUI = isLocation("flow-internal:", "main-ui");
-  const isPopupUI = isLocation("flow-internal:", "popup-ui");
+  const isMainUI = isLocation("lumi-internal:", "main-ui");
+  const isPopupUI = isLocation("lumi-internal:", "popup-ui");
   const isBrowserUI = isMainUI || isPopupUI;
 
   // Windows
-  const isNewTab = isLocation("flow:", "new-tab");
-  const isOmniboxUI = isLocation("flow-internal:", "omnibox");
-  const isOmniboxDebug = isLocation("flow:", "omnibox");
+  const isNewTab = isLocation("lumi:", "new-tab");
+  const isOmniboxUI = isLocation("lumi-internal:", "omnibox");
+  const isOmniboxDebug = isLocation("lumi:", "omnibox");
   const isOmnibox = isOmniboxUI || isNewTab || isOmniboxDebug;
 
   // Extensions
-  const isExtensions = isLocation("flow:", "extensions");
-  const isHistoryPage = isLocation("flow:", "history");
+  const isExtensions = isLocation("lumi:", "extensions");
+  const isHistoryPage = isLocation("lumi:", "history");
 
   switch (permission) {
     case "all":
@@ -92,7 +92,7 @@ function hasPermission(permission: Permission) {
     case "browser":
       return isBrowserUI || isOmnibox || isHistoryPage;
     case "session":
-      return isFlowInternalProtocol || isOmnibox || isBrowserUI;
+      return isLumiInternalProtocol || isOmnibox || isBrowserUI;
     case "settings":
       return isInternalProtocols;
     default:
@@ -132,7 +132,7 @@ function polyfillPopup() {
       throw new Error("Invalid arguments: x and y must be provided as numbers");
     }
 
-    flow.interface.moveWindowBy(x, y);
+    lumi.interface.moveWindowBy(x, y);
   };
 
   window.moveTo = (x: number, y: number) => {
@@ -140,7 +140,7 @@ function polyfillPopup() {
       throw new Error("Invalid arguments: x and y must be provided as numbers");
     }
 
-    flow.interface.moveWindowTo(x, y);
+    lumi.interface.moveWindowTo(x, y);
   };
 
   window.resizeBy = (width: number, height: number) => {
@@ -148,7 +148,7 @@ function polyfillPopup() {
       throw new Error("Invalid arguments: width and height must be provided as numbers");
     }
 
-    flow.interface.resizeWindowBy(width, height);
+    lumi.interface.resizeWindowBy(width, height);
   };
 
   window.resizeTo = (width: number, height: number) => {
@@ -156,7 +156,7 @@ function polyfillPopup() {
       throw new Error("Invalid arguments: width and height must be provided as numbers");
     }
 
-    flow.interface.resizeWindowTo(width, height);
+    lumi.interface.resizeWindowTo(width, height);
   };
 }
 
@@ -214,7 +214,7 @@ function wrapAPI<T extends object>(
         }
 
         if (noPermission) {
-          throw new Error(`Permission denied: flow.${permission}.${key}()`);
+          throw new Error(`Permission denied: lumi.${permission}.${key}()`);
         }
 
         return value(...args);
@@ -228,7 +228,7 @@ function wrapAPI<T extends object>(
 }
 
 // BROWSER API //
-const browserAPI: FlowBrowserAPI = {
+const browserAPI: LumiBrowserAPI = {
   loadProfile: async (profileId: string) => {
     return ipcRenderer.send("browser:load-profile", profileId);
   },
@@ -244,7 +244,7 @@ const browserAPI: FlowBrowserAPI = {
 };
 
 // TABS API //
-const tabsAPI: FlowTabsAPI = {
+const tabsAPI: LumiTabsAPI = {
   getData: async () => {
     return ipcRenderer.invoke("tabs:get-data");
   },
@@ -324,7 +324,7 @@ const tabsAPI: FlowTabsAPI = {
 };
 
 // PINNED TABS API //
-const pinnedTabsAPI: FlowPinnedTabsAPI = {
+const pinnedTabsAPI: LumiPinnedTabsAPI = {
   getData: async () => {
     return ipcRenderer.invoke("pinned-tabs:get-data");
   },
@@ -355,7 +355,7 @@ const pinnedTabsAPI: FlowPinnedTabsAPI = {
 };
 
 // PAGE API //
-const pageAPI: FlowPageAPI = {
+const pageAPI: LumiPageAPI = {
   setPageBounds: (bounds: { x: number; y: number; width: number; height: number }) => {
     return ipcRenderer.send("page:set-bounds", bounds);
   },
@@ -365,7 +365,7 @@ const pageAPI: FlowPageAPI = {
 };
 
 // NAVIGATION API //
-const navigationAPI: FlowNavigationAPI = {
+const navigationAPI: LumiNavigationAPI = {
   getTabNavigationStatus: (tabId: number) => {
     return ipcRenderer.invoke("navigation:get-tab-status", tabId);
   },
@@ -384,7 +384,7 @@ const navigationAPI: FlowNavigationAPI = {
 };
 
 // HISTORY API //
-const historyAPI: FlowHistoryAPI = {
+const historyAPI: LumiHistoryAPI = {
   list: async () => {
     return ipcRenderer.invoke("history:list");
   },
@@ -406,7 +406,7 @@ const historyAPI: FlowHistoryAPI = {
 };
 
 // PASSKEY API //
-const passkeyAPI: FlowPasskeyAPI = {
+const passkeyAPI: LumiPasskeyAPI = {
   getConditionalRequests: async (): Promise<ConditionalPasskeyRequest[]> => {
     return ipcRenderer.invoke("passkey:get-conditional-requests");
   },
@@ -431,7 +431,7 @@ const passkeyAPI: FlowPasskeyAPI = {
 };
 
 // INTERFACE API //
-const interfaceAPI: FlowInterfaceAPI = {
+const interfaceAPI: LumiInterfaceAPI = {
   setWindowButtonPosition: (position: { x: number; y: number }) => {
     return ipcRenderer.send("window-button:set-position", position);
   },
@@ -441,18 +441,18 @@ const interfaceAPI: FlowInterfaceAPI = {
   onToggleSidebar: (callback: () => void) => {
     return listenOnIPCChannel("sidebar:on-toggle", callback);
   },
-  onCursorAtEdge: (callback: (event: import("~/flow/interfaces/browser/interface").CursorEdgeEvent) => void) => {
+  onCursorAtEdge: (callback: (event: import("~/lumi/interfaces/browser/interface").CursorEdgeEvent) => void) => {
     return listenOnIPCChannel("interface:cursor-at-edge", callback);
   },
   setComponentWindowBounds: (componentId: string, bounds: Electron.Rectangle) => {
     return ipcRenderer.send("interface:set-component-window-bounds", componentId, bounds);
   },
   allocateComponentWindow: (
-    ...[componentId, layerType, visible]: Parameters<FlowInterfaceAPI["allocateComponentWindow"]>
+    ...[componentId, layerType, visible]: Parameters<LumiInterfaceAPI["allocateComponentWindow"]>
   ) => {
     return ipcRenderer.send("interface:allocate-component-window", componentId, layerType, visible);
   },
-  setComponentWindowVisible: (...[componentId, visible]: Parameters<FlowInterfaceAPI["setComponentWindowVisible"]>) => {
+  setComponentWindowVisible: (...[componentId, visible]: Parameters<LumiInterfaceAPI["setComponentWindowVisible"]>) => {
     return ipcRenderer.send("interface:set-component-window-visible", componentId, visible);
   },
   releaseComponentWindow: (componentId: string) => {
@@ -496,7 +496,7 @@ const interfaceAPI: FlowInterfaceAPI = {
 };
 
 // PROFILES API //
-const profilesAPI: FlowProfilesAPI = {
+const profilesAPI: LumiProfilesAPI = {
   getProfiles: async () => {
     return ipcRenderer.invoke("profiles:get-all");
   },
@@ -518,7 +518,7 @@ const profilesAPI: FlowProfilesAPI = {
 };
 
 // SPACES API //
-const spacesAPI: FlowSpacesAPI = {
+const spacesAPI: LumiSpacesAPI = {
   getSpaces: async () => {
     return ipcRenderer.invoke("spaces:get-all");
   },
@@ -561,7 +561,7 @@ const spacesAPI: FlowSpacesAPI = {
 };
 
 // APP API //
-const appAPI: FlowAppAPI = {
+const appAPI: LumiAppAPI = {
   getAppInfo: async () => {
     const appInfo: {
       version: string;
@@ -598,7 +598,7 @@ const appAPI: FlowAppAPI = {
 };
 
 // ICONS API //
-const iconsAPI: FlowIconsAPI = {
+const iconsAPI: LumiIconsAPI = {
   getIcons: async () => {
     return ipcRenderer.invoke("icons:get-all");
   },
@@ -614,14 +614,14 @@ const iconsAPI: FlowIconsAPI = {
 };
 
 // NEW TAB API //
-const newTabAPI: FlowNewTabAPI = {
+const newTabAPI: LumiNewTabAPI = {
   open: () => {
     return ipcRenderer.send("new-tab:open");
   }
 };
 
 // OPEN EXTERNAL API //
-const openExternalAPI: FlowOpenExternalAPI = {
+const openExternalAPI: LumiOpenExternalAPI = {
   getAlwaysOpenExternal: async () => {
     return ipcRenderer.invoke("open-external:get");
   },
@@ -631,7 +631,7 @@ const openExternalAPI: FlowOpenExternalAPI = {
 };
 
 // ONBOARDING API //
-const onboardingAPI: FlowOnboardingAPI = {
+const onboardingAPI: LumiOnboardingAPI = {
   finish: () => {
     return ipcRenderer.send("onboarding:finish");
   },
@@ -641,7 +641,7 @@ const onboardingAPI: FlowOnboardingAPI = {
 };
 
 // OMNIBOX API //
-const omniboxAPI: FlowOmniboxAPI = {
+const omniboxAPI: LumiOmniboxAPI = {
   show: (bounds: Electron.Rectangle | null, params: OmniboxOpenParams | null) => {
     return ipcRenderer.send("omnibox:show", bounds, params);
   },
@@ -657,7 +657,7 @@ const omniboxAPI: FlowOmniboxAPI = {
 };
 
 // FIND IN PAGE API //
-const findInPageAPI: FlowFindInPageAPI = {
+const findInPageAPI: LumiFindInPageAPI = {
   find: (text: string, options?: { forward?: boolean; findNext?: boolean }) => {
     ipcRenderer.send("find-in-page:find", text, options);
   },
@@ -680,7 +680,7 @@ const findInPageAPI: FlowFindInPageAPI = {
 };
 
 // PROMPTS API //
-const promptsAPI: FlowPromptsAPI = {
+const promptsAPI: LumiPromptsAPI = {
   getActivePrompts: async () => {
     return ipcRenderer.invoke("prompts:get-active-prompts");
   },
@@ -694,7 +694,7 @@ const promptsAPI: FlowPromptsAPI = {
 };
 
 // SETTINGS API //
-const settingsAPI: FlowSettingsAPI = {
+const settingsAPI: LumiSettingsAPI = {
   getSetting: async (settingId: string) => {
     return ipcRenderer.invoke("settings:get-setting", settingId);
   },
@@ -710,7 +710,7 @@ const settingsAPI: FlowSettingsAPI = {
 };
 
 // SEARCH ENGINES API //
-const searchEnginesAPI: FlowSearchEnginesAPI = {
+const searchEnginesAPI: LumiSearchEnginesAPI = {
   getSearchEngines: async () => {
     return ipcRenderer.invoke("search-engines:get-all");
   },
@@ -738,7 +738,7 @@ const searchEnginesAPI: FlowSearchEnginesAPI = {
 };
 
 // WINDOWS API //
-const windowsAPI: FlowWindowsAPI = {
+const windowsAPI: LumiWindowsAPI = {
   openSettingsWindow: () => {
     return ipcRenderer.send("settings:open");
   },
@@ -765,7 +765,7 @@ const windowsAPI: FlowWindowsAPI = {
 };
 
 // EXTENSIONS API //
-const extensionsAPI: FlowExtensionsAPI = {
+const extensionsAPI: LumiExtensionsAPI = {
   getAllInProfile: async (profileId: string) => {
     return ipcRenderer.invoke("extensions:get-all-in-profile", profileId);
   },
@@ -787,7 +787,7 @@ const extensionsAPI: FlowExtensionsAPI = {
 };
 
 // UPDATES API //
-const updatesAPI: FlowUpdatesAPI = {
+const updatesAPI: LumiUpdatesAPI = {
   isAutoUpdateSupported: async () => {
     return ipcRenderer.invoke("updates:is-auto-update-supported");
   },
@@ -812,7 +812,7 @@ const updatesAPI: FlowUpdatesAPI = {
 };
 
 // ACTIONS API //
-const actionsAPI: FlowActionsAPI = {
+const actionsAPI: LumiActionsAPI = {
   onCopyLink: (callback: () => void) => {
     return listenOnIPCChannel("actions:on-copy-link", callback);
   },
@@ -822,7 +822,7 @@ const actionsAPI: FlowActionsAPI = {
 };
 
 // SHORTCUTS API //
-const shortcutsAPI: FlowShortcutsAPI = {
+const shortcutsAPI: LumiShortcutsAPI = {
   getShortcuts: async () => {
     return ipcRenderer.invoke("shortcuts:get-all");
   },
@@ -838,7 +838,7 @@ const shortcutsAPI: FlowShortcutsAPI = {
 };
 
 // CONTENT BLOCKER API //
-const contentBlockerAPI: FlowContentBlockerAPI = {
+const contentBlockerAPI: LumiContentBlockerAPI = {
   getTabStats: async (tabId: number) => {
     return ipcRenderer.invoke("content-blocker:get-tab-stats", tabId);
   },
@@ -863,7 +863,7 @@ const contentBlockerAPI: FlowContentBlockerAPI = {
 };
 
 // FAVOURITES API //
-const favouritesAPI: FlowFavouritesAPI = {
+const favouritesAPI: LumiFavouritesAPI = {
   getAllFavourites: async () => {
     return ipcRenderer.invoke("favourites:get-all");
   },
@@ -881,8 +881,8 @@ const favouritesAPI: FlowFavouritesAPI = {
   }
 };
 
-// EXPOSE FLOW API //
-const flowAPI: typeof flow = {
+// EXPOSE LUMI API //
+const lumiAPI: typeof lumi = {
   // App APIs
   app: wrapAPI(appAPI, "app", {
     getPlatform: "all"
@@ -930,5 +930,4 @@ const flowAPI: typeof flow = {
   openExternal: wrapAPI(openExternalAPI, "settings"),
   onboarding: wrapAPI(onboardingAPI, "settings")
 };
-contextBridge.exposeInMainWorld("flow", flowAPI);
-contextBridge.exposeInMainWorld("lumi", flowAPI);
+contextBridge.exposeInMainWorld("lumi", lumiAPI);

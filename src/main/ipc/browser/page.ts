@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
-import { type PageLayoutParams } from "~/flow/types";
+import { type PageLayoutParams } from "~/lumi/types";
 
 export type PageBounds = {
   x: number;

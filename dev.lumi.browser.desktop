@@ -1,0 +1,20 @@
+[Desktop Entry]
+Name=Lumi
+Comment=Cleaner browsing, sharper focus
+GenericName=Web Browser
+Exec=run.sh %u
+Icon=dev.lumi.browser
+Type=Application
+StartupNotify=true
+StartupWMClass=Lumi
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;application/pdf;x-scheme-handler/http;x-scheme-handler/https;
+Actions=new-window;new-incognito-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=run.sh --new-window %u
+
+[Desktop Action new-incognito-window]
+Name=New Incognito Window
+Exec=run.sh --new-incognito-window %u

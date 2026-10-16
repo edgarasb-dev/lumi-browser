@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { NavigationEntry } from "~/flow/interfaces/browser/navigation";
+import { NavigationEntry } from "~/lumi/interfaces/browser/navigation";
 
 type NavigationEntryWithIndex = NavigationEntry & { index: number };
 
@@ -106,7 +106,7 @@ function NavigationButton({
   const onActivateHistory = useCallback(
     (entry: NavigationEntryWithIndex) => {
       if (!focusedTabId) return;
-      flow.navigation.goToNavigationEntry(focusedTabId, entry.index);
+      lumi.navigation.goToNavigationEntry(focusedTabId, entry.index);
       setOpen(false);
     },
     [focusedTabId]
@@ -114,7 +114,7 @@ function NavigationButton({
 
   const navigate = useCallback(() => {
     if (!focusedTabId || entries.length === 0) return;
-    flow.navigation.goToNavigationEntry(focusedTabId, entries[0].index);
+    lumi.navigation.goToNavigationEntry(focusedTabId, entries[0].index);
   }, [focusedTabId, entries]);
 
   const handleContextMenu = useCallback(
@@ -230,7 +230,7 @@ export function NavigationControls() {
     }
 
     let cancelled = false;
-    flow.navigation.getTabNavigationStatus(tabId).then((status) => {
+    lumi.navigation.getTabNavigationStatus(tabId).then((status) => {
       if (cancelled || !status) return;
       setCanGoBack(status.canGoBack);
       setCanGoForward(status.canGoForward);
@@ -248,12 +248,12 @@ export function NavigationControls() {
 
   const handleStopLoading = useCallback(() => {
     if (!focusedTabId) return;
-    flow.navigation.stopLoadingTab(focusedTabId);
+    lumi.navigation.stopLoadingTab(focusedTabId);
   }, [focusedTabId]);
 
   const handleReload = useCallback(() => {
     if (!focusedTabId) return;
-    flow.navigation.reloadTab(focusedTabId);
+    lumi.navigation.reloadTab(focusedTabId);
   }, [focusedTabId]);
 
   return (

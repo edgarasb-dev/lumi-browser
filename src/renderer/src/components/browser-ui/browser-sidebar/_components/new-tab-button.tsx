@@ -17,7 +17,7 @@ export function NewTabButton() {
   const [isPressed, setIsPressed] = useState(false);
 
   const handleNewTab = () => {
-    flow.newTab.open();
+    lumi.newTab.open();
   };
 
   return (

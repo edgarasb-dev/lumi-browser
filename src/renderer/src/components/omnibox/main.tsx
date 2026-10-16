@@ -7,7 +7,7 @@ import { OmniboxSuggestionRow } from "@/components/omnibox/omnibox-suggestion";
 import { useSetting } from "@/components/providers/settings-provider";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { cn } from "@/lib/utils";
-import type { OmniboxOpenState } from "~/flow/interfaces/browser/omnibox";
+import type { OmniboxOpenState } from "~/lumi/interfaces/browser/omnibox";
 import "@/css/border.css";
 import { setOmniboxCurrentProfileId, setOmniboxCurrentSpaceId } from "@/lib/omnibox-new/states";
 
@@ -31,43 +31,43 @@ const OMNIBOX_SHADOW =
 function commitSuggestion(suggestion: OmniboxSuggestion, openIn: "current" | "new_tab") {
   switch (suggestion.type) {
     case "open-tab":
-      flow.tabs.switchToTab(suggestion.tabId);
+      lumi.tabs.switchToTab(suggestion.tabId);
       break;
     case "pedal": {
       const a = suggestion.action;
       if (a === "open_settings") {
-        flow.windows.openSettingsWindow();
+        lumi.windows.openSettingsWindow();
       } else if (a === "open_new_window") {
-        flow.browser.createWindow();
+        lumi.browser.createWindow();
       } else if (a === "open_incognito_window") {
-        flow.browser.createIncognitoWindow();
+        lumi.browser.createIncognitoWindow();
       } else if (a === "open_extensions") {
-        flow.tabs.newTab("flow://extensions", true);
+        lumi.tabs.newTab("lumi://extensions", true);
       } else if (a === "open_history") {
-        flow.tabs.newTab("flow://history", true);
+        lumi.tabs.newTab("lumi://history", true);
       }
       break;
     }
     case "search": {
       const url = suggestion.url;
       if (openIn === "current") {
-        flow.navigation.goTo(url, undefined, true);
+        lumi.navigation.goTo(url, undefined, true);
       } else {
-        flow.tabs.newTab(url, true, undefined, true);
+        lumi.tabs.newTab(url, true, undefined, true);
       }
       break;
     }
     case "website": {
       const url = suggestion.url;
       if (openIn === "current") {
-        flow.navigation.goTo(url, undefined, true);
+        lumi.navigation.goTo(url, undefined, true);
       } else {
-        flow.tabs.newTab(url, true, undefined, true);
+        lumi.tabs.newTab(url, true, undefined, true);
       }
       break;
     }
   }
-  flow.omnibox.hide();
+  lumi.omnibox.hide();
 }
 
 export function OmniboxMain() {
@@ -138,12 +138,12 @@ export function OmniboxMain() {
 
   useEffect(() => {
     let isMounted = true;
-    void flow.omnibox.getState().then((state) => {
+    void lumi.omnibox.getState().then((state) => {
       if (!isMounted || !state) return;
       setOpenState(state);
     });
 
-    const unsubscribe = flow.omnibox.onStateChanged((state) => {
+    const unsubscribe = lumi.omnibox.onStateChanged((state) => {
       setOpenState(state);
     });
 
@@ -213,7 +213,7 @@ export function OmniboxMain() {
 
     if (e.key === "Escape") {
       e.preventDefault();
-      flow.omnibox.hide();
+      lumi.omnibox.hide();
       return;
     }
     if (suggestions.length === 0) return;

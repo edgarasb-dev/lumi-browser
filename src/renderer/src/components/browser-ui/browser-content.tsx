@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { PageLayoutParams } from "~/flow/types";
+import { PageLayoutParams } from "~/lumi/types";
 import { cn } from "@/lib/utils";
 import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
 import { useAdaptiveTopbar } from "@/components/browser-ui/adaptive-topbar";
@@ -43,7 +43,7 @@ function BrowserContent() {
       }
     };
 
-    const unsub = flow.tabs.onPlaceholderChanged(({ snapshotId, generation, spaceId }: TabPlaceholderUpdate) => {
+    const unsub = lumi.tabs.onPlaceholderChanged(({ snapshotId, generation, spaceId }: TabPlaceholderUpdate) => {
       if (spaceId !== currentSpaceIdRef.current) {
         return;
       }
@@ -85,7 +85,7 @@ function BrowserContent() {
     setPlaceholderSnapshotId(null);
   }, [currentSpace?.id]);
 
-  const placeholderUrl = placeholderSnapshotId ? `flow-internal://tab-snapshot?id=${placeholderSnapshotId}` : null;
+  const placeholderUrl = placeholderSnapshotId ? `lumi-internal://tab-snapshot?id=${placeholderSnapshotId}` : null;
 
   // Derive sidebar visibility from the mode.
   // Floating sidebars are overlays (PortalComponent) and have zero layout impact.
@@ -108,7 +108,7 @@ function BrowserContent() {
         sidebarAnimating: isAnimating,
         contentTopOffset
       };
-      flow.page.setLayoutParams(params);
+      lumi.page.setLayoutParams(params);
     },
     [contentTopOffset, isAnimating, sidebarSide, sidebarVisible, topbarHeight, topbarVisible]
   );

@@ -1,10 +1,10 @@
 // Real Target Protocol -> Fake Browser Protocol
 const protocolReplacements = {
   "chrome-extension://": "extension://",
-  "chrome://": "flow://"
+  "chrome://": "lumi://"
 };
 
-// URLs that should not transform to flow://
+// URLs that should not transform to lumi://
 // Prefix these with chrome:// to open them in the browser
 // e.g. chrome://gpu
 const CHROME_PROTOCOL_WHITELIST = [
@@ -18,14 +18,13 @@ const CHROME_PROTOCOL_WHITELIST = [
 ];
 
 export function transformPotentialDisplayUrlToUrl(url: string): string | null {
-  // chrome:// -> flow:// (for most cases)
-  // without this case, it will try to transform every flow:// URL to chrome://, which we can't have.
+  // chrome:// -> lumi:// (for most cases)
   const urlObject = URL.parse(url);
-  if (urlObject && ["chrome:", "flow:"].includes(urlObject.protocol)) {
+  if (urlObject && ["chrome:", "lumi:"].includes(urlObject.protocol)) {
     if (CHROME_PROTOCOL_WHITELIST.includes(urlObject.hostname)) {
       urlObject.protocol = "chrome:";
     } else {
-      urlObject.protocol = "flow:";
+      urlObject.protocol = "lumi:";
     }
     return urlObject.toString();
   }
@@ -80,8 +79,8 @@ export function getURLFromInput(input: string): string | null {
 export function transformUrlToDisplayURL(url: string, allowEmpty: boolean = true): string | null {
   const urlObject = URL.parse(url);
 
-  // Error Page (flow://error)
-  if (urlObject && urlObject.protocol === "flow:" && urlObject.hostname === "error") {
+  // Error Page (lumi://error)
+  if (urlObject && urlObject.protocol === "lumi:" && urlObject.hostname === "error") {
     const erroredURL = urlObject.searchParams.get("url");
     if (erroredURL) {
       return transformUrlToDisplayURL(erroredURL, allowEmpty) ?? erroredURL;
@@ -90,15 +89,15 @@ export function transformUrlToDisplayURL(url: string, allowEmpty: boolean = true
     }
   }
 
-  // New Tab Page (flow://new-tab)
-  if (urlObject && urlObject.protocol === "flow:" && urlObject.hostname === "new-tab") {
+  // New Tab Page (lumi://new-tab)
+  if (urlObject && urlObject.protocol === "lumi:" && urlObject.hostname === "new-tab") {
     if (allowEmpty) {
       return "";
     }
   }
 
-  // PDF Viewer (flow://pdf-viewer)
-  if (urlObject && urlObject.protocol === "flow:" && urlObject.hostname === "pdf-viewer") {
+  // PDF Viewer (lumi://pdf-viewer)
+  if (urlObject && urlObject.protocol === "lumi:" && urlObject.hostname === "pdf-viewer") {
     const pdfURL = urlObject.searchParams.get("url");
     if (pdfURL) {
       return transformUrlToDisplayURL(pdfURL, allowEmpty) ?? pdfURL;

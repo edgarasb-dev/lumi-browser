@@ -52,12 +52,12 @@ export function AdaptiveTopbarProvider({ children }: AdaptiveTopbarProviderProps
   const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => {
     let updated = false;
-    flow.interface.getWindowState().then((state) => {
+    lumi.interface.getWindowState().then((state) => {
       if (!updated) {
         setIsFullscreen(state.isFullscreen);
       }
     });
-    const removeListener = flow.interface.onWindowStateChanged((state) => {
+    const removeListener = lumi.interface.onWindowStateChanged((state) => {
       setIsFullscreen(state.isFullscreen);
       updated = true;
     });

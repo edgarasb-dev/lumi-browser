@@ -21,7 +21,7 @@ export function setupBetterPdfViewer(session: Session) {
       }
 
       const { pathname } = urlObject;
-      if (pathname && pathname.toLowerCase().endsWith(".pdf") && getSettingValueById("enableFlowPdfViewer") === true) {
+      if (pathname && pathname.toLowerCase().endsWith(".pdf") && getSettingValueById("enableLumiPdfViewer") === true) {
         const response = await session.fetch(url).catch(() => null);
         if (!response) {
           return callback({});
@@ -38,12 +38,12 @@ export function setupBetterPdfViewer(session: Session) {
         addPdfResponseToCache(cacheKey, response);
 
         // Construct the local file URL
-        const localFileURL = new URL("flow://pdf-cache");
+        const localFileURL = new URL("lumi://pdf-cache");
         localFileURL.searchParams.set("url", url);
         localFileURL.searchParams.set("key", cacheKey);
 
         // Redirect to PDF viewer with the local file path
-        const viewerURL = new URL("flow://pdf-viewer");
+        const viewerURL = new URL("lumi://pdf-viewer");
         viewerURL.searchParams.set("url", url);
         viewerURL.searchParams.set("cacheURL", localFileURL.toString());
 

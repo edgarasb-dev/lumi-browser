@@ -33,7 +33,7 @@ export const TabPreviewCard = memo(function TabPreviewCard({
     try {
       if (!tab.url) return { domain: "New Tab", path: "" };
       const parsed = new URL(tab.url);
-      if (parsed.protocol === "flow:") {
+      if (parsed.protocol === "lumi:") {
         return {
           domain: "Lumi Internal",
           path: parsed.hostname || parsed.pathname
@@ -60,7 +60,7 @@ export const TabPreviewCard = memo(function TabPreviewCard({
     setIsFetching(true);
     setImageError(false);
 
-    flow.tabs
+    lumi.tabs
       .getTabPreview(tab.id)
       .then((res) => {
         if (isMounted) {
@@ -225,9 +225,9 @@ export const TabPreviewCard = memo(function TabPreviewCard({
             <button
               onClick={() => {
                 if (tab.asleep) {
-                  flow.tabs.wakeTab(tab.id);
+                  lumi.tabs.wakeTab(tab.id);
                 } else {
-                  flow.tabs.snoozeTab(tab.id);
+                  lumi.tabs.snoozeTab(tab.id);
                 }
               }}
               className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"

@@ -50,7 +50,7 @@ export function UpdateCard() {
   useEffect(() => {
     const getAppInfo = async () => {
       try {
-        const appInfo = await flow.app.getAppInfo();
+        const appInfo = await lumi.app.getAppInfo();
         setState((prev) => ({ ...prev, currentVersion: appInfo.app_version }));
       } catch (error) {
         console.error("Failed to get app info:", error);
@@ -68,7 +68,7 @@ export function UpdateCard() {
   }, [checkForUpdates, updateStatus, isAutoUpdateSupported]);
 
   const openDownloadPage = () => {
-    flow.tabs.newTab(DOWNLOAD_PAGE, true);
+    lumi.tabs.newTab(DOWNLOAD_PAGE, true);
   };
 
   const handleInstallUpdate = async () => {

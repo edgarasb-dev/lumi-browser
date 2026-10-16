@@ -8,7 +8,7 @@ export function SetAsDefaultBrowserSetting() {
 
   useEffect(() => {
     const refetchDefaultBrowser = async () => {
-      const isDefaultResult = await flow.app.getDefaultBrowser();
+      const isDefaultResult = await lumi.app.getDefaultBrowser();
       setIsDefault(isDefaultResult);
     };
 
@@ -18,7 +18,7 @@ export function SetAsDefaultBrowserSetting() {
   }, []);
 
   const setDefaultBrowser = () => {
-    flow.app.setDefaultBrowser();
+    lumi.app.setDefaultBrowser();
   };
 
   return (

@@ -313,7 +313,7 @@ ipcMain.handle("tabs:get-tab-preview", async (_event, tabId: number) => {
   }
 
   return {
-    snapshotUrl: snapshotId ? `flow-internal://tab-snapshot?id=${snapshotId}` : null
+    snapshotUrl: snapshotId ? `lumi-internal://tab-snapshot?id=${snapshotId}` : null
   };
 });
 

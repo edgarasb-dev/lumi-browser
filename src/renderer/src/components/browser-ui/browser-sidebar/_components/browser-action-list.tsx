@@ -119,7 +119,7 @@ function BrowserAction({
 
   const togglePin = useCallback(() => {
     if (!extensionId) return;
-    flow.extensions.setExtensionPinned(extensionId, !isPinned);
+    lumi.extensions.setExtensionPinned(extensionId, !isPinned);
   }, [extensionId, isPinned]);
 
   return (
@@ -156,7 +156,7 @@ export function BrowserActionList() {
   const alignment = useMemo(() => "right bottom", []);
 
   const openExtensionsPage = useCallback(() => {
-    flow.tabs.newTab("flow://extensions", true);
+    lumi.tabs.newTab("lumi://extensions", true);
     setOpen(false);
   }, []);
 

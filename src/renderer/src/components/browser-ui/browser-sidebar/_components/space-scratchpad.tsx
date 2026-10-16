@@ -22,7 +22,7 @@ export const SpaceScratchpad = memo(function SpaceScratchpad() {
   useEffect(() => {
     if (!currentSpaceId) return;
 
-    flow.spaces.getSpaceNotes(currentSpaceId).then((savedNotes) => {
+    lumi.spaces.getSpaceNotes(currentSpaceId).then((savedNotes) => {
       setContent(savedNotes || "");
       setHasNotes(!!savedNotes && savedNotes.trim().length > 0);
     });
@@ -42,7 +42,7 @@ export const SpaceScratchpad = memo(function SpaceScratchpad() {
 
       saveTimeoutRef.current = setTimeout(async () => {
         if (currentSpaceId) {
-          await flow.spaces.saveSpaceNotes(currentSpaceId, newText);
+          await lumi.spaces.saveSpaceNotes(currentSpaceId, newText);
           setIsSaving(false);
         }
       }, 400);
@@ -61,7 +61,7 @@ export const SpaceScratchpad = memo(function SpaceScratchpad() {
     if (!currentSpaceId || !content) return;
     setContent("");
     setHasNotes(false);
-    await flow.spaces.saveSpaceNotes(currentSpaceId, "");
+    await lumi.spaces.saveSpaceNotes(currentSpaceId, "");
   }, [currentSpaceId, content]);
 
   // Calculate statistics

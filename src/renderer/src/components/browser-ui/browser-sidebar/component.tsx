@@ -9,7 +9,7 @@ import { SidebarInner } from "./inner";
 import { type ImperativeResizablePanelWrapperHandle, PixelBasedResizablePanel } from "@/components/ui/resizable-extras";
 import { PortalComponent } from "@/components/portal/portal";
 import { SpaceBackgroundStylesheet } from "@/components/providers/spaces-provider";
-import { SIDEBAR_ANIMATION_CSS_EASING, SIDEBAR_ANIMATION_DURATION_MS } from "~/flow/sidebar-animation";
+import { SIDEBAR_ANIMATION_CSS_EASING, SIDEBAR_ANIMATION_DURATION_MS } from "~/lumi/sidebar-animation";
 
 // Component //
 const SIDEBAR_ANIMATION_STYLE: CSSProperties = {

@@ -23,7 +23,7 @@ export function OnboardingIcon({ advance }: { advance: OnboardingAdvanceCallback
     const fetchIcons = async () => {
       setIsLoading(true);
       try {
-        const supported = await flow.icons.isPlatformSupported();
+        const supported = await lumi.icons.isPlatformSupported();
         setIsSupported(supported);
 
         if (!supported) {
@@ -31,7 +31,7 @@ export function OnboardingIcon({ advance }: { advance: OnboardingAdvanceCallback
           return;
         }
 
-        const [icons, currentIconId] = await Promise.all([flow.icons.getIcons(), flow.icons.getCurrentIcon()]);
+        const [icons, currentIconId] = await Promise.all([lumi.icons.getIcons(), lumi.icons.getCurrentIcon()]);
 
         setSelectedIcon(currentIconId);
 
@@ -59,7 +59,7 @@ export function OnboardingIcon({ advance }: { advance: OnboardingAdvanceCallback
 
     setIsUpdating(true);
     try {
-      const success = await flow.icons.setCurrentIcon(iconId);
+      const success = await lumi.icons.setCurrentIcon(iconId);
       if (success) {
         setSelectedIcon(iconId);
         setIconOptions((prev) =>
@@ -132,7 +132,7 @@ export function OnboardingIcon({ advance }: { advance: OnboardingAdvanceCallback
                   <div className="absolute inset-0 flex items-center justify-center">
                     {icon.imageId ? (
                       <img
-                        src={`flow://asset/icons/${icon.imageId}`}
+                        src={`lumi://asset/icons/${icon.imageId}`}
                         alt={icon.name}
                         className="size-10 platform-darwin:size-12 rounded-lg shadow-lg"
                       />

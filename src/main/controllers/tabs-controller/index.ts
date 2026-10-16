@@ -19,9 +19,9 @@ import { TabGroupMode } from "~/types/tabs";
 import { FLAGS } from "@/modules/flags";
 import { quitController } from "@/controllers/quit-controller";
 import { clearPlaceholdersForTab, isSyncExcludedTab, isTabSyncEnabled, registerTabsController } from "./tab-sync";
-import { storeSnapshot } from "@/controllers/sessions-controller/protocols/_protocols/flow-internal/tab-snapshot";
+import { storeSnapshot } from "@/controllers/sessions-controller/protocols/_protocols/lumi-internal/tab-snapshot";
 
-export const NEW_TAB_URL = "flow://new-tab";
+export const NEW_TAB_URL = "lumi://new-tab";
 const ARCHIVE_CHECK_INTERVAL_MS = 10 * 1000;
 
 type TabsControllerEvents = {

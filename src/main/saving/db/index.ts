@@ -4,12 +4,12 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import path from "path";
 import fs from "fs";
 import { app } from "electron";
-import { LUMI_DATA_DIR, FLOW_DATA_DIR } from "@/modules/paths";
+import { LUMI_DATA_DIR } from "@/modules/paths";
 import { debugPrint, debugError } from "@/modules/output";
 import { pruneBrowsingHistory } from "@/saving/history/browsing-history";
 import * as schema from "./schema";
 
-const LEGACY_DB_PATH = path.join(FLOW_DATA_DIR, "flow.db");
+const LEGACY_DB_PATH = path.join(LUMI_DATA_DIR, "flow.db");
 const DB_PATH = path.join(LUMI_DATA_DIR, "lumi.db");
 
 /**

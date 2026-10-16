@@ -1,4 +1,4 @@
-import { Space } from "~/flow/interfaces/sessions/spaces";
+import { Space } from "~/lumi/interfaces/sessions/spaces";
 import { SpaceIcon } from "@/lib/phosphor-icons";
 import { cn } from "@/lib/utils";
 import { Palette } from "lucide-react";

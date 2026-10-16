@@ -61,14 +61,14 @@ export function WindowControlsLinux() {
 
   useEffect(() => {
     let updated = false;
-    flow.interface.getWindowState().then((state) => {
+    lumi.interface.getWindowState().then((state) => {
       if (!updated) {
         setIsMaximized(state.isMaximized);
         setIsFullscreen(state.isFullscreen);
       }
     });
 
-    const removeListener = flow.interface.onWindowStateChanged((state) => {
+    const removeListener = lumi.interface.onWindowStateChanged((state) => {
       setIsMaximized(state.isMaximized);
       setIsFullscreen(state.isFullscreen);
       updated = true;
@@ -83,7 +83,7 @@ export function WindowControlsLinux() {
   return (
     <div className="flex items-center gap-1">
       <button
-        onClick={() => flow.interface.minimizeWindow()}
+        onClick={() => lumi.interface.minimizeWindow()}
         className={cn(CONTROL_BUTTON_CLASSES, "hover:bg-gray-200/20 dark:hover:bg-gray-700/50")}
         title="Minimize"
       >
@@ -91,7 +91,7 @@ export function WindowControlsLinux() {
       </button>
 
       <button
-        onClick={() => flow.interface.maximizeWindow()}
+        onClick={() => lumi.interface.maximizeWindow()}
         className={cn(CONTROL_BUTTON_CLASSES, "hover:bg-gray-200/20 dark:hover:bg-gray-700/50")}
         title={isMaximized ? "Restore" : "Maximize"}
       >
@@ -99,7 +99,7 @@ export function WindowControlsLinux() {
       </button>
 
       <button
-        onClick={() => flow.interface.closeWindow()}
+        onClick={() => lumi.interface.closeWindow()}
         className={cn(CONTROL_BUTTON_CLASSES, "hover:bg-red-500 dark:hover:bg-red-500 [&:hover_svg]:stroke-white")}
         title="Close"
       >

@@ -10,14 +10,14 @@ import type {
   OmniboxOpenParams,
   OmniboxOpenState,
   OmniboxShadowPadding
-} from "~/flow/interfaces/browser/omnibox";
+} from "~/lumi/interfaces/browser/omnibox";
 import type {
-  BrowserWindow as FlowBrowserWindow,
+  BrowserWindow as LumiBrowserWindow,
   BrowserWindowType
 } from "@/controllers/windows-controller/types/browser";
 
 const omniboxes = new Map<ElectronBrowserWindow, Omnibox>();
-const OMNIBOX_URL = "flow-internal://omnibox/";
+const OMNIBOX_URL = "lumi-internal://omnibox/";
 const DEFAULT_OMNIBOX_WIDTH = 750;
 const DEFAULT_OMNIBOX_HEIGHT = 335;
 const OMNIBOX_SHADOW_PADDING = 30;
@@ -78,7 +78,7 @@ export class Omnibox {
   public layer: Layer<WebContentsView>;
 
   private window: ElectronBrowserWindow;
-  private browserWindow: FlowBrowserWindow;
+  private browserWindow: LumiBrowserWindow;
   private bounds: Electron.Rectangle | null = null;
   private ignoreBlurEvents: boolean = false;
   private blurIgnoreTimeout: NodeJS.Timeout | null = null;
@@ -92,7 +92,7 @@ export class Omnibox {
   private disabled: boolean = false;
   private isDestroyed: boolean = false;
 
-  constructor(parentWindow: FlowBrowserWindow, windowType: BrowserWindowType) {
+  constructor(parentWindow: LumiBrowserWindow, windowType: BrowserWindowType) {
     debugPrint("OMNIBOX", `Creating new omnibox for window ${parentWindow.id}`);
     const electronWindow = parentWindow.browserWindow;
     const onmiboxView = new WebContentsView({

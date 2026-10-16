@@ -8,7 +8,7 @@ import { unifiedWebRequests } from "@/controllers/sessions-controller";
 import { tabsController } from "@/controllers/tabs-controller";
 import type { Tab } from "@/controllers/tabs-controller/tab";
 import { sendMessageToListeners } from "@/ipc/listeners-manager";
-import type { BlockedRequestItem, TabBlockerStats } from "~/flow/interfaces/browser/content-blocker";
+import type { BlockedRequestItem, TabBlockerStats } from "~/lumi/interfaces/browser/content-blocker";
 
 type BlockerInstanceType = "all" | "adsAndTrackers" | "adsOnly";
 

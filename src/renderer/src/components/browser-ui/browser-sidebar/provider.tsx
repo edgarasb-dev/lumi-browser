@@ -3,7 +3,7 @@ import { useSettings } from "@/components/providers/settings-provider";
 import { generateUUID } from "@/lib/utils";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useMount } from "react-use";
-import { SIDEBAR_ANIMATION_DURATION_MS } from "~/flow/sidebar-animation";
+import { SIDEBAR_ANIMATION_DURATION_MS } from "~/lumi/sidebar-animation";
 
 // Configuration //
 export const MIN_SIDEBAR_WIDTH = 150;
@@ -257,7 +257,7 @@ export function BrowserSidebarProvider({ children, hasSidebar = true }: BrowserS
   // Helpers //
   useMount(() => {
     // Remove window buttons until the window controls component takes over.
-    flow.interface.setWindowButtonVisibility(false);
+    lumi.interface.setWindowButtonVisibility(false);
   });
 
   useEffect(() => {
@@ -276,7 +276,7 @@ export function BrowserSidebarProvider({ children, hasSidebar = true }: BrowserS
 
   // Listeners //
   useEffect(() => {
-    const removeListener = flow.interface.onToggleSidebar(() => {
+    const removeListener = lumi.interface.onToggleSidebar(() => {
       handleSetVisible(!isVisibleRef.current);
     });
     return () => {

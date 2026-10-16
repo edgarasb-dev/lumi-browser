@@ -242,7 +242,7 @@ export const BasicSettings: BasicSetting[] = [
 
   // [EXPERIMENTAL] Enable Lumi PDF Viewer
   {
-    id: "enableFlowPdfViewer",
+    id: "enableLumiPdfViewer",
     name: "Enable Lumi PDF Viewer",
     showName: true,
     type: "boolean",
@@ -313,7 +313,7 @@ export const BasicSettingCards: BasicSettingCard[] = [
   {
     title: "Experimental Settings",
     subtitle: "Experimental settings for Lumi",
-    settings: ["enableFlowPdfViewer"]
+    settings: ["enableLumiPdfViewer"]
   },
 
   // Advanced Settings Card

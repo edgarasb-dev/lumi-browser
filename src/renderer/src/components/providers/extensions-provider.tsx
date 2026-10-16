@@ -35,7 +35,7 @@ export const ExtensionsProvider = ({ dataKey = "extensions", profileId = null, c
 
   const fetchExtensions = useCallback(
     async (targetProfileId?: string | null) => {
-      if (!flow) {
+      if (!lumi) {
         return;
       }
 
@@ -48,8 +48,8 @@ export const ExtensionsProvider = ({ dataKey = "extensions", profileId = null, c
 
       try {
         const data = targetProfileId
-          ? await flow.extensions.getAllInProfile(targetProfileId)
-          : await flow.extensions.getAllInCurrentProfile();
+          ? await lumi.extensions.getAllInProfile(targetProfileId)
+          : await lumi.extensions.getAllInCurrentProfile();
 
         if (!hasExplicitProfileScope) {
           if (requestId === fetchRequestIdRef.current) {
@@ -84,9 +84,9 @@ export const ExtensionsProvider = ({ dataKey = "extensions", profileId = null, c
   }, [dataKey]);
 
   useEffect(() => {
-    if (!flow) return;
+    if (!lumi) return;
 
-    const unsubscribe = flow.extensions.onUpdated((profileId, data) => {
+    const unsubscribe = lumi.extensions.onUpdated((profileId, data) => {
       if (!hasExplicitProfileScope || currentProfileIdRef.current === profileId) {
         setExtensions(data);
       }

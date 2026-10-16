@@ -4,6 +4,7 @@
 export const LUMI_RELEASE_CODENAMES: Record<string, string> = {
   "0.1.0": "Spark",
   "0.1.1": "Spark",
+  "0.1.2": "Spark",
   "0.2.0": "Glow",
   "0.3.0": "Prism",
   "0.4.0": "Flare",

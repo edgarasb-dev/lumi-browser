@@ -54,7 +54,7 @@ export const AddressBar = memo(function AddressBar() {
       const omniboxX = hasSidebar ? rect.x : rect.x + Math.max(0, (rect.width - omniboxWidth) / 2);
       const omniboxY = hasSidebar ? rect.y : rect.bottom + 4;
 
-      flow.omnibox.show(
+      lumi.omnibox.show(
         {
           x: omniboxX,
           y: omniboxY,

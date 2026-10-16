@@ -7,7 +7,7 @@ export function AboutSettings() {
   const [version, setVersion] = useState<string>("");
 
   useEffect(() => {
-    flow.app
+    lumi.app
       .getAppInfo()
       .then((info) => setVersion(info.app_version))
       .catch((err) => console.error("Failed to load app version:", err));

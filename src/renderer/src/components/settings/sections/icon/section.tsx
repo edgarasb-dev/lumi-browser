@@ -24,7 +24,7 @@ export function IconSettings() {
       setIsLoading(true);
       try {
         // Check if platform supports icon customization
-        const supported = await flow.icons.isPlatformSupported();
+        const supported = await lumi.icons.isPlatformSupported();
         setIsSupported(supported);
 
         if (!supported) {
@@ -33,7 +33,7 @@ export function IconSettings() {
         }
 
         // Fetch both icons and current icon in parallel
-        const [icons, currentIconId] = await Promise.all([flow.icons.getIcons(), flow.icons.getCurrentIcon()]);
+        const [icons, currentIconId] = await Promise.all([lumi.icons.getIcons(), lumi.icons.getCurrentIcon()]);
 
         setSelectedIcon(currentIconId);
 
@@ -64,7 +64,7 @@ export function IconSettings() {
 
     setIsUpdating(true);
     try {
-      const success = await flow.icons.setCurrentIcon(iconId);
+      const success = await lumi.icons.setCurrentIcon(iconId);
       if (success) {
         toast.success("Icon updated!");
         setSelectedIcon(iconId);
@@ -119,12 +119,12 @@ export function IconSettings() {
                     <div className="absolute inset-0 flex items-center justify-center">
                       {icon.imageId ? (
                         <img
-                          src={`flow://asset/icons/${icon.imageId}`}
+                          src={`lumi://asset/icons/${icon.imageId}`}
                           alt={icon.name}
                           className="size-10 platform-darwin:size-12 rounded-lg shadow-lg flex items-center justify-center text-xl font-bold text-white"
                         />
                       ) : (
-                        "F"
+                        "L"
                       )}
                     </div>
                   </div>

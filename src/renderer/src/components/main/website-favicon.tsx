@@ -18,7 +18,7 @@ export function WebsiteFavicon({
   const [useCustomFavicon, setUseCustomFavicon] = useState(false);
 
   if (useLumiUtility) {
-    const srcUrl = new URL("flow://favicon");
+    const srcUrl = new URL("lumi://favicon");
     srcUrl.searchParams.set("url", url);
     return (
       <img

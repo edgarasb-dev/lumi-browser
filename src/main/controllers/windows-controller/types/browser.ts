@@ -1,7 +1,7 @@
 import { BaseWindow, BaseWindowEvents } from "@/controllers/windows-controller/types/base";
 import { app, BrowserWindow as ElectronBrowserWindow, nativeTheme, WebContents } from "electron";
 import { type PageBounds } from "@/ipc/browser/page";
-import { type PageLayoutParams } from "~/flow/types";
+import { type PageLayoutParams } from "~/lumi/types";
 import { appMenuController } from "@/controllers/app-menu-controller";
 import { LayerManager } from "@/controllers/windows-controller/layer-manager";
 import { FakeWebContentsViewLayer } from "@/controllers/windows-controller/layer-manager/fake-webcontentsview-layer";
@@ -18,7 +18,7 @@ import { hex_is_light } from "@/modules/utils";
 import { relocateTabsFromClosingWindow } from "@/controllers/tabs-controller/tab-sync";
 import { createModalTo, focusPriorities, zIndexes } from "~/layers";
 import { SidebarInterpolation } from "@/controllers/windows-controller/utils/browser/sidebar-interpolation";
-import { SIDEBAR_ANIMATION_DURATION_MS } from "~/flow/sidebar-animation";
+import { SIDEBAR_ANIMATION_DURATION_MS } from "~/lumi/sidebar-animation";
 
 export type BrowserWindowType = "normal" | "popup";
 
@@ -118,9 +118,9 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
     sessionsController.whenDefaultSessionReady().then(() => {
       // Load the correct UI
       if (type === "normal") {
-        browserWindow.loadURL("flow-internal://main-ui/");
+        browserWindow.loadURL("lumi-internal://main-ui/");
       } else if (type === "popup") {
-        browserWindow.loadURL("flow-internal://popup-ui/");
+        browserWindow.loadURL("lumi-internal://popup-ui/");
       }
       if (!app.isPackaged && !!process.env.BROWSER_WINDOW_DEVTOOLS) {
         browserWindow.webContents.openDevTools({ mode: "detach" });

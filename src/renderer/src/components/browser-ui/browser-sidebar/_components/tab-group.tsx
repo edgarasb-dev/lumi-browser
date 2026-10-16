@@ -89,14 +89,14 @@ const SidebarTab = memo(
 
     const handleClick = useCallback(() => {
       if (!tab.id) return;
-      flow.tabs.switchToTab(tab.id);
+      lumi.tabs.switchToTab(tab.id);
     }, [tab.id]);
 
     const handleCloseTab = useCallback(
       (e: React.MouseEvent) => {
         if (!tab.id) return;
         e.preventDefault();
-        flow.tabs.closeTab(tab.id);
+        lumi.tabs.closeTab(tab.id);
       },
       [tab.id]
     );
@@ -118,7 +118,7 @@ const SidebarTab = memo(
         e.stopPropagation();
         if (!tab.id) return;
         const newMutedState = !tab.muted;
-        flow.tabs.setTabMuted(tab.id, newMutedState);
+        lumi.tabs.setTabMuted(tab.id, newMutedState);
       },
       [tab.id, tab.muted]
     );
@@ -126,7 +126,7 @@ const SidebarTab = memo(
     const handleContextMenu = useCallback(
       (e: React.MouseEvent) => {
         e.preventDefault();
-        flow.tabs.showContextMenu(tab.id);
+        lumi.tabs.showContextMenu(tab.id);
       },
       [tab.id]
     );
@@ -284,10 +284,10 @@ const SidebarTab = memo(
           }}
           onCloseTab={() => {
             setIsPreviewOpen(false);
-            if (tab.id) flow.tabs.closeTab(tab.id);
+            if (tab.id) lumi.tabs.closeTab(tab.id);
           }}
           onToggleMute={() => {
-            if (tab.id) flow.tabs.setTabMuted(tab.id, !tab.muted);
+            if (tab.id) lumi.tabs.setTabMuted(tab.id, !tab.muted);
           }}
         />
       </>
@@ -373,7 +373,7 @@ export const TabGroup = memo(
           if (tabGroupData.profileId !== tabGroup.profileId) {
             // TODO: @MOVE_TABS_BETWEEN_PROFILES not supported yet
           } else {
-            flow.tabs.moveTabToWindowSpace(sourceTabId, tabGroup.spaceId, newPos);
+            lumi.tabs.moveTabToWindowSpace(sourceTabId, tabGroup.spaceId, newPos);
           }
         } else if (newPos !== undefined) {
           moveTab(sourceTabId, newPos);
