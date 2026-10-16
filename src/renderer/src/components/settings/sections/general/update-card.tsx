@@ -72,8 +72,11 @@ export function UpdateCard() {
   };
 
   const handleInstallUpdate = async () => {
-    await installUpdate();
+    const success = await installUpdate();
     setState((prev) => ({ ...prev, dialogOpen: false }));
+    if (!success) {
+      openDownloadPage();
+    }
   };
 
   const isDownloaded = updateStatus?.updateDownloaded === true;

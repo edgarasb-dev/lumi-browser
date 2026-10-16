@@ -5,6 +5,7 @@ import { getVersionUpdatedFrom, markUpdateStarted } from "@/saving/ephemeral";
 import { getSettingValueById, onSettingsCached, settingsEmitter } from "@/saving/settings";
 import { app } from "electron";
 import { autoUpdater, ProgressInfo, UpdateInfo, UpdateCheckResult } from "electron-updater";
+import { spawnSync } from "node:child_process";
 import { UpdateStatus } from "~/types/updates";
 
 // Mock Data //
@@ -45,11 +46,27 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   private mockDownloadIntervalId: NodeJS.Timeout | null = null;
   private mockBytesDownloaded: number = 0;
 
+  private isMacCodeSigned(): boolean {
+    if (process.platform !== "darwin") return true;
+    if (!app.isPackaged) return false;
+    try {
+      const result = spawnSync("codesign", ["-dvvv", process.execPath], { encoding: "utf8" });
+      const stderr = result.stderr || "";
+      // Squirrel.Mac requires an official Apple Developer ID certificate, not adhoc
+      return !stderr.includes("Signature=adhoc") && stderr.includes("Authority=Developer ID");
+    } catch {
+      return false;
+    }
+  }
+
   public isAutoUpdateSupported(platform: NodeJS.Platform): boolean {
     if (MOCK_DATA_ENABLED) return MOCK_DATA.isSupported;
 
     // Flatpak updates are managed by the Flatpak runtime, not electron-updater
     if (process.env["FLATPAK_ID"]) return false;
+
+    // macOS Squirrel.Mac requires a valid Apple Developer ID signature to replace apps in-place
+    if (platform === "darwin" && !this.isMacCodeSigned()) return false;
 
     return SUPPORTED_PLATFORMS.includes(platform);
   }
