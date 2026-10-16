@@ -252,7 +252,7 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
         provider: "github",
         owner: "edgarasb-dev",
         repo: "lumi-browser",
-        releaseType: "prerelease"
+        releaseType: "release"
       });
     } catch (err) {
       debugError("AUTO_UPDATER", "Failed to set default feed URL:", err);

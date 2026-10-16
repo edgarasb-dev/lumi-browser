@@ -38,7 +38,7 @@ jobs:
             TITLE="Lumi $TAG"
           fi
           echo "Ensuring release exists for $TAG with title: $TITLE..."
-          gh release view "$TAG" || gh release create "$TAG" --title "$TITLE" --prerelease --generate-notes || true
+          gh release view "$TAG" || gh release create "$TAG" --title "$TITLE" --generate-notes || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

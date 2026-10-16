@@ -150,7 +150,7 @@ const electronBuilderConfig: Configuration = {
     provider: "github",
     owner: "edgarasb-dev",
     repo: "lumi-browser",
-    releaseType: "prerelease"
+    releaseType: "release"
   },
   electronDist: "node_modules/electron/dist",
   afterPack: "./build/hooks/afterPack.js",

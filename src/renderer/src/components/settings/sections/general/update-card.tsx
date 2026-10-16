@@ -80,7 +80,7 @@ export function UpdateCard() {
   const updateProgress = updateStatus?.downloadProgress?.percent || 0;
   const hasChecked =
     updateStatus !== null && Boolean(updateStatus.lastChecked || updateStatus.availableUpdate || updateStatus.error);
-  const hasUpdate = updateStatus?.availableUpdate !== null;
+  const hasUpdate = Boolean(updateStatus?.availableUpdate);
   const availableVersion = updateStatus?.availableUpdate?.version || "";
   const downloadFailed = updateStatus?.downloadProgress?.percent === -1;
   const hasError = Boolean(updateStatus?.error);
