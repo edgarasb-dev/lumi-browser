@@ -2,7 +2,7 @@ import { MenuItemConstructorOptions } from "electron";
 import { getFocusedBrowserWindow } from "../helpers";
 import { tabsController } from "@/controllers/tabs-controller";
 import { getCurrentShortcut } from "@/modules/shortcuts";
-import { toggleFocusedTabPin } from "@/ipc/browser/pinned-tabs";
+import { toggleFocusedTabPin } from "@/controllers/pinned-tabs-controller/actions";
 
 export function menuNextTab() {
   const window = getFocusedBrowserWindow();

@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.1.6" date="2026-11-19">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.6</url>
+      <description>
+        <p>Fix production startup circular initialization in pinned-tabs helpers so Lumi launches reliably across all platforms.</p>
+      </description>
+    </release>
     <release version="0.1.5" date="2026-11-19">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.5</url>
       <description>

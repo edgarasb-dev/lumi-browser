@@ -1,10 +1,12 @@
 import { pinnedTabsController } from "@/controllers/pinned-tabs-controller";
+import {
+  handlePinnedTabClick,
+  pinTabToSpace,
+  unpinPinnedTabToList
+} from "@/controllers/pinned-tabs-controller/actions";
 import { tabsController } from "@/controllers/tabs-controller";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
-import { BrowserWindow } from "@/controllers/windows-controller/types";
 import { clipboard, ipcMain, Menu, MenuItem } from "electron";
-import { PinnedTabData } from "~/types/pinned-tabs";
-import { moveTabOrGroupToWindow } from "@/controllers/tabs-controller/tab-sync";
 
 // --- Change notification ---
 
@@ -38,113 +40,6 @@ tabsController.on("tab-removed", (tab) => {
 // associated tab is moved to the current space only when the user explicitly
 // clicks the pinned tab (see handlePinnedTabClick).
 
-// --- Shared helpers ---
-
-/**
- * Create a new ephemeral tab for a pinned tab in a specific space, associate it, and activate it.
- */
-async function createAndAssociatePinnedTab(
-  pinnedTabId: string,
-  pinnedTab: PinnedTabData,
-  window: BrowserWindow,
-  spaceId: string,
-  url?: string
-) {
-  const newTab = await tabsController.createTab(window.id, pinnedTab.profileId, spaceId, undefined, {
-    url: url ?? pinnedTab.defaultUrl,
-    ephemeral: true
-  });
-
-  pinnedTabsController.associateTab(pinnedTabId, spaceId, newTab.id);
-  tabsController.activateTab(newTab);
-  return newTab;
-}
-
-export function pinTabToSpace(tabId: number, position?: number): PinnedTabData | null {
-  const tab = tabsController.getTabById(tabId);
-  if (!tab || !tab.url) return null;
-
-  const existingPin = pinnedTabsController.getPinnedIdByTabId(tab.id);
-  if (existingPin) {
-    const existing = pinnedTabsController.getById(existingPin.pinnedTabId);
-    return existing;
-  }
-
-  // Detach from any glance/split group before converting to an ephemeral pinned tab
-  const existingGroup = tabsController.getTabGroupByTabId(tab.id);
-  existingGroup?.removeTab(tab.id);
-
-  const faviconUrl = tab.faviconURL ?? null;
-  const pinnedTab = pinnedTabsController.create(tab.profileId, tab.url, faviconUrl, position);
-
-  // Mark the tab as ephemeral so it won't be persisted across sessions
-  tabsController.makeTabEphemeral(tab.id);
-
-  // Associate the pinned tab with the browser tab in its current space
-  pinnedTabsController.associateTab(pinnedTab.uniqueId, tab.spaceId, tab.id);
-
-  return { ...pinnedTab, associatedTabIdsBySpace: { [tab.spaceId]: tab.id } };
-}
-
-export async function unpinPinnedTabToList(
-  pinnedTabId: string,
-  window: BrowserWindow,
-  currentSpaceId: string,
-  position?: number
-): Promise<boolean> {
-  const pinnedTab = pinnedTabsController.getById(pinnedTabId);
-  if (!pinnedTab) return false;
-
-  const associatedTabId = pinnedTabsController.getAssociatedTabId(pinnedTabId, currentSpaceId);
-  let preservedTabId: number | null = null;
-
-  if (associatedTabId !== null) {
-    const tab = tabsController.getTabById(associatedTabId);
-    if (tab && position !== undefined) {
-      tab.updateStateProperty("position", position);
-    }
-    tabsController.makeTabPersistent(associatedTabId);
-    if (tab) {
-      preservedTabId = tab.id;
-      tabsController.normalizePositions(tab.getWindow().id, tab.spaceId);
-    }
-  } else {
-    const newTab = await tabsController.createTab(window.id, pinnedTab.profileId, currentSpaceId, undefined, {
-      url: pinnedTab.defaultUrl,
-      position
-    });
-    preservedTabId = newTab.id;
-    tabsController.activateTab(newTab);
-    tabsController.normalizePositions(window.id, currentSpaceId);
-  }
-
-  const removedTabIds = pinnedTabsController.remove(pinnedTabId);
-  for (const tabId of removedTabIds) {
-    if (tabId === preservedTabId) continue;
-    const tab = tabsController.getTabById(tabId);
-    if (tab && !tab.isDestroyed) {
-      tab.destroy();
-    }
-  }
-
-  return true;
-}
-
-export async function toggleFocusedTabPin(window: BrowserWindow): Promise<boolean> {
-  const spaceId = window.currentSpaceId;
-  if (!spaceId) return false;
-
-  const focusedTab = tabsController.getFocusedTab(window.id, spaceId);
-  if (!focusedTab) return false;
-
-  const pinnedInfo = pinnedTabsController.getPinnedIdByTabId(focusedTab.id);
-  if (pinnedInfo) {
-    return unpinPinnedTabToList(pinnedInfo.pinnedTabId, window, spaceId);
-  }
-
-  return pinTabToSpace(focusedTab.id) !== null;
-}
-
 // --- IPC Handlers ---
 
 /**
@@ -161,52 +56,6 @@ ipcMain.handle("pinned-tabs:get-data", async () => {
 ipcMain.handle("pinned-tabs:create-from-tab", async (_event, tabId: number, position?: number) => {
   return pinTabToSpace(tabId, position);
 });
-
-/**
- * Click handler: activate or create the associated browser tab for the current space.
- * If the pinned tab already has an associated live tab in the current space, switch to it.
- * Otherwise, create a new tab with the pinned tab's defaultUrl in the current space.
- *
- * When navigateToDefault is true (double-click), also navigates the
- * associated tab back to the pinned tab's defaultUrl first.
- */
-async function handlePinnedTabClick(
-  window: BrowserWindow,
-  pinnedTabId: string,
-  navigateToDefault: boolean
-): Promise<boolean> {
-  const pinnedTab = pinnedTabsController.getById(pinnedTabId);
-  if (!pinnedTab) return false;
-
-  // Get the current space ID
-  const currentSpaceId = window.currentSpaceId;
-  if (!currentSpaceId) return false;
-
-  // Check if there's already an associated tab for this space
-  const associatedTabId = pinnedTabsController.getAssociatedTabId(pinnedTabId, currentSpaceId);
-
-  if (associatedTabId !== null) {
-    const tab = tabsController.getTabById(associatedTabId);
-    if (tab && !tab.isDestroyed) {
-      // Move to the requesting window if needed
-      if (tab.getWindow().id !== window.id) {
-        await moveTabOrGroupToWindow(tab, window);
-      }
-
-      if (navigateToDefault && tab.url !== pinnedTab.defaultUrl) {
-        tab.loadURL(pinnedTab.defaultUrl);
-      }
-      tabsController.activateTab(tab);
-      return true;
-    }
-    // Tab was destroyed but association wasn't cleaned up — clear it
-    pinnedTabsController.dissociateTab(pinnedTabId, currentSpaceId);
-  }
-
-  // No associated tab for this space — create a new one
-  const newTab = await createAndAssociatePinnedTab(pinnedTabId, pinnedTab, window, currentSpaceId);
-  return newTab !== null;
-}
 
 ipcMain.handle("pinned-tabs:click", async (event, pinnedTabId: string) => {
   const window = browserWindowsController.getWindowFromWebContents(event.sender);

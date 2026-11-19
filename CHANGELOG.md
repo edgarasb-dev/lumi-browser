@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.6] — 2026-11-19
+
+### Codename: Spark
+
+### Fixed
+
+- Fixed a startup circular-import initialization crash in bundled production builds caused by `src/main/ipc/browser/pinned-tabs.ts` being imported from `tabs.ts` and `menu/items/tabs.ts` before `tabsController` had finished constructing, by extracting shared pinned-tab helpers into `src/main/controllers/pinned-tabs-controller/actions.ts`.
+
+---
+
 ## [0.1.5] — 2026-11-19
 
 ### Codename: Spark

@@ -15,7 +15,7 @@ import {
   moveTabOrGroupToWindow,
   runTabSyncMutation
 } from "@/controllers/tabs-controller/tab-sync";
-import { pinTabToSpace } from "@/ipc/browser/pinned-tabs";
+import { pinTabToSpace } from "@/controllers/pinned-tabs-controller/actions";
 import { getCurrentShortcut } from "@/modules/shortcuts";
 import { isHttpOrHttpsUrl, isSafariInstalled, openUrlInSafari } from "@/modules/safari-sync/safari-bridge";
 
