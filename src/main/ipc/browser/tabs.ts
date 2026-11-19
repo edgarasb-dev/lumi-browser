@@ -15,6 +15,7 @@ import {
   moveTabOrGroupToWindow,
   runTabSyncMutation
 } from "@/controllers/tabs-controller/tab-sync";
+import { isHttpOrHttpsUrl, isSafariInstalled, openUrlInSafari } from "@/modules/safari-sync/safari-bridge";
 
 // IPC Handlers //
 function getWindowTabsData(window: BrowserWindow) {
@@ -444,6 +445,17 @@ ipcMain.on("tabs:show-context-menu", async (event, tabId: number) => {
       }
     })
   );
+
+  if (process.platform === "darwin" && isSafariInstalled() && isHttpOrHttpsUrl(tab.url)) {
+    contextMenu.append(
+      new MenuItem({
+        label: "Open in Safari",
+        click: () => {
+          void openUrlInSafari(tab.url);
+        }
+      })
+    );
+  }
 
   contextMenu.append(
     new MenuItem({

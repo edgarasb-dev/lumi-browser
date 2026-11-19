@@ -26,10 +26,10 @@ import "@/ipc/session/spaces";
 
 // Settings APIs
 import "@/ipc/window/settings";
-import "@/ipc/app/icons";
 import "@/ipc/app/open-external";
 import "@/ipc/app/onboarding";
 import "@/ipc/settings/search-engines";
+import "@/ipc/settings/safari-sync";
 
 // Special
 import "@/ipc/listeners-manager";

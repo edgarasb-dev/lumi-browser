@@ -21,10 +21,10 @@ import { LumiProfilesAPI } from "~/lumi/interfaces/sessions/profiles";
 import { LumiSpacesAPI } from "~/lumi/interfaces/sessions/spaces";
 
 import { LumiSettingsAPI } from "~/lumi/interfaces/settings/settings";
-import { LumiIconsAPI } from "~/lumi/interfaces/settings/icons";
 import { LumiOpenExternalAPI } from "~/lumi/interfaces/settings/openExternal";
 import { LumiOnboardingAPI } from "~/lumi/interfaces/settings/onboarding";
 import { LumiSearchEnginesAPI } from "~/lumi/interfaces/settings/search-engines";
+import { LumiSafariSyncAPI } from "~/lumi/interfaces/settings/safari-sync";
 import { LumiUpdatesAPI } from "~/lumi/interfaces/app/updates";
 import { LumiActionsAPI } from "~/lumi/interfaces/app/actions";
 import { LumiShortcutsAPI } from "~/lumi/interfaces/app/shortcuts";
@@ -61,7 +61,7 @@ export type LumiAPI = {
   // Settings APIs
   settings: LumiSettingsAPI;
   searchEngines: LumiSearchEnginesAPI;
-  icons: LumiIconsAPI;
+  safariSync: LumiSafariSyncAPI;
   openExternal: LumiOpenExternalAPI;
   onboarding: LumiOnboardingAPI;
 };

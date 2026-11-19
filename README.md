@@ -8,7 +8,7 @@
  _A modern, privacy-focused browser with fluid vertical spaces, tab previews, and full Chrome extension support._
 
   <p align="center">
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.2-blue?style=flat-square&logo=github" alt="Release v0.1.2" /></a>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.3-blue?style=flat-square&logo=github" alt="Release v0.1.3" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-emerald?style=flat-square" alt="License GPL-3.0" /></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-purple?style=flat-square" alt="Platforms" />
     <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -35,8 +35,9 @@
 Mainstream browsers are bloated, distraction-heavy, and cluttered with telemetry. **Lumi** reimagines the web desktop experience by combining the speed of Chromium with an intentional, zen-like aesthetic:
 
 - 🌌 **Spaces & Custom Contexts**: Isolate your personal life, school, work projects, and client research into distinct workspaces with dedicated tab groups.
-- 📑 **Ergonomic Vertical Tabs**: Say goodbye to squished horizontal tabs. Navigate with a collapsible, reactive sidebar featuring tab sleep states and live previews.
+- 📑 **Flexible Sidebar & Horizontal Topbar**: Switch between a collapsible vertical sidebar with pinned tiles and live previews or a compact frosted-glass horizontal topbar.
 - ⚡ **Lightning Command Palette (`Cmd / Ctrl + K`)**: Instant keyboard-driven navigation. Jump between spaces, search bookmarks, or browse the web in milliseconds.
+- 🧭 **Safari & External Sync**: Import tabs, bookmarks, Reading List, and history from macOS Safari, sync encrypted snapshots via iCloud Drive, and push links from iPhone over local Wi-Fi & Bonjour.
 - 🧩 **Chrome Extension Support**: Full compatibility with the Chrome Web Store. Install your favorite ad blockers, password managers, and productivity extensions.
 - 🛡️ **Native Ad & Tracker Protection**: Built-in adblocker powered by Ghostery engine keeping your browsing fast, private, and lightweight.
 - 🎬 **DRM & Streaming Ready**: Bundled with Widevine DRM support for Netflix, Spotify, Disney+, and YouTube playback.
@@ -52,9 +53,17 @@ Mainstream browsers are bloated, distraction-heavy, and cluttered with telemetry
 | :-------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
 | <img src="./docs/assets/screenshots/beta-browser-1.png" width="460" alt="Main Browser Interface" /> | <img src="./docs/assets/screenshots/beta-command-1.png" width="460" alt="Command Palette" /> |
 
-|                                     **Focused Start Page**                                     |                                   **Settings & Customization**                                   |
-| :--------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/screenshots/beta-newtab-1.png" width="460" alt="New Tab Experience" /> | <img src="./docs/assets/screenshots/beta-settings-1.png" width="460" alt="Settings & Theming" /> |
+|                                  **Horizontal Topbar Mode**                                   |                                     **Focused Start Page**                                     |
+| :-------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/beta-topbar-1.png" width="460" alt="Horizontal Topbar" /> | <img src="./docs/assets/screenshots/beta-newtab-1.png" width="460" alt="New Tab Experience" /> |
+
+|                                      **Settings & Spaces**                                      |                                   **Safari & External Sync**                                   |
+| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/beta-settings-1.png" width="460" alt="Settings & Spaces" /> | <img src="./docs/assets/screenshots/beta-safari-sync-1.png" width="460" alt="Safari & Sync" /> |
+
+|                                    **Welcome & Onboarding**                                     |
+| :---------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/beta-onboarding-1.png" width="460" alt="Lumi Onboarding" /> |
 
 </div>
 

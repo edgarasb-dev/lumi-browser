@@ -331,3 +331,82 @@ export function pruneBrowsingHistory(): void {
     );
   });
 }
+
+/**
+ * Batch-import external browsing history items (e.g. from Safari or synced devices)
+ * idempotently into the target profile's history tables.
+ */
+export function importBrowsingHistoryEntries(
+  profileId: string,
+  entries: Array<{ url: string; title: string; visitTime: number; visitCount?: number }>
+): number {
+  if (entries.length === 0) return 0;
+
+  const db = getDb();
+  const cutoff = Date.now() - RETENTION_MS;
+  let importedCount = 0;
+
+  db.transaction((tx) => {
+    for (const entry of entries) {
+      if (!isHistoryRecordableUrl(entry.url)) continue;
+      const visitTime = Math.max(cutoff + 1, Math.min(entry.visitTime || Date.now(), Date.now()));
+      let displayTitle = entry.title.trim();
+      if (!displayTitle) {
+        try {
+          displayTitle = new URL(entry.url).hostname;
+        } catch {
+          displayTitle = entry.url;
+        }
+      }
+
+      const existing = tx
+        .select()
+        .from(historyUrls)
+        .where(and(eq(historyUrls.profileId, profileId), eq(historyUrls.url, entry.url)))
+        .limit(1)
+        .all();
+
+      let urlId: number;
+      if (existing[0]) {
+        urlId = existing[0].id;
+        // Skip if a visit within 1 second already exists for this URL (idempotent re-import)
+        const nearbyVisit = tx
+          .select({ id: historyVisits.id })
+          .from(historyVisits)
+          .where(and(eq(historyVisits.urlId, urlId), sql`abs(${historyVisits.visitTime} - ${visitTime}) < 1000`))
+          .limit(1)
+          .get();
+        if (nearbyVisit) continue;
+
+        tx.insert(historyVisits).values({ urlId, visitTime, typed: false }).run();
+        tx.update(historyUrls)
+          .set({
+            visitCount: existing[0].visitCount + 1,
+            lastVisitTime: Math.max(existing[0].lastVisitTime, visitTime),
+            title: existing[0].title || displayTitle
+          })
+          .where(eq(historyUrls.id, urlId))
+          .run();
+        importedCount++;
+      } else {
+        const inserted = tx
+          .insert(historyUrls)
+          .values({
+            profileId,
+            url: entry.url,
+            title: displayTitle,
+            visitCount: Math.max(1, entry.visitCount ?? 1),
+            typedCount: 0,
+            lastVisitTime: visitTime
+          })
+          .returning({ id: historyUrls.id })
+          .all();
+        urlId = inserted[0]!.id;
+        tx.insert(historyVisits).values({ urlId, visitTime, typed: false }).run();
+        importedCount++;
+      }
+    }
+  });
+
+  return importedCount;
+}

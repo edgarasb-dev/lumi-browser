@@ -1,5 +1,6 @@
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 import { onboarding } from "@/controllers/windows-controller/interfaces/onboarding";
+import { safariSyncController } from "@/controllers/safari-sync-controller";
 import { SettingsDataStore } from "@/saving/settings";
 import { debugPrint } from "@/modules/output";
 import { app } from "electron";
@@ -46,7 +47,8 @@ export async function setOnboardingCompleted() {
   // destroyed, which calls `app.quit()` and prevents the browser window from
   // ever being created.
   if (browserWindowsController.getWindows().length === 0) {
-    await browserWindowsController.create();
+    const newWindow = await browserWindowsController.create();
+    await safariSyncController.flushPendingOnboardingTabs(newWindow);
   }
 
   onboarding.hide();

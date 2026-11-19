@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.1.3" date="2026-11-19">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.3</url>
+      <description>
+        <p>Safari Connectivity &amp; External Sync (Safari Bridge, encrypted iCloud Drive sync, Wi-Fi/Bonjour companion server), Liquid Glass icon cleanup, and updated Lumi screenshots.</p>
+      </description>
+    </release>
     <release version="0.1.2" date="2026-10-16">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.2</url>
       <description>

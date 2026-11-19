@@ -11,26 +11,24 @@ A comprehensive overview of planned upcoming features and completed engineering 
 | **Tab Management & Multitasking** |     4     |    3    |   7    |
 | **Navigation, History & Search**  |     3     |    2    |   5    |
 | **Spaces & Personalization**      |     3     |    0    |   3    |
-| **Native Platform & Performance** |     1     |    2    |   3    |
-| **Privacy, Media & Ecosystem**    |     1     |    2    |   3    |
+| **Native Platform & Performance** |     2     |    1    |   3    |
+| **Privacy, Media & Ecosystem**    |     2     |    1    |   3    |
 | **Brand & Open-Source Identity**  |     2     |    0    |   2    |
-| **Total**                         |  **14**   |  **9**  | **23** |
+| **Total**                         |  **16**   |  **7**  | **23** |
 
 ---
 
 ## 🗺️ Upcoming Features Roadmap (Planned)
 
-| Feature                                          | Category            | Difficulty             | Estimated Effort  | Status     |
-| :----------------------------------------------- | :------------------ | :--------------------- | :---------------- | :--------- |
-| **Pinned Tabs in Spaces**                        | Tab Management      | 🟡 Moderate (3.5/5)    | 4–5 hours         | ⏳ Pending |
-| **Split View & Glance Tab Groups**               | Tab Management      | 🟠 Moderate–Hard (4/5) | 6–8 hours         | ⏳ Pending |
-| **Reader Mode**                                  | Tab Management      | 🟡 Moderate (3/5)      | 3–5 hours         | ⏳ Pending |
-| **Next-Gen Omnibox & Zero Suggest**              | Navigation & Search | 🟡 Moderate (3/5)      | 3–5 hours         | ⏳ Pending |
-| **Chromium-Inspired History & `lumi://history`** | Navigation & Search | 🟡 Moderate (3/5)      | 4–6 hours         | ⏳ Pending |
-| **macOS Liquid Glass & Custom Icons**            | Native Platform     | 🟡 Moderate (3/5)      | 3–4 hours         | ⏳ Pending |
-| **Declarative Page Bounds Engine**               | Native Platform     | 🟡 Moderate (2.5/5)    | 2–3 hours         | ⏳ Pending |
-| **Native Download Manager**                      | Media & Files       | 🟠 Moderate–Hard (4/5) | 5–7 hours         | ⏳ Pending |
-| **Safari Connectivity & External Sync**          | Ecosystem           | 🔴 Very Hard (5/5)     | Multi-day project | ⏳ Pending |
+| Feature                                          | Category            | Difficulty             | Estimated Effort | Status     |
+| :----------------------------------------------- | :------------------ | :--------------------- | :--------------- | :--------- |
+| **Pinned Tabs in Spaces**                        | Tab Management      | 🟡 Moderate (3.5/5)    | 4–5 hours        | ⏳ Pending |
+| **Split View & Glance Tab Groups**               | Tab Management      | 🟠 Moderate–Hard (4/5) | 6–8 hours        | ⏳ Pending |
+| **Reader Mode**                                  | Tab Management      | 🟡 Moderate (3/5)      | 3–5 hours        | ⏳ Pending |
+| **Next-Gen Omnibox & Zero Suggest**              | Navigation & Search | 🟡 Moderate (3/5)      | 3–5 hours        | ⏳ Pending |
+| **Chromium-Inspired History & `lumi://history`** | Navigation & Search | 🟡 Moderate (3/5)      | 4–6 hours        | ⏳ Pending |
+| **Declarative Page Bounds Engine**               | Native Platform     | 🟡 Moderate (2.5/5)    | 2–3 hours        | ⏳ Pending |
+| **Native Download Manager**                      | Media & Files       | 🟠 Moderate–Hard (4/5) | 5–7 hours        | ⏳ Pending |
 
 ---
 
@@ -51,7 +49,9 @@ A comprehensive overview of planned upcoming features and completed engineering 
 | **Collapsible Tab Groups / Folders**          | Tab Management      | 🟡 Moderate (3/5)      | v0.1.0          |
 | **Horizontal Topbar vs Vertical Sidebar**     | Layout & Navigation | 🔴 Hard (4.5/5)        | v0.1.0          |
 | **Multi-Platform DMG & Release CI**           | Packaging & DevOps  | 🟡 Moderate (3/5)      | v0.1.1          |
+| **macOS Liquid Glass Icon**                   | Native Platform     | 🟡 Moderate (3/5)      | v0.1.1          |
 | **Rebranding Phase 2: Complete Flow Removal** | Project Identity    | 🟡 Moderate (3/5)      | v0.1.2          |
+| **Safari Connectivity & External Sync**       | Ecosystem           | 🔴 Very Hard (5/5)     | v0.1.3          |
 
 ---
 
@@ -145,22 +145,7 @@ Organized by functional domain.
 
 ## Domain 3: Native Platform Polish & Performance
 
-### 6. ⏳ macOS Liquid Glass & Custom Icons
-
-- **Source Document:** [`design/macos-persistent-icons.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/design/macos-persistent-icons.md)
-- **Description:** Native macOS icon customization system supporting 14 distinct visual themes with true persistent icon rendering across the Dock, Finder, Spotlight, and Launchpad, while preserving macOS Liquid Glass (`Assets.car`) on default.
-- **Difficulty:** 🟡 Moderate (3/5)
-- **Estimated Effort:** 3–4 hours
-- **How we will do it:**
-  - **Zero-Intervention Default:** When set to `"default"`, avoid calling `app.dock.setIcon()`. Use `resetAppIconImage()` and `clearFinderIcon()` so macOS natively renders the dynamic Apple Liquid Glass icon bundle.
-  - **Custom Icon Persistence:**
-    - Use `NSWorkspace.shared.setIcon` to write custom icon artwork directly onto the running `.app` bundle, ensuring custom icons reflect in Finder, Spotlight, and Launchpad even when Lumi is closed.
-    - Leverage `NSDockTilePlugIn` bundled inside `Contents/PlugIns/` to dynamically load the selected icon onto the macOS Dock tile when the application is not running.
-  - **Private API Cache Invalidation:** Call `SLSIconAppearanceConfiguration.fetchCurrentIconAppearanceConfiguration().save()` to force macOS Dock to immediately flush its icon cache on reset rather than leaving stale cached icons.
-
----
-
-### 7. ⏳ Declarative Page Bounds Engine
+### 6. ⏳ Declarative Page Bounds Engine
 
 - **Source Document:** [`design/DECLARATIVE_PAGE_BOUNDS.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/design/DECLARATIVE_PAGE_BOUNDS.md)
 - **Description:** Arithmetic zero-latency layout synchronization between the renderer and Electron main process, eliminating DOM reflows and sidebar tween gaps.
@@ -175,7 +160,7 @@ Organized by functional domain.
 
 ## Domain 4: Media, File Management & Ecosystem
 
-### 8. ⏳ Native Download Manager
+### 7. ⏳ Native Download Manager
 
 - **Description:** Full file download manager for files downloaded from the web with real-time speed, progress rings, and historical tracking.
 - **Difficulty:** 🟠 Moderate to Hard (4/5)
@@ -187,19 +172,6 @@ Organized by functional domain.
     - Downloads toolbar button and popover showing active progress rings and recent downloads.
     - "Show in Finder", "Open File", "Cancel", and "Retry" actions.
     - Completion toast notifications via `sonner`.
-
----
-
-### 9. ⏳ Safari Connectivity & Cross-Device Sync
-
-- **Description:** Sync open tabs, history, and bookmarks with mobile / Safari.
-- **Difficulty:** 🔴 Very Hard (5/5)
-- **Estimated Effort:** Multi-day project
-- **How we will do it:**
-  - Since Lumi is a desktop-only app, connecting to iOS/Safari requires an external bridge:
-    - **Option A (iCloud Sync):** Sync an encrypted JSON state file to `~/Library/Mobile Documents/com~apple~CloudDocs/` (iCloud Drive) that an iOS Shortcut or companion reader accesses.
-    - **Option B (Local Network / Bonjour):** Run a local WebSocket/HTTP companion server inside Electron to sync with mobile devices on the same Wi-Fi.
-    - **Option C (Safari Import / AppleScript Bridge):** One-click import/sync from macOS Safari open tabs and reading list into Lumi via macOS AppleScript IPC.
 
 ---
 
@@ -408,3 +380,26 @@ Detailed records of delivered features organized by domain.
     - Renamed internal setting ID `enableFlowPdfViewer` $\rightarrow$ `enableLumiPdfViewer`.
     - Replaced `FLOW_DATA_DIR` with `LUMI_DATA_DIR` across all data stores, icon caches, database initializers, and profile paths.
     - Updated default browser registration scripts for Linux and Windows (`APP_NAME_SHORT = "lumi"`).
+
+---
+
+## Domain 6: Ecosystem & Cross-Device Sync
+
+### ✅ Safari Connectivity & External Sync
+
+- **Description:** Unified bridge connecting Lumi to macOS Safari, encrypted iCloud Drive snapshots, and iOS/mobile browsers over local Wi-Fi and Bonjour.
+- **Difficulty:** 🔴 Very Hard (5/5)
+- **Status:** [x] Done (Shipped in v0.1.3)
+- **How it was implemented:**
+  - **macOS Safari Bridge (`src/main/modules/safari-sync/safari-bridge.ts`):**
+    - Non-intrusive Safari open-tab discovery via JXA (`osascript -l JavaScript`) when Safari is running, plus `"Open in Safari"` in the tab right-click context menu.
+    - Binary/XML `Bookmarks.plist` parsing via `/usr/bin/plutil`, Netscape HTML bookmark file import fallback, Reading List extraction, and read-only `History.db` snapshot import with CoreData epoch conversion.
+    - Flexible target mapping (import into an existing Space, auto-create a `"Safari"` Space, save bookmarks/Reading List to Favourites, and import history into `lumi.db`), plus optional live open-tab polling.
+  - **iCloud Drive Encrypted Sync (`src/main/modules/safari-sync/icloud-sync.ts`, `crypto.ts`):**
+    - AES-256-GCM + PBKDF2-SHA256 encrypted state snapshots (`devices/<deviceId>.enc.json` and `lumi-sync-state.enc.json`) written to iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/Lumi`) or any custom sync directory, with OS keychain passphrase protection via Electron `safeStorage`.
+    - Watches `inbox/` for `.json`/`.txt` drops from Apple iOS Shortcuts and merges remote device tabs, favourites, and history.
+  - **Local Wi-Fi & Bonjour Companion Server (`src/main/modules/safari-sync/companion-server.ts`, `websocket.ts`, `companion-html.ts`):**
+    - Embedded local HTTP + RFC 6455 WebSocket server with token/6-digit pairing authentication, rate-limited `/api/pair`, macOS Bonjour advertisement (`_lumi-sync._tcp` via `/usr/bin/dns-sd`), self-contained mobile Safari web UI, and pure-TypeScript QR code pairing (`src/renderer/src/lib/qr-code.ts`).
+  - **UI & Onboarding Integration:**
+    - Added **Settings → Safari & Sync** (`src/renderer/src/components/settings/sections/safari-sync/`) with Safari Bridge, iCloud Sync, Wi-Fi/Bonjour QR pairing, Sync Inbox, and Activity Log.
+    - Added an optional macOS **Import from Safari** step in Onboarding (`src/renderer/src/components/onboarding/stages/safari-import.tsx`) with deferred tab opening upon onboarding completion.

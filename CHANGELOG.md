@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.3] — 2026-11-19
+
+### Codename: Spark
+
+### Added
+
+- **Safari Connectivity & External Sync**:
+  - **macOS Safari Bridge**: Non-intrusive open-tab discovery via JXA, `"Open in Safari"` tab context menu action, `Bookmarks.plist` and Netscape HTML import, Reading List extraction, read-only `History.db` import, and optional live open-tab sync.
+  - **iCloud Drive Encrypted Sync**: AES-256-GCM + PBKDF2-SHA256 encrypted snapshots stored in iCloud Drive (or custom sync folder) with OS keychain passphrase storage (`safeStorage`) and an `inbox/` watcher for Apple iOS Shortcuts.
+  - **Local Wi-Fi & Bonjour Companion Server**: Embedded HTTP + RFC 6455 WebSocket companion server with rate-limited 6-digit pairing, QR code onboarding, and macOS Bonjour advertisement (`_lumi-sync._tcp`).
+  - **UI & Onboarding**: Added **Settings → Safari & Sync** and a macOS-only **Import from Safari** onboarding step with deferred tab opening.
+
+### Changed
+
+- **Native Liquid Glass Icon Simplification**: Standardized exclusively on Lumi's native macOS Liquid Glass icon (`Assets.car`) and default Lumi icon across platforms.
+- **Documentation**: Updated README and Flathub screenshots with native Lumi Browser captures, including Horizontal Topbar mode, Safari & External Sync, and Onboarding.
+
+### Removed
+
+- Removed legacy Flow app icon sets, custom icon switcher UI in Settings and Onboarding, `lumi.icons` preload/IPC endpoints, and `DockTilePlugIn.plugin` packaging hooks.
+
+---
+
 ## [0.1.2] — 2026-10-16
 
 ### Codename: Spark

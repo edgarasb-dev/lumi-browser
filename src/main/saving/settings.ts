@@ -11,9 +11,6 @@ type SettingsEvents = {
 };
 export const settingsEmitter = new TypedEventEmitter<SettingsEvents>();
 
-// Settings: Current Icon //
-// Find in `@/modules/icons.ts`
-
 // Settings: Settings Config //
 const basicSettingsCurrentValues: Record<string, SettingType["defaultValue"]> = {};
 

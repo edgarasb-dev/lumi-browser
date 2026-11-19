@@ -111,11 +111,13 @@ const electronBuilderConfig: Configuration = {
     ...(process.env.CSC_LINK || process.env.CSC_NAME || process.env.CSC_KEY_PASSWORD
       ? { provisioningProfile: "build/profile.provisionprofile" }
       : { identity: null }),
-    binaries: ["Contents/PlugIns/DockTilePlugIn.plugin"],
     extendInfo: {
       CFBundleIconName: "AppIcon",
       NSUserActivityTypes: ["NSUserActivityTypeBrowsingWeb"],
-      NSDockTilePlugIn: "DockTilePlugIn.plugin"
+      NSAppleEventsUsageDescription: "Lumi uses Apple Events to sync open tabs and bookmarks with Safari.",
+      NSLocalNetworkUsageDescription:
+        "Lumi uses your local network and Bonjour to sync tabs and bookmarks with companion devices on the same Wi-Fi.",
+      NSBonjourServices: ["_lumi-sync._tcp.", "_http._tcp."]
     }
   },
   dmg: {

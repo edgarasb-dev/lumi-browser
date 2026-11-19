@@ -82,6 +82,47 @@ export async function addFavourite(title: string, url: string, faviconURL?: stri
   return fav;
 }
 
+export async function addFavouritesBatch(
+  items: Array<{ title: string; url: string; faviconURL?: string | null; createdAt?: number }>
+): Promise<number> {
+  await onFavouritesLoaded();
+  if (!cachedFavourites) cachedFavourites = [];
+
+  const existingNormalized = new Set(cachedFavourites.map((f) => normalizeUrl(f.url)));
+  const newlyAdded: Favourite[] = [];
+
+  for (const item of items) {
+    if (!item.url) continue;
+    try {
+      const parsed = new URL(item.url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+    } catch {
+      continue;
+    }
+
+    const normalized = normalizeUrl(item.url);
+    if (existingNormalized.has(normalized)) continue;
+    existingNormalized.add(normalized);
+
+    newlyAdded.push({
+      id: generateID(),
+      title: item.title.trim() || item.url,
+      url: item.url,
+      faviconURL: item.faviconURL || null,
+      createdAt: item.createdAt || Date.now()
+    });
+  }
+
+  if (newlyAdded.length === 0) {
+    return 0;
+  }
+
+  cachedFavourites = [...newlyAdded, ...cachedFavourites];
+  await FavouritesDataStore.set("list", cachedFavourites);
+  favouritesEmitter.emit("favourites-changed", [...cachedFavourites]);
+  return newlyAdded.length;
+}
+
 export async function removeFavourite(idOrUrl: string): Promise<boolean> {
   await onFavouritesLoaded();
   if (!cachedFavourites) return false;

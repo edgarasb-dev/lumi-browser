@@ -84,5 +84,12 @@ export function setupPlatformIntegration() {
   } else if (process.platform === "darwin") {
     setupMacOSDock();
     debugPrint("INITIALIZATION", "setup macOS dock finished");
+  } else if (process.platform === "linux") {
+    void import("@/modules/icons")
+      .then(({ setupLinuxWindowIcons }) => setupLinuxWindowIcons())
+      .catch((error) => {
+        console.error("Failed to initialize Linux window icons:", error);
+      });
+    debugPrint("INITIALIZATION", "setup Linux window icons queued");
   }
 }

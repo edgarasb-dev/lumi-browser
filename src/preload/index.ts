@@ -26,7 +26,6 @@ import { LumiInterfaceAPI } from "~/lumi/interfaces/browser/interface";
 import { LumiProfilesAPI } from "~/lumi/interfaces/sessions/profiles";
 import { LumiSpacesAPI } from "~/lumi/interfaces/sessions/spaces";
 import { LumiAppAPI } from "~/lumi/interfaces/app/app";
-import { LumiIconsAPI } from "~/lumi/interfaces/settings/icons";
 import { LumiNewTabAPI } from "~/lumi/interfaces/browser/newTab";
 import { LumiOpenExternalAPI } from "~/lumi/interfaces/settings/openExternal";
 import { LumiOnboardingAPI } from "~/lumi/interfaces/settings/onboarding";
@@ -49,6 +48,14 @@ import { LumiPromptsAPI } from "~/lumi/interfaces/browser/prompts";
 import type { ActivePrompt } from "~/types/prompts";
 import { LumiContentBlockerAPI } from "~/lumi/interfaces/browser/content-blocker";
 import { LumiFavouritesAPI, Favourite } from "~/lumi/interfaces/browser/favourites";
+import { LumiSafariSyncAPI } from "~/lumi/interfaces/settings/safari-sync";
+import type {
+  ICloudSyncConfig,
+  LocalCompanionConfig,
+  SafariImportOptions,
+  SafariLiveSyncConfig,
+  SafariSyncState
+} from "~/types/safari-sync";
 
 // const isIFrame = !process.isMainFrame;
 
@@ -597,22 +604,6 @@ const appAPI: LumiAppAPI = {
   }
 };
 
-// ICONS API //
-const iconsAPI: LumiIconsAPI = {
-  getIcons: async () => {
-    return ipcRenderer.invoke("icons:get-all");
-  },
-  isPlatformSupported: async () => {
-    return ipcRenderer.invoke("icons:is-platform-supported");
-  },
-  getCurrentIcon: async () => {
-    return ipcRenderer.invoke("icons:get-current-icon-id");
-  },
-  setCurrentIcon: async (iconId: string) => {
-    return ipcRenderer.invoke("icons:set-current-icon-id", iconId);
-  }
-};
-
 // NEW TAB API //
 const newTabAPI: LumiNewTabAPI = {
   open: () => {
@@ -881,6 +872,82 @@ const favouritesAPI: LumiFavouritesAPI = {
   }
 };
 
+// SAFARI & SYNC API //
+const safariSyncAPI: LumiSafariSyncAPI = {
+  getState: async () => {
+    return ipcRenderer.invoke("safari-sync:get-state");
+  },
+  onStateChanged: (callback: (state: SafariSyncState) => void) => {
+    return listenOnIPCChannel("safari-sync:on-state-changed", callback);
+  },
+  discoverSafari: async (customBookmarksFilePath?: string) => {
+    return ipcRenderer.invoke("safari-sync:discover-safari", customBookmarksFilePath);
+  },
+  pickBookmarksFile: async () => {
+    return ipcRenderer.invoke("safari-sync:pick-bookmarks-file");
+  },
+  importFromSafari: async (options: SafariImportOptions) => {
+    return ipcRenderer.invoke("safari-sync:import-from-safari", options);
+  },
+  openInSafari: async (url: string) => {
+    return ipcRenderer.invoke("safari-sync:open-in-safari", url);
+  },
+  updateSafariLiveSync: async (updates: Partial<SafariLiveSyncConfig>) => {
+    return ipcRenderer.invoke("safari-sync:update-safari-live-sync", updates);
+  },
+  syncSafariOpenTabsNow: async () => {
+    return ipcRenderer.invoke("safari-sync:sync-safari-tabs-now");
+  },
+  openMacPrivacySettings: async (pane: "automation" | "full-disk-access") => {
+    return ipcRenderer.invoke("safari-sync:open-mac-privacy-settings", pane);
+  },
+  updateICloudConfig: async (updates: Partial<ICloudSyncConfig>) => {
+    return ipcRenderer.invoke("safari-sync:update-icloud-config", updates);
+  },
+  setICloudPassphrase: async (passphrase: string) => {
+    return ipcRenderer.invoke("safari-sync:set-icloud-passphrase", passphrase);
+  },
+  generateICloudPassphrase: async () => {
+    return ipcRenderer.invoke("safari-sync:generate-icloud-passphrase");
+  },
+  revealICloudPassphrase: async () => {
+    return ipcRenderer.invoke("safari-sync:reveal-icloud-passphrase");
+  },
+  pickICloudDirectory: async () => {
+    return ipcRenderer.invoke("safari-sync:pick-icloud-directory");
+  },
+  revealICloudDirectory: async () => {
+    return ipcRenderer.invoke("safari-sync:reveal-icloud-directory");
+  },
+  syncICloudNow: async () => {
+    return ipcRenderer.invoke("safari-sync:sync-icloud-now");
+  },
+  openRemoteDeviceTab: async (url: string, spaceId?: string) => {
+    return ipcRenderer.invoke("safari-sync:open-remote-device-tab", url, spaceId);
+  },
+  openAllRemoteDeviceTabs: async (deviceId: string, createSpace?: boolean) => {
+    return ipcRenderer.invoke("safari-sync:open-all-remote-device-tabs", deviceId, createSpace);
+  },
+  updateCompanionConfig: async (updates: Partial<LocalCompanionConfig>) => {
+    return ipcRenderer.invoke("safari-sync:update-companion-config", updates);
+  },
+  regenerateCompanionPairing: async () => {
+    return ipcRenderer.invoke("safari-sync:regenerate-companion-pairing");
+  },
+  openInboxLink: async (linkId: string, spaceId?: string) => {
+    return ipcRenderer.invoke("safari-sync:open-inbox-link", linkId, spaceId);
+  },
+  saveInboxLinkToFavourites: async (linkId: string) => {
+    return ipcRenderer.invoke("safari-sync:save-inbox-link-to-favourites", linkId);
+  },
+  dismissInboxLink: async (linkId: string) => {
+    return ipcRenderer.invoke("safari-sync:dismiss-inbox-link", linkId);
+  },
+  clearInbox: async () => {
+    return ipcRenderer.invoke("safari-sync:clear-inbox");
+  }
+};
+
 // EXPOSE LUMI API //
 const lumiAPI: typeof lumi = {
   // App APIs
@@ -926,7 +993,7 @@ const lumiAPI: typeof lumi = {
   // Settings APIs
   settings: wrapAPI(settingsAPI, "settings"),
   searchEngines: wrapAPI(searchEnginesAPI, "settings"),
-  icons: wrapAPI(iconsAPI, "settings"),
+  safariSync: wrapAPI(safariSyncAPI, "settings"),
   openExternal: wrapAPI(openExternalAPI, "settings"),
   onboarding: wrapAPI(onboardingAPI, "settings")
 };
