@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.7] — 2026-11-19
+
+### Codename: Spark
+
+### Fixed
+
+- **macOS Full Disk Access Registration & UX**: Replaced `access()`/`existsSync()` early returns in Safari Sync with direct main-process `open()` / `readdir()` probes (`probeSafariFullDiskAccess`) and added a **Reveal Lumi.app** button plus clearer guidance in Settings and Onboarding.
+- **Release Publishing & Updater Messaging**: Updated `build-and-release.yml` to create releases as drafts until all platform builds and `latest-mac.yml` finish uploading, and improved `UpdateCard` 404 messaging during release builds.
+
+---
+
 ## [0.1.6] — 2026-11-19
 
 ### Codename: Spark

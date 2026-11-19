@@ -169,8 +169,10 @@ export function OnboardingSafariImport({ advance }: { advance: OnboardingAdvance
                   <div className="flex items-start gap-2">
                     <ShieldAlert className="size-4 text-amber-400 shrink-0 mt-0.5" />
                     <p className="text-gray-300 leading-relaxed">
-                      macOS restricts direct access to Safari data without Full Disk Access / Automation approval. You
-                      can pick an exported Safari Bookmarks file or grant access in System Settings.
+                      macOS restricts direct access to Safari data without Full Disk Access (no popup appears — click{" "}
+                      <strong>Privacy Settings</strong>, add <code className="px-1 rounded bg-white/10">Lumi.app</code>{" "}
+                      with <strong>+</strong> if it isn&apos;t listed, then quit &amp; reopen), or pick an exported
+                      Safari Bookmarks file.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 pl-6">
@@ -184,14 +186,24 @@ export function OnboardingSafariImport({ advance }: { advance: OnboardingAdvance
                       Select Bookmarks File
                     </Button>
                     {discovery?.fullDiskAccessNeeded && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs text-amber-300 hover:bg-white/10 hover:text-amber-200"
-                        onClick={() => void lumi.safariSync.openMacPrivacySettings("full-disk-access")}
-                      >
-                        Privacy Settings
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs text-amber-300 hover:bg-white/10 hover:text-amber-200"
+                          onClick={() => void lumi.safariSync.openMacPrivacySettings("full-disk-access")}
+                        >
+                          Privacy Settings
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs text-amber-300 hover:bg-white/10 hover:text-amber-200"
+                          onClick={() => void lumi.safariSync.revealApp()}
+                        >
+                          Reveal Lumi.app
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>

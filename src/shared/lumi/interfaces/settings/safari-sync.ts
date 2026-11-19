@@ -21,6 +21,7 @@ export interface LumiSafariSyncAPI {
   updateSafariLiveSync: (updates: Partial<SafariLiveSyncConfig>) => Promise<SafariSyncState>;
   syncSafariOpenTabsNow: () => Promise<{ importedCount: number; error?: string }>;
   openMacPrivacySettings: (pane: "automation" | "full-disk-access") => Promise<boolean>;
+  revealApp: () => Promise<boolean>;
 
   // Option A: iCloud Drive Encrypted Sync
   updateICloudConfig: (updates: Partial<ICloudSyncConfig>) => Promise<SafariSyncState>;

@@ -998,6 +998,9 @@ const safariSyncAPI: LumiSafariSyncAPI = {
   openMacPrivacySettings: async (pane: "automation" | "full-disk-access") => {
     return ipcRenderer.invoke("safari-sync:open-mac-privacy-settings", pane);
   },
+  revealApp: async () => {
+    return ipcRenderer.invoke("safari-sync:reveal-app");
+  },
   updateICloudConfig: async (updates: Partial<ICloudSyncConfig>) => {
     return ipcRenderer.invoke("safari-sync:update-icloud-config", updates);
   },

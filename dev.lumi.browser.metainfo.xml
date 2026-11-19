@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.1.7" date="2026-11-19">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.7</url>
+      <description>
+        <p>Improve macOS Full Disk Access registration and Reveal Lumi.app guidance for Safari Sync, harden draft-until-ready release publishing in CI, and refine updater 404 messaging.</p>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-11-19">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.6</url>
       <description>

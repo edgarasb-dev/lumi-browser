@@ -227,9 +227,12 @@ export function SafariBridgeCard({ liveSync, onRefreshState }: SafariBridgeCardP
                   {discovery.fullDiskAccessNeeded && (
                     <p className="text-muted-foreground">
                       Safari&apos;s <code className="px-1 py-0.5 rounded bg-muted">Bookmarks.plist</code> and{" "}
-                      <code className="px-1 py-0.5 rounded bg-muted">History.db</code> are protected by macOS Full Disk
-                      Access. You can either grant access in System Settings or export{" "}
-                      <strong>File → Export → Bookmarks…</strong> from Safari and pick the HTML file above.
+                      <code className="px-1 py-0.5 rounded bg-muted">History.db</code> require macOS Full Disk Access
+                      (macOS does not show an automatic popup for it). Click <strong>Open Full Disk Access</strong> — if
+                      Lumi does not appear in the list automatically, click <strong>+</strong> (or drag{" "}
+                      <code className="px-1 py-0.5 rounded bg-muted">Lumi.app</code> into the list), then quit and
+                      reopen Lumi. Or export <strong>File → Export → Bookmarks…</strong> from Safari and pick the HTML
+                      file below.
                     </p>
                   )}
                   {discovery.automationError && <p className="text-muted-foreground">{discovery.automationError}</p>}
@@ -237,14 +240,25 @@ export function SafariBridgeCard({ liveSync, onRefreshState }: SafariBridgeCardP
               </div>
               <div className="flex flex-wrap gap-2 pl-6">
                 {discovery.fullDiskAccessNeeded && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    onClick={() => void lumi.safariSync.openMacPrivacySettings("full-disk-access")}
-                  >
-                    Open Full Disk Access
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => void lumi.safariSync.openMacPrivacySettings("full-disk-access")}
+                    >
+                      Open Full Disk Access
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => void lumi.safariSync.revealApp()}
+                    >
+                      <FolderOpen className="size-3 mr-1" />
+                      Reveal Lumi.app
+                    </Button>
+                  </>
                 )}
                 {discovery.automationError && (
                   <Button

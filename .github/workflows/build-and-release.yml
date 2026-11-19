@@ -59,8 +59,8 @@ jobs:
           else
             TITLE="Lumi $TAG"
           fi
-          echo "Ensuring release exists for $TAG with title: $TITLE..."
-          gh release view "$TAG" || gh release create "$TAG" --title "$TITLE" --generate-notes || true
+          echo "Ensuring draft release exists for $TAG with title: $TITLE..."
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --title "$TITLE" --generate-notes || true
           echo "should_release=true" >> "$GITHUB_OUTPUT"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -280,6 +280,20 @@ jobs:
         run: |
           TAG="${{ needs.create-release.outputs.tag }}"
           gh release upload "$TAG" mac-publish/* --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish the draft release only once all OS builds and merged macOS assets have been uploaded
+  publish-release:
+    needs: [create-release, release, publish-macos]
+    if: needs.create-release.outputs.should_release == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Publish GitHub Release
+        run: |
+          TAG="${{ needs.create-release.outputs.tag }}"
+          gh release edit "$TAG" -R "${{ github.repository }}" --draft=false --latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

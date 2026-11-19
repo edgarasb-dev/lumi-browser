@@ -44,6 +44,10 @@ ipcMain.handle("safari-sync:open-mac-privacy-settings", async (_event, pane: "au
   return safariSyncController.openMacPrivacySettings(pane);
 });
 
+ipcMain.handle("safari-sync:reveal-app", async () => {
+  return safariSyncController.revealAppBundle();
+});
+
 ipcMain.handle("safari-sync:update-icloud-config", async (_event, updates: Partial<ICloudSyncConfig>) => {
   return safariSyncController.updateICloudConfig(updates);
 });

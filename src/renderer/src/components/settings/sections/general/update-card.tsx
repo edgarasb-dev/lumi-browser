@@ -134,7 +134,7 @@ export function UpdateCard() {
             <span className="text-sm text-amber-500 font-medium">Update check failed</span>
             <span className="text-xs text-muted-foreground line-clamp-1" title={updateStatus?.error || undefined}>
               {isNotFound
-                ? "Release feed returned 404 (check repository visibility)"
+                ? "Release manifest unavailable (a new build may still be uploading)"
                 : updateStatus?.error || "Network error"}
             </span>
           </div>
@@ -312,8 +312,8 @@ export function UpdateCard() {
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <div>
                 <span>
-                  GitHub Releases returned 404 Not Found. If the GitHub repository is private, unauthenticated update
-                  checks cannot access releases until the repository is made public.
+                  The latest release manifest returned 404 Not Found. If a new release just started building, wait a few
+                  minutes for all platform assets to finish uploading and try again.
                 </span>
                 <div className="mt-1">
                   <Button

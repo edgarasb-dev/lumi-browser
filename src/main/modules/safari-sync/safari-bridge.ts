@@ -305,6 +305,36 @@ export async function parseSafariBookmarksPlist(filePath: string): Promise<{
   return { bookmarks, readingList };
 }
 
+export async function probeSafariFullDiskAccess(): Promise<boolean> {
+  if (process.platform !== "darwin") return false;
+
+  const safariDir = path.join(os.homedir(), "Library", "Safari");
+  const candidates = [path.join(safariDir, "Bookmarks.plist"), path.join(safariDir, "History.db")];
+
+  let anyReadable = false;
+
+  // Issuing real opendir(3) / open(2) syscalls from Lumi's main process lets macOS
+  // record Lumi in System Settings -> Privacy & Security -> Full Disk Access.
+  try {
+    await fsPromises.readdir(safariDir);
+    anyReadable = true;
+  } catch {
+    // Expected when Full Disk Access has not been granted yet
+  }
+
+  for (const filePath of candidates) {
+    try {
+      const handle = await fsPromises.open(filePath, "r");
+      await handle.close();
+      anyReadable = true;
+    } catch {
+      // Expected EPERM/EACCES/ENOENT
+    }
+  }
+
+  return anyReadable;
+}
+
 export async function readSafariBookmarksSource(customFilePath?: string): Promise<{
   readable: boolean;
   permissionDenied: boolean;
@@ -315,27 +345,25 @@ export async function readSafariBookmarksSource(customFilePath?: string): Promis
   const defaultPath = path.join(os.homedir(), "Library", "Safari", "Bookmarks.plist");
   const targetPath = customFilePath || defaultPath;
 
-  if (!fs.existsSync(targetPath)) {
-    // Note: TCC-protected directories on macOS may throw EPERM on access even if existsSync is false
-    try {
-      await fsPromises.access(targetPath, fs.constants.R_OK);
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException)?.code;
-      if (code === "EPERM" || code === "EACCES") {
-        return {
-          readable: false,
-          permissionDenied: true,
-          bookmarks: [],
-          readingList: []
-        };
-      }
+  try {
+    const handle = await fsPromises.open(targetPath, "r");
+    await handle.close();
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException)?.code;
+    if (code === "EPERM" || code === "EACCES") {
       return {
         readable: false,
-        permissionDenied: false,
+        permissionDenied: true,
         bookmarks: [],
         readingList: []
       };
     }
+    return {
+      readable: false,
+      permissionDenied: false,
+      bookmarks: [],
+      readingList: []
+    };
   }
 
   try {
@@ -383,7 +411,8 @@ export async function readSafariHistory(options?: { maxDays?: number; limit?: nu
 
   const safariHistoryPath = path.join(os.homedir(), "Library", "Safari", "History.db");
   try {
-    await fsPromises.access(safariHistoryPath, fs.constants.R_OK);
+    const handle = await fsPromises.open(safariHistoryPath, "r");
+    await handle.close();
   } catch (error) {
     const code = (error as NodeJS.ErrnoException)?.code;
     const permissionDenied = code === "EPERM" || code === "EACCES";

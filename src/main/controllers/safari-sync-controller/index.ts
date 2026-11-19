@@ -20,6 +20,7 @@ import {
   isHttpOrHttpsUrl,
   openUrlInSafari,
   openUrlsInLumiSpace,
+  probeSafariFullDiskAccess,
   readSafariOpenTabs,
   resolveOrCreateTargetSpace
 } from "@/modules/safari-sync/safari-bridge";
@@ -359,6 +360,11 @@ class SafariSyncController extends TypedEventEmitter<SafariSyncEvents> {
 
   public async openMacPrivacySettings(pane: "automation" | "full-disk-access"): Promise<boolean> {
     if (process.platform !== "darwin") return false;
+    if (pane === "full-disk-access") {
+      // Trigger direct main-process open()/readdir() syscalls on ~/Library/Safari so macOS
+      // TCC logs the access attempt before System Settings opens.
+      await probeSafariFullDiskAccess().catch(() => false);
+    }
     const url =
       pane === "automation"
         ? "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
@@ -369,6 +375,13 @@ class SafariSyncController extends TypedEventEmitter<SafariSyncEvents> {
     } catch {
       return false;
     }
+  }
+
+  public revealAppBundle(): boolean {
+    if (process.platform !== "darwin") return false;
+    const bundlePath = app.isPackaged ? path.resolve(process.execPath, "..", "..", "..") : process.execPath;
+    shell.showItemInFolder(bundlePath);
+    return true;
   }
 
   // --- Option A: iCloud Drive Sync ---
