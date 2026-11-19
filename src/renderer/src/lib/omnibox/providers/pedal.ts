@@ -1,8 +1,7 @@
-import { AutocompleteInput } from "@/lib/omnibox-v2";
 import { BaseProvider } from "@/lib/omnibox/base-provider";
 import { getStringSimilarity } from "@/lib/omnibox/data-providers/string-similarity";
 import { OmniboxUpdateCallback } from "@/lib/omnibox/omnibox";
-import { AutocompleteMatch } from "@/lib/omnibox/types";
+import { AutocompleteInput, AutocompleteMatch } from "@/lib/omnibox/types";
 
 interface Pedal {
   triggers: string[];
@@ -12,7 +11,7 @@ interface Pedal {
 
 const PEDALS = [
   {
-    triggers: ["settings", "app icon", "profiles", "spaces", "about lumi", "onboarding"],
+    triggers: ["settings", "profiles", "spaces", "about lumi", "onboarding"],
     action: "open_settings",
     description: "Open settings"
   },
