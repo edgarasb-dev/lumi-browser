@@ -102,6 +102,14 @@ export const STATIC_DOMAINS: StaticDomainInfo[] = [
   },
   {
     protocol: "lumi",
+    hostname: "downloads",
+    actual: {
+      type: "route",
+      route: "downloads"
+    }
+  },
+  {
+    protocol: "lumi",
     hostname: "bangs",
     actual: {
       type: "route",

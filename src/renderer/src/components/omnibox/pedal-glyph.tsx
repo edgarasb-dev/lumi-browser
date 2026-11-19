@@ -1,5 +1,14 @@
 import { cn } from "@/lib/utils";
-import { HistoryIcon, AppWindowIcon, PuzzleIcon, SettingsIcon, ShieldIcon, LinkIcon } from "lucide-react";
+import {
+  HistoryIcon,
+  AppWindowIcon,
+  PuzzleIcon,
+  SettingsIcon,
+  ShieldIcon,
+  LinkIcon,
+  DownloadIcon,
+  Trash2Icon
+} from "lucide-react";
 
 export function PedalGlyph({ action, selected, className }: { action: string; selected: boolean; className?: string }) {
   const cls = cn(
@@ -18,6 +27,10 @@ export function PedalGlyph({ action, selected, className }: { action: string; se
       return <PuzzleIcon className={cls} strokeWidth={2} />;
     case "open_history":
       return <HistoryIcon className={cls} strokeWidth={2} />;
+    case "open_downloads":
+      return <DownloadIcon className={cls} strokeWidth={2} />;
+    case "clear_browsing_data":
+      return <Trash2Icon className={cls} strokeWidth={2} />;
     default:
       return <LinkIcon className={cls} strokeWidth={2} />;
   }

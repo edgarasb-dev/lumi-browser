@@ -60,6 +60,91 @@ async function createAndAssociatePinnedTab(
   return newTab;
 }
 
+export function pinTabToSpace(tabId: number, position?: number): PinnedTabData | null {
+  const tab = tabsController.getTabById(tabId);
+  if (!tab || !tab.url) return null;
+
+  const existingPin = pinnedTabsController.getPinnedIdByTabId(tab.id);
+  if (existingPin) {
+    const existing = pinnedTabsController.getById(existingPin.pinnedTabId);
+    return existing;
+  }
+
+  // Detach from any glance/split group before converting to an ephemeral pinned tab
+  const existingGroup = tabsController.getTabGroupByTabId(tab.id);
+  existingGroup?.removeTab(tab.id);
+
+  const faviconUrl = tab.faviconURL ?? null;
+  const pinnedTab = pinnedTabsController.create(tab.profileId, tab.url, faviconUrl, position);
+
+  // Mark the tab as ephemeral so it won't be persisted across sessions
+  tabsController.makeTabEphemeral(tab.id);
+
+  // Associate the pinned tab with the browser tab in its current space
+  pinnedTabsController.associateTab(pinnedTab.uniqueId, tab.spaceId, tab.id);
+
+  return { ...pinnedTab, associatedTabIdsBySpace: { [tab.spaceId]: tab.id } };
+}
+
+export async function unpinPinnedTabToList(
+  pinnedTabId: string,
+  window: BrowserWindow,
+  currentSpaceId: string,
+  position?: number
+): Promise<boolean> {
+  const pinnedTab = pinnedTabsController.getById(pinnedTabId);
+  if (!pinnedTab) return false;
+
+  const associatedTabId = pinnedTabsController.getAssociatedTabId(pinnedTabId, currentSpaceId);
+  let preservedTabId: number | null = null;
+
+  if (associatedTabId !== null) {
+    const tab = tabsController.getTabById(associatedTabId);
+    if (tab && position !== undefined) {
+      tab.updateStateProperty("position", position);
+    }
+    tabsController.makeTabPersistent(associatedTabId);
+    if (tab) {
+      preservedTabId = tab.id;
+      tabsController.normalizePositions(tab.getWindow().id, tab.spaceId);
+    }
+  } else {
+    const newTab = await tabsController.createTab(window.id, pinnedTab.profileId, currentSpaceId, undefined, {
+      url: pinnedTab.defaultUrl,
+      position
+    });
+    preservedTabId = newTab.id;
+    tabsController.activateTab(newTab);
+    tabsController.normalizePositions(window.id, currentSpaceId);
+  }
+
+  const removedTabIds = pinnedTabsController.remove(pinnedTabId);
+  for (const tabId of removedTabIds) {
+    if (tabId === preservedTabId) continue;
+    const tab = tabsController.getTabById(tabId);
+    if (tab && !tab.isDestroyed) {
+      tab.destroy();
+    }
+  }
+
+  return true;
+}
+
+export async function toggleFocusedTabPin(window: BrowserWindow): Promise<boolean> {
+  const spaceId = window.currentSpaceId;
+  if (!spaceId) return false;
+
+  const focusedTab = tabsController.getFocusedTab(window.id, spaceId);
+  if (!focusedTab) return false;
+
+  const pinnedInfo = pinnedTabsController.getPinnedIdByTabId(focusedTab.id);
+  if (pinnedInfo) {
+    return unpinPinnedTabToList(pinnedInfo.pinnedTabId, window, spaceId);
+  }
+
+  return pinTabToSpace(focusedTab.id) !== null;
+}
+
 // --- IPC Handlers ---
 
 /**
@@ -74,22 +159,7 @@ ipcMain.handle("pinned-tabs:get-data", async () => {
  * The tab's current URL becomes the pinned tab's defaultUrl.
  */
 ipcMain.handle("pinned-tabs:create-from-tab", async (_event, tabId: number, position?: number) => {
-  const tab = tabsController.getTabById(tabId);
-  if (!tab) return null;
-
-  const url = tab.url;
-  if (!url) return null;
-
-  const faviconUrl = tab.faviconURL ?? null;
-  const pinnedTab = pinnedTabsController.create(tab.profileId, url, faviconUrl, position);
-
-  // Mark the tab as ephemeral so it won't be persisted across sessions
-  tabsController.makeTabEphemeral(tab.id);
-
-  // Associate the pinned tab with the browser tab in its current space
-  pinnedTabsController.associateTab(pinnedTab.uniqueId, tab.spaceId, tab.id);
-
-  return { ...pinnedTab, associatedTabIdsBySpace: { [tab.spaceId]: tab.id } };
+  return pinTabToSpace(tabId, position);
 });
 
 /**
@@ -179,49 +249,7 @@ ipcMain.handle("pinned-tabs:unpin-to-tab-list", async (event, pinnedTabId: strin
   const currentSpaceId = window.currentSpaceId;
   if (!currentSpaceId) return false;
 
-  const pinnedTab = pinnedTabsController.getById(pinnedTabId);
-  if (!pinnedTab) return false;
-
-  // Get the associated tab for the current space
-  const associatedTabId = pinnedTabsController.getAssociatedTabId(pinnedTabId, currentSpaceId);
-
-  let preservedTabId: number | null = null;
-
-  // Make the associated tab persistent so it reappears in the sidebar
-  if (associatedTabId !== null) {
-    const tab = tabsController.getTabById(associatedTabId);
-    if (tab && position !== undefined) {
-      tab.updateStateProperty("position", position);
-    }
-    tabsController.makeTabPersistent(associatedTabId);
-    if (tab) {
-      preservedTabId = tab.id;
-      tabsController.normalizePositions(tab.getWindow().id, tab.spaceId);
-    }
-  } else {
-    // No associated tab in this space — create a new persistent tab with the defaultUrl
-    const newTab = await tabsController.createTab(window.id, pinnedTab.profileId, currentSpaceId, undefined, {
-      url: pinnedTab.defaultUrl,
-      position
-    });
-
-    tabsController.activateTab(newTab);
-    tabsController.normalizePositions(window.id, currentSpaceId);
-  }
-
-  // Remove the pinned-tab record after the live tab has been restored to the
-  // regular tab list. This keeps unpinning aligned with the remove/unpin
-  // behavior used elsewhere in the feature.
-  const removedTabIds = pinnedTabsController.remove(pinnedTabId);
-  for (const tabId of removedTabIds) {
-    if (tabId === preservedTabId) continue;
-    const tab = tabsController.getTabById(tabId);
-    if (tab && !tab.isDestroyed) {
-      tab.destroy();
-    }
-  }
-
-  return true;
+  return unpinPinnedTabToList(pinnedTabId, window, currentSpaceId, position);
 });
 
 /**

@@ -3,6 +3,7 @@ import { registerProtocolsWithSession } from "../protocols";
 import { app, session } from "electron";
 import { setupInterceptRules } from "@/controllers/sessions-controller/intercept-rules";
 import { registerPreloadScripts } from "@/controllers/sessions-controller/preload-scripts";
+import { attachDownloadsToSession } from "@/controllers/downloads-controller";
 
 function initializeDefaultSession() {
   const defaultSession = session.defaultSession;
@@ -11,6 +12,7 @@ function initializeDefaultSession() {
 
   setupInterceptRules(defaultSession);
   registerPreloadScripts(defaultSession);
+  attachDownloadsToSession(defaultSession, "default");
 }
 
 export let isDefaultSessionReady = false;

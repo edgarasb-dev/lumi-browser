@@ -1,7 +1,7 @@
-# Logs from Flow
+# Logs from Lumi
 
 Logs can be found in these directories:
 
-- on Linux: `~/.config/Flow/logs/`
-- on macOS: `~/Library/Logs/Flow/`
-- on Windows: `%USERPROFILE%\AppData\Roaming\Flow\logs\`
+- on Linux: `~/.config/Lumi/logs/`
+- on macOS: `~/Library/Logs/Lumi/`
+- on Windows: `%USERPROFILE%\AppData\Roaming\Lumi\logs\`

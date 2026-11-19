@@ -45,6 +45,10 @@ function commitSuggestion(suggestion: OmniboxSuggestion, openIn: "current" | "ne
         lumi.tabs.newTab("lumi://extensions", true);
       } else if (a === "open_history") {
         lumi.tabs.newTab("lumi://history", true);
+      } else if (a === "open_downloads") {
+        lumi.tabs.newTab("lumi://downloads", true);
+      } else if (a === "clear_browsing_data") {
+        lumi.tabs.newTab("lumi://history?clear=1", true);
       }
       break;
     }

@@ -19,6 +19,8 @@ import "@/ipc/app/new-tab";
 import "@/ipc/browser/prompts";
 import "@/ipc/browser/content-blocker";
 import "@/ipc/browser/favourites";
+import "@/ipc/browser/reader";
+import "@/ipc/browser/downloads";
 
 // Session APIs
 import "@/ipc/session/profiles";

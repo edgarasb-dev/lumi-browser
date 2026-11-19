@@ -1,4 +1,5 @@
 import { GlanceTabGroup } from "@/controllers/tabs-controller/tab-groups/glance";
+import { SplitTabGroup } from "@/controllers/tabs-controller/tab-groups/split";
 import { spacesController } from "@/controllers/spaces-controller";
 import { recentlyClosedManager } from "./recently-closed-manager";
 import type { BrowserWindow } from "@/controllers/windows-controller/types";
@@ -60,6 +61,15 @@ export function restoreTabGroupMembership(restoredTab: Tab, groupData?: Persiste
       const frontTab = tabsByUniqueId.get(groupData.glanceFrontTabUniqueId);
       if (frontTab && newGroup instanceof GlanceTabGroup) {
         newGroup.setFrontTab(frontTab.id);
+      }
+    }
+
+    if (groupData.mode === "split" && newGroup instanceof SplitTabGroup) {
+      if (groupData.splitDirection) {
+        newGroup.setSplitDirection(groupData.splitDirection);
+      }
+      if (typeof groupData.splitRatio === "number") {
+        newGroup.setSplitRatio(groupData.splitRatio);
       }
     }
   } catch (error) {

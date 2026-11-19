@@ -3,6 +3,7 @@ import { getFocusedBrowserWindow, getFocusedWindow, getTab, getTabWcFromFocusedW
 import { toggleSidebar } from "@/ipc/browser/interface";
 import { getCurrentShortcut } from "@/modules/shortcuts";
 import { browserWindowsManager } from "@/controllers/windows-controller";
+import { readerModeController } from "@/controllers/reader-mode-controller";
 
 export function menuCloseTab() {
   const window = getFocusedWindow();
@@ -81,6 +82,18 @@ export const createViewMenu = (): MenuItemConstructorOptions => ({
         const window = getFocusedBrowserWindow();
         if (window) {
           window.sendMessageToCoreWebContents("find-in-page:toggle");
+        }
+      }
+    },
+    {
+      label: "Toggle Reader Mode",
+      accelerator: getCurrentShortcut("tab.toggleReaderMode"),
+      click: () => {
+        const window = getFocusedBrowserWindow();
+        if (!window) return;
+        const tab = getTab(window);
+        if (tab) {
+          void readerModeController.toggle(tab.id);
         }
       }
     },

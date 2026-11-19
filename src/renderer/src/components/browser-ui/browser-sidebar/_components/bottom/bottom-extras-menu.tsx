@@ -4,7 +4,7 @@ import { useSpaces } from "@/components/providers/spaces-provider";
 import { Button } from "@/components/ui/button";
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { ArchiveIcon, HistoryIcon, LucideIcon, SettingsIcon, StarIcon } from "lucide-react";
+import { ArchiveIcon, DownloadIcon, HistoryIcon, LucideIcon, SettingsIcon, StarIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Favourite } from "~/lumi/interfaces/browser/favourites";
 
@@ -67,6 +67,13 @@ export function BottomExtrasMenu() {
               Icon={HistoryIcon}
               label="History"
               url="lumi://history"
+              onItemSelected={onItemSelected}
+            />
+            <BottomExtrasMenuItem
+              id="downloads"
+              Icon={DownloadIcon}
+              label="Downloads"
+              url="lumi://downloads"
               onItemSelected={onItemSelected}
             />
             <BottomExtrasMenuItem

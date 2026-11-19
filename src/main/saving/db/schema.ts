@@ -1,5 +1,6 @@
-import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { NavigationEntry, TabGroupMode } from "~/types/tabs";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { NavigationEntry, SplitDirection, TabGroupMode } from "~/types/tabs";
+import { DownloadState } from "~/types/downloads";
 
 // --- Tabs Table ---
 
@@ -36,6 +37,8 @@ export const tabGroups = sqliteTable("tab_groups", {
   spaceId: text("space_id").notNull(),
   tabUniqueIds: text("tab_unique_ids", { mode: "json" }).$type<string[]>().notNull(),
   glanceFrontTabUniqueId: text("glance_front_tab_unique_id"),
+  splitDirection: text("split_direction").$type<SplitDirection>(),
+  splitRatio: real("split_ratio"),
   position: integer("position").notNull()
 });
 
@@ -107,3 +110,30 @@ export const historyVisits = sqliteTable(
 
 export type HistoryUrlRow = typeof historyUrls.$inferSelect;
 export type HistoryVisitRow = typeof historyVisits.$inferSelect;
+
+// --- Downloads Table ---
+
+export const downloads = sqliteTable(
+  "downloads",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id").notNull(),
+    url: text("url").notNull(),
+    finalUrl: text("final_url").notNull(),
+    filename: text("filename").notNull(),
+    savePath: text("save_path").notNull(),
+    mimeType: text("mime_type"),
+    totalBytes: integer("total_bytes").notNull().default(0),
+    receivedBytes: integer("received_bytes").notNull().default(0),
+    state: text("state").$type<DownloadState>().notNull(),
+    startTime: integer("start_time").notNull(),
+    endTime: integer("end_time")
+  },
+  (table) => [
+    index("idx_downloads_profile_id").on(table.profileId),
+    index("idx_downloads_start_time").on(table.startTime)
+  ]
+);
+
+export type DownloadRow = typeof downloads.$inferSelect;
+export type DownloadInsert = typeof downloads.$inferInsert;

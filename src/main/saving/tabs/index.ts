@@ -57,6 +57,8 @@ function tabGroupRowToPersistedData(row: TabGroupRow): PersistedTabGroupData {
     spaceId: row.spaceId,
     tabUniqueIds: row.tabUniqueIds,
     glanceFrontTabUniqueId: row.glanceFrontTabUniqueId ?? undefined,
+    splitDirection: row.splitDirection ?? undefined,
+    splitRatio: row.splitRatio ?? undefined,
     position: row.position
   };
 }
@@ -69,6 +71,8 @@ function persistedDataToTabGroupInsert(data: PersistedTabGroupData): TabGroupIns
     spaceId: data.spaceId,
     tabUniqueIds: data.tabUniqueIds,
     glanceFrontTabUniqueId: data.glanceFrontTabUniqueId ?? null,
+    splitDirection: data.splitDirection ?? null,
+    splitRatio: data.splitRatio ?? null,
     position: data.position
   };
 }
@@ -347,6 +351,8 @@ export class TabPersistenceManager {
           spaceId: insert.spaceId,
           tabUniqueIds: insert.tabUniqueIds,
           glanceFrontTabUniqueId: insert.glanceFrontTabUniqueId,
+          splitDirection: insert.splitDirection,
+          splitRatio: insert.splitRatio,
           position: insert.position
         }
       })

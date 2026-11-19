@@ -16,7 +16,7 @@ function mapRange(value: number, inMin: number, inMax: number, outMin: number, o
 // Icons are stored at `src/renderer/src/components/omnibox/pedal-glyph.tsx`
 const PEDALS = [
   {
-    triggers: ["open settings", "settings", "app icon", "profiles", "spaces", "about lumi", "onboarding"],
+    triggers: ["open settings", "settings", "profiles", "spaces", "about lumi", "onboarding"],
     action: "open_settings",
     description: "Open settings"
   },
@@ -39,6 +39,16 @@ const PEDALS = [
     triggers: ["history", "browse history", "browsing history"],
     action: "open_history",
     description: "History"
+  },
+  {
+    triggers: ["downloads", "download manager", "open downloads", "files"],
+    action: "open_downloads",
+    description: "Downloads"
+  },
+  {
+    triggers: ["clear history", "clear browsing data", "delete history", "clear cache"],
+    action: "clear_browsing_data",
+    description: "Clear Browsing Data"
   }
 ] satisfies Pedal[];
 

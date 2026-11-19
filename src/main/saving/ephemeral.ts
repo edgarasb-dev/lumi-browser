@@ -5,8 +5,8 @@ import { getDatastore } from "./datastore";
 
 const EphemeralDataStore = getDatastore("ephemeral");
 
-export function markUpdateStarted(currentAppVersion: string) {
-  EphemeralDataStore.set("appUpdatedFromVersion", currentAppVersion);
+export async function markUpdateStarted(currentAppVersion: string): Promise<boolean> {
+  await EphemeralDataStore.set("appUpdatedFromVersion", currentAppVersion);
   return true;
 }
 

@@ -34,6 +34,7 @@ type TabStateProperty =
   | "fullScreen"
   | "isPictureInPicture"
   | "asleep"
+  | "readerMode"
   | "lastActiveAt"
   | "position";
 type TabContentProperty = "title" | "url" | "isLoading" | "audible" | "muted" | "navHistory" | "navHistoryIndex";
@@ -175,6 +176,7 @@ export class Tab extends TypedEventEmitter<TabEvents> {
   public fullScreen: boolean = false;
   public isPictureInPicture: boolean = false;
   public asleep: boolean = false;
+  public readerMode: boolean = false;
   public createdAt: number;
   public lastActiveAt: number;
   public position: number;

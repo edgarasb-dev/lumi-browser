@@ -48,6 +48,10 @@ import { LumiPromptsAPI } from "~/lumi/interfaces/browser/prompts";
 import type { ActivePrompt } from "~/types/prompts";
 import { LumiContentBlockerAPI } from "~/lumi/interfaces/browser/content-blocker";
 import { LumiFavouritesAPI, Favourite } from "~/lumi/interfaces/browser/favourites";
+import { LumiReaderAPI } from "~/lumi/interfaces/browser/reader";
+import type { ReaderPreferences, ReaderTabState } from "~/types/reader";
+import { LumiDownloadsAPI } from "~/lumi/interfaces/browser/downloads";
+import type { DownloadEvent, DownloadItemData } from "~/types/downloads";
 import { LumiSafariSyncAPI } from "~/lumi/interfaces/settings/safari-sync";
 import type {
   ICloudSyncConfig,
@@ -90,6 +94,7 @@ function hasPermission(permission: Permission) {
   // Extensions
   const isExtensions = isLocation("lumi:", "extensions");
   const isHistoryPage = isLocation("lumi:", "history");
+  const isDownloadsPage = isLocation("lumi:", "downloads");
 
   switch (permission) {
     case "all":
@@ -97,7 +102,7 @@ function hasPermission(permission: Permission) {
     case "app":
       return isInternalProtocols || isExtensions;
     case "browser":
-      return isBrowserUI || isOmnibox || isHistoryPage;
+      return isBrowserUI || isOmnibox || isHistoryPage || isDownloadsPage;
     case "session":
       return isLumiInternalProtocol || isOmnibox || isBrowserUI;
     case "settings":
@@ -327,6 +332,30 @@ const tabsAPI: LumiTabsAPI = {
 
   clearRecentlyClosed: async () => {
     return ipcRenderer.invoke("tabs:clear-recently-closed");
+  },
+
+  createSplitView: async (tabIds: [number, number], direction?: "horizontal" | "vertical") => {
+    return ipcRenderer.invoke("tabs:create-split-view", tabIds, direction);
+  },
+
+  setSplitRatio: async (groupId: string, ratio: number) => {
+    return ipcRenderer.invoke("tabs:set-split-ratio", groupId, ratio);
+  },
+
+  setSplitDirection: async (groupId: string, direction: "horizontal" | "vertical") => {
+    return ipcRenderer.invoke("tabs:set-split-direction", groupId, direction);
+  },
+
+  swapSplitPanes: async (groupId: string) => {
+    return ipcRenderer.invoke("tabs:swap-split-panes", groupId);
+  },
+
+  ungroupTabGroup: async (groupId: string, preferredActiveTabId?: number) => {
+    return ipcRenderer.invoke("tabs:ungroup-tab-group", groupId, preferredActiveTabId);
+  },
+
+  dismissGlance: async (groupId: string, promoteFront?: boolean) => {
+    return ipcRenderer.invoke("tabs:dismiss-glance", groupId, promoteFront);
   }
 };
 
@@ -872,6 +901,74 @@ const favouritesAPI: LumiFavouritesAPI = {
   }
 };
 
+// READER MODE API //
+const readerAPI: LumiReaderAPI = {
+  toggle: async (tabId: number) => {
+    return ipcRenderer.invoke("reader:toggle", tabId);
+  },
+  enable: async (tabId: number) => {
+    return ipcRenderer.invoke("reader:enable", tabId);
+  },
+  disable: async (tabId: number) => {
+    return ipcRenderer.invoke("reader:disable", tabId);
+  },
+  getArticle: async (tabId: number) => {
+    return ipcRenderer.invoke("reader:get-article", tabId);
+  },
+  getPreferences: async () => {
+    return ipcRenderer.invoke("reader:get-preferences");
+  },
+  updatePreferences: async (updates: Partial<ReaderPreferences>) => {
+    return ipcRenderer.invoke("reader:update-preferences", updates);
+  },
+  onStateChanged: (callback: (state: ReaderTabState) => void) => {
+    return listenOnIPCChannel("reader:on-state-changed", callback);
+  },
+  onPreferencesChanged: (callback: (preferences: ReaderPreferences) => void) => {
+    return listenOnIPCChannel("reader:on-preferences-changed", callback);
+  }
+};
+
+// DOWNLOADS API //
+const downloadsAPI: LumiDownloadsAPI = {
+  list: async (profileId?: string) => {
+    return ipcRenderer.invoke("downloads:list", profileId);
+  },
+  pause: async (id: string) => {
+    return ipcRenderer.invoke("downloads:pause", id);
+  },
+  resume: async (id: string) => {
+    return ipcRenderer.invoke("downloads:resume", id);
+  },
+  cancel: async (id: string) => {
+    return ipcRenderer.invoke("downloads:cancel", id);
+  },
+  retry: async (id: string) => {
+    return ipcRenderer.invoke("downloads:retry", id);
+  },
+  openFile: async (id: string) => {
+    return ipcRenderer.invoke("downloads:open-file", id);
+  },
+  showInFinder: async (id: string) => {
+    return ipcRenderer.invoke("downloads:show-in-finder", id);
+  },
+  remove: async (id: string) => {
+    return ipcRenderer.invoke("downloads:remove", id);
+  },
+  clearCompleted: async (profileId?: string) => {
+    return ipcRenderer.invoke("downloads:clear-completed", profileId);
+  },
+  openDownloadsFolder: async () => {
+    return ipcRenderer.invoke("downloads:open-folder");
+  },
+  onChanged: (callback: (downloads: DownloadItemData[]) => void) => {
+    return listenOnIPCChannel("downloads:on-changed", callback);
+  },
+  onEvent: (callback: (event: DownloadEvent) => void) => {
+    return listenOnIPCChannel("downloads:on-event", callback);
+  }
+};
+
 // SAFARI & SYNC API //
 const safariSyncAPI: LumiSafariSyncAPI = {
   getState: async () => {
@@ -981,6 +1078,8 @@ const lumiAPI: typeof lumi = {
   prompts: wrapAPI(promptsAPI, "browser"),
   contentBlocker: wrapAPI(contentBlockerAPI, "browser"),
   favourites: wrapAPI(favouritesAPI, "browser"),
+  reader: wrapAPI(readerAPI, "browser"),
+  downloads: wrapAPI(downloadsAPI, "browser"),
 
   // Session APIs
   profiles: wrapAPI(profilesAPI, "session", {

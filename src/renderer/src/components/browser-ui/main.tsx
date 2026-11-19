@@ -29,6 +29,7 @@ import { ExtensionsProviderWithSpaces } from "@/components/providers/extensions-
 import MinimalToastProvider from "@/components/providers/minimal-toast-provider";
 import { ActionsProvider } from "@/components/providers/actions-provider";
 import { PinnedTabsProvider } from "@/components/providers/pinned-tabs-provider";
+import { DownloadsProvider } from "@/components/providers/downloads-provider";
 import BrowserContent from "@/components/browser-ui/browser-content";
 import { TargetUrlIndicator } from "@/components/browser-ui/target-url-indicator";
 import { FindInPage } from "@/components/browser-ui/find-in-page";
@@ -243,95 +244,97 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
   return (
     <FullscreenGuard>
       <MinimalToastProvider anchorRef={browserContentAnchorRef} sidebarSide={attachedDirection}>
-        <ActionsProvider>
-          <WindowTitle />
-          <AutoNewTab isReady={isReady} />
-          <div
-            className={cn(
-              "w-screen h-screen overflow-hidden",
-              "bg-linear-to-br from-space-background-start/65 to-space-background-end/65",
-              "transition-colors duration-150",
-              "flex flex-col",
-              "app-drag"
-            )}
-          >
-            {isTopbarMode ? (
-              <div className="w-full h-full flex flex-col">
-                <LoadingIndicator />
-                <TopbarLayout />
-                <div className="relative flex-1 min-h-0 flex p-2.5 remove-app-drag">
-                  <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
-                  <WebPrompts anchorRef={browserContentAnchorRef} />
-                  <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
-                  <FindInPage anchorRef={browserContentAnchorRef} />
-                  <BrowserContent />
-                  <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
+        <DownloadsProvider>
+          <ActionsProvider>
+            <WindowTitle />
+            <AutoNewTab isReady={isReady} />
+            <div
+              className={cn(
+                "w-screen h-screen overflow-hidden",
+                "bg-linear-to-br from-space-background-start/65 to-space-background-end/65",
+                "transition-colors duration-150",
+                "flex flex-col",
+                "app-drag"
+              )}
+            >
+              {isTopbarMode ? (
+                <div className="w-full h-full flex flex-col">
+                  <LoadingIndicator />
+                  <TopbarLayout />
+                  <div className="relative flex-1 min-h-0 flex p-2.5 remove-app-drag">
+                    <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
+                    <WebPrompts anchorRef={browserContentAnchorRef} />
+                    <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
+                    <FindInPage anchorRef={browserContentAnchorRef} />
+                    <BrowserContent />
+                    <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <ResizablePanelGroupWithProvider direction="horizontal" className="flex-1 flex flex-col!">
-                <AdaptiveTopbar />
-                <div
-                  className={cn(
-                    "w-full min-w-0 h-[calc(100vh-var(--topbar-height))] flex flex-row items-center justify-center"
-                  )}
-                  style={{ "--topbar-height": `${topbarHeight}px` } as React.CSSProperties}
-                >
-                  {hasSidebar && (
-                    <PresenceSidebar
-                      sidebarMode={sidebarMode}
-                      targetSidebarModes={["attached-left", "floating-left"]}
-                      direction="left"
-                      order={1}
-                    />
-                  )}
-                  <ResizablePanel
-                    id="main"
-                    order={2}
-                    className={cn("min-w-0 flex-1 h-full py-2.5 overflow-visible!", topbarVisible && "pt-0")}
+              ) : (
+                <ResizablePanelGroupWithProvider direction="horizontal" className="flex-1 flex flex-col!">
+                  <AdaptiveTopbar />
+                  <div
+                    className={cn(
+                      "w-full min-w-0 h-[calc(100vh-var(--topbar-height))] flex flex-row items-center justify-center"
+                    )}
+                    style={{ "--topbar-height": `${topbarHeight}px` } as React.CSSProperties}
                   >
-                    <div className="w-full min-w-0 h-full flex items-center justify-center remove-app-drag">
-                      {sidebarMode !== "attached-left" ? (
-                        <div className="w-2.5 shrink-0" />
-                      ) : (
-                        <SidebarResizeHandle key="left-sidebar-resize-handle" />
-                      )}
+                    {hasSidebar && (
+                      <PresenceSidebar
+                        sidebarMode={sidebarMode}
+                        targetSidebarModes={["attached-left", "floating-left"]}
+                        direction="left"
+                        order={1}
+                      />
+                    )}
+                    <ResizablePanel
+                      id="main"
+                      order={2}
+                      className={cn("min-w-0 flex-1 h-full py-2.5 overflow-visible!", topbarVisible && "pt-0")}
+                    >
+                      <div className="w-full min-w-0 h-full flex items-center justify-center remove-app-drag">
+                        {sidebarMode !== "attached-left" ? (
+                          <div className="w-2.5 shrink-0" />
+                        ) : (
+                          <SidebarResizeHandle key="left-sidebar-resize-handle" />
+                        )}
 
-                      <div className="relative flex-1 min-w-0 h-full flex flex-col">
-                        <LoadingIndicator />
-                        {type === "popup" && <PopupToolbar />}
-                        <div className="relative flex-1 min-h-0 flex">
-                          <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
-                          <WebPrompts anchorRef={browserContentAnchorRef} />
-                          <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
-                          <FindInPage anchorRef={browserContentAnchorRef} />
-                          <BrowserContent />
-                          <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
+                        <div className="relative flex-1 min-w-0 h-full flex flex-col">
+                          <LoadingIndicator />
+                          {type === "popup" && <PopupToolbar />}
+                          <div className="relative flex-1 min-h-0 flex">
+                            <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
+                            <WebPrompts anchorRef={browserContentAnchorRef} />
+                            <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
+                            <FindInPage anchorRef={browserContentAnchorRef} />
+                            <BrowserContent />
+                            <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
+                          </div>
                         </div>
+
+                        {sidebarMode !== "attached-right" ? (
+                          <div className="w-2.5 shrink-0" />
+                        ) : (
+                          <SidebarResizeHandle key="right-sidebar-resize-handle" />
+                        )}
                       </div>
+                    </ResizablePanel>
+                    {hasSidebar && (
+                      <PresenceSidebar
+                        sidebarMode={sidebarMode}
+                        targetSidebarModes={["attached-right", "floating-right"]}
+                        direction="right"
+                        order={3}
+                      />
+                    )}
+                  </div>
+                </ResizablePanelGroupWithProvider>
+              )}
 
-                      {sidebarMode !== "attached-right" ? (
-                        <div className="w-2.5 shrink-0" />
-                      ) : (
-                        <SidebarResizeHandle key="right-sidebar-resize-handle" />
-                      )}
-                    </div>
-                  </ResizablePanel>
-                  {hasSidebar && (
-                    <PresenceSidebar
-                      sidebarMode={sidebarMode}
-                      targetSidebarModes={["attached-right", "floating-right"]}
-                      direction="right"
-                      order={3}
-                    />
-                  )}
-                </div>
-              </ResizablePanelGroupWithProvider>
-            )}
-
-            <ConditionalUpdateEffect />
-          </div>
-        </ActionsProvider>
+              <ConditionalUpdateEffect />
+            </div>
+          </ActionsProvider>
+        </DownloadsProvider>
       </MinimalToastProvider>
     </FullscreenGuard>
   );

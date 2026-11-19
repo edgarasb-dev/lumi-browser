@@ -1,5 +1,12 @@
 import { IPCListener } from "~/lumi/types";
-import { RecentlyClosedTabData, TabData, TabPlaceholderUpdate, TabTargetUrlUpdate, WindowTabsData } from "~/types/tabs";
+import {
+  RecentlyClosedTabData,
+  SplitDirection,
+  TabData,
+  TabPlaceholderUpdate,
+  TabTargetUrlUpdate,
+  WindowTabsData
+} from "~/types/tabs";
 
 // API //
 export interface LumiTabsAPI {
@@ -138,4 +145,34 @@ export interface LumiTabsAPI {
    * @returns Whether the operation was successful
    */
   clearRecentlyClosed: () => Promise<boolean>;
+
+  /**
+   * Pair two tabs into a side-by-side or stacked Split View group
+   */
+  createSplitView: (tabIds: [number, number], direction?: SplitDirection) => Promise<boolean>;
+
+  /**
+   * Adjust the pane ratio [0.2..0.8] of an active Split View group
+   */
+  setSplitRatio: (groupId: string, ratio: number) => Promise<boolean>;
+
+  /**
+   * Switch Split View orientation between horizontal and vertical
+   */
+  setSplitDirection: (groupId: string, direction: SplitDirection) => Promise<boolean>;
+
+  /**
+   * Swap the panes inside a Split View group
+   */
+  swapSplitPanes: (groupId: string) => Promise<boolean>;
+
+  /**
+   * Ungroup a Split or Glance group without destroying its tabs
+   */
+  ungroupTabGroup: (groupId: string, preferredActiveTabId?: number) => Promise<boolean>;
+
+  /**
+   * Dismiss a Glance overlay group (close front tab or promote front tab to full view)
+   */
+  dismissGlance: (groupId: string, promoteFront?: boolean) => Promise<boolean>;
 }

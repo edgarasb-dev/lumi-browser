@@ -8,7 +8,7 @@
  _A modern, privacy-focused browser with fluid vertical spaces, tab previews, and full Chrome extension support._
 
   <p align="center">
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.3-blue?style=flat-square&logo=github" alt="Release v0.1.3" /></a>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.5-blue?style=flat-square&logo=github" alt="Release v0.1.5" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-emerald?style=flat-square" alt="License GPL-3.0" /></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-purple?style=flat-square" alt="Platforms" />
     <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />

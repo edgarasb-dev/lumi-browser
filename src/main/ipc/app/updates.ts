@@ -27,8 +27,8 @@ ipcMain.handle("updates:download-update", () => {
   return autoUpdateController.downloadUpdate();
 });
 
-ipcMain.handle("updates:install-update", () => {
-  return autoUpdateController.installUpdate();
+ipcMain.handle("updates:install-update", async () => {
+  return await autoUpdateController.installUpdate();
 });
 
 ipcMain.handle("updates:has-updated", () => {

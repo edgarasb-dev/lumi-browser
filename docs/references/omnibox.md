@@ -53,7 +53,7 @@ const omniboxBackend = new Omnibox(handleSuggestionsUpdate);
 omniboxBackend.handleInput("", "focus");
 
 // Example: Keystroke event
-omniboxBackend.handleInput("flow", "keystroke");
+omniboxBackend.handleInput("lumi", "keystroke");
 
 // Example: Selecting a match
 const selectedMatch: AutocompleteMatch = /* ... get match from UI */;

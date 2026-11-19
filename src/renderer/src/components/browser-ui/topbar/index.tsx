@@ -9,10 +9,22 @@ import { AddressBar } from "@/components/browser-ui/browser-sidebar/_components/
 import { SpaceSwitcher } from "@/components/browser-ui/browser-sidebar/_components/bottom/space-switcher";
 import { SpaceScratchpad } from "@/components/browser-ui/browser-sidebar/_components/space-scratchpad";
 import { BottomExtrasMenu } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-extras-menu";
+import { DownloadsButton } from "@/components/browser-ui/browser-sidebar/_components/downloads-button";
 import { TabPreviewCard } from "@/components/browser-ui/browser-sidebar/_components/tab-preview-card";
 import { useSetting } from "@/components/providers/settings-provider";
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
-import { Plus, X, PanelLeft, Volume2, VolumeX } from "lucide-react";
+import {
+  Plus,
+  X,
+  PanelLeft,
+  Volume2,
+  VolumeX,
+  Columns2,
+  Rows2,
+  ArrowLeftRight,
+  Ungroup,
+  Maximize2
+} from "lucide-react";
 import type { TabData } from "~/types/tabs";
 
 interface TopbarTabProps {
@@ -171,7 +183,7 @@ export function TopbarLayout() {
   const { setContentTopOffset } = useAdaptiveTopbar();
   const { platform } = usePlatform();
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
-  const { getTabGroups } = useTabsGroups();
+  const { getTabGroups, activeTabGroup } = useTabsGroups();
   const focusedTab = useFocusedTab();
   const [, setNavigationLayout] = useSetting<"sidebar" | "topbar">("navigationLayout");
 
@@ -246,8 +258,71 @@ export function TopbarLayout() {
           </button>
         </div>
 
-        {/* Spaces and Layout Toggle on right */}
+        {/* Split / Glance Quick Controls + Spaces + Layout Toggle on right */}
         <div className="shrink-0 flex items-center gap-1.5 remove-app-drag">
+          {activeTabGroup?.mode === "split" && activeTabGroup.tabs.length >= 2 && (
+            <div className="flex items-center gap-0.5 px-1 py-0.5 rounded-lg bg-black/5 dark:bg-white/10">
+              <button
+                type="button"
+                onClick={() => lumi.tabs.swapSplitPanes(activeTabGroup.id)}
+                className="size-6 rounded flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/15"
+                title="Swap Split Panes"
+              >
+                <ArrowLeftRight className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  lumi.tabs.setSplitDirection(
+                    activeTabGroup.id,
+                    activeTabGroup.splitDirection === "vertical" ? "horizontal" : "vertical"
+                  )
+                }
+                className="size-6 rounded flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/15"
+                title={
+                  activeTabGroup.splitDirection === "vertical"
+                    ? "Switch to Side-by-Side Split"
+                    : "Switch to Top/Bottom Split"
+                }
+              >
+                {activeTabGroup.splitDirection === "vertical" ? (
+                  <Columns2 className="size-3.5" />
+                ) : (
+                  <Rows2 className="size-3.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => lumi.tabs.ungroupTabGroup(activeTabGroup.id, focusedTab?.id)}
+                className="size-6 rounded flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/15"
+                title="Unsplit Tabs"
+              >
+                <Ungroup className="size-3.5" />
+              </button>
+            </div>
+          )}
+
+          {activeTabGroup?.mode === "glance" && activeTabGroup.tabs.length >= 2 && (
+            <div className="flex items-center gap-0.5 px-1 py-0.5 rounded-lg bg-black/5 dark:bg-white/10">
+              <button
+                type="button"
+                onClick={() => lumi.tabs.dismissGlance(activeTabGroup.id, true)}
+                className="size-6 rounded flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/15"
+                title="Promote Glance Tab"
+              >
+                <Maximize2 className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => lumi.tabs.dismissGlance(activeTabGroup.id, false)}
+                className="size-6 rounded flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/15"
+                title="Dismiss Glance Overlay"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+
           <div className="max-w-[150px]">
             <SpaceSwitcher />
           </div>
@@ -276,6 +351,7 @@ export function TopbarLayout() {
         </div>
 
         <div className="shrink-0 flex items-center gap-1 remove-app-drag">
+          <DownloadsButton />
           <SpaceScratchpad />
           <BottomExtrasMenu />
         </div>

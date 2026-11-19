@@ -77,6 +77,9 @@ function groupVisitsByDay(
 function HistoryPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [clearDialogOpen, setClearDialogOpen] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("clear") === "1"
+  );
   const searchRef = useRef<HTMLInputElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -183,7 +186,7 @@ function HistoryPage() {
             />
           </div>
 
-          <AlertDialog>
+          <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"

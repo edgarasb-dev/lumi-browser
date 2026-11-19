@@ -6,6 +6,7 @@ import { setupInterceptRules } from "./intercept-rules";
 import { registerPreloadScripts } from "./preload-scripts";
 import { registerProtocolsWithSession } from "./protocols";
 import { createBetterWebRequest, createBetterSession } from "./web-requests";
+import { attachDownloadsToSession } from "@/controllers/downloads-controller";
 
 class SessionsController {
   private sessions: Map<string, Session> = new Map();
@@ -24,9 +25,10 @@ class SessionsController {
     registerProtocolsWithSession(profileSession, ["lumi", "lumi-external"]);
     registerHandlersWithSession(profileSession);
 
-    // Register Preload Script and Network Intercept Rules
+    // Register Preload Script, Network Intercept Rules, and Download tracking
     registerPreloadScripts(profileSession);
     setupInterceptRules(profileSession);
+    attachDownloadsToSession(profileSession, profileId);
 
     // Store session in map and return
     this.sessions.set(profileId, profileSession);

@@ -340,10 +340,11 @@ export function UpdateCard() {
           >
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <div className="font-medium">Automatic updates are not supported on this platform.</div>
+              <div className="font-medium">Automatic updates are not available for this installation.</div>
             </div>
             <div className="mt-1.5 pl-7 text-xs">
-              Please download v{availableVersion} manually from our website.
+              Please download v{availableVersion} manually from GitHub Releases (on macOS, ensure Lumi.app is placed in
+              Applications).
               <Button
                 variant="link"
                 size="sm"

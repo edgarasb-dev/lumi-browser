@@ -1,7 +1,7 @@
 import { BaseTabGroup, TabGroup } from "@/controllers/tabs-controller/tab-groups";
 import { spacesController } from "@/controllers/spaces-controller";
 import { clipboard, ipcMain, Menu, MenuItem } from "electron";
-import { TabData, WindowActiveTabIds, WindowFocusedTabIds } from "~/types/tabs";
+import { SplitDirection, TabData, WindowActiveTabIds, WindowFocusedTabIds } from "~/types/tabs";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 import { BrowserWindow } from "@/controllers/windows-controller/types";
 import { Tab } from "@/controllers/tabs-controller/tab";
@@ -15,6 +15,8 @@ import {
   moveTabOrGroupToWindow,
   runTabSyncMutation
 } from "@/controllers/tabs-controller/tab-sync";
+import { pinTabToSpace } from "@/ipc/browser/pinned-tabs";
+import { getCurrentShortcut } from "@/modules/shortcuts";
 import { isHttpOrHttpsUrl, isSafariInstalled, openUrlInSafari } from "@/modules/safari-sync/safari-bridge";
 
 // IPC Handlers //
@@ -446,6 +448,93 @@ ipcMain.on("tabs:show-context-menu", async (event, tabId: number) => {
     })
   );
 
+  contextMenu.append(
+    new MenuItem({
+      label: "Pin Tab",
+      accelerator: getCurrentShortcut("tab.togglePin"),
+      enabled: hasURL,
+      click: () => {
+        pinTabToSpace(tab.id);
+      }
+    })
+  );
+
+  // Split View & Glance actions
+  const existingGroup = tabsController.getTabGroupByTabId(tab.id);
+  if (!existingGroup) {
+    const activeTabOrGroup = tabsController.getActiveTab(window.id, tab.spaceId);
+    const activeFocusedTab = tabsController.getFocusedTab(window.id, tab.spaceId);
+    const activePairCandidate =
+      activeFocusedTab && activeFocusedTab.id !== tab.id && !activeFocusedTab.ephemeral && !activeFocusedTab.groupId
+        ? activeFocusedTab
+        : activeTabOrGroup instanceof Tab &&
+            activeTabOrGroup.id !== tab.id &&
+            !activeTabOrGroup.ephemeral &&
+            !activeTabOrGroup.groupId
+          ? activeTabOrGroup
+          : tabsController
+              .getTabsInWindowSpace(window.id, tab.spaceId)
+              .find((candidate) => candidate.id !== tab.id && !candidate.ephemeral && !candidate.groupId);
+
+    if (activePairCandidate && !tab.ephemeral) {
+      contextMenu.append(
+        new MenuItem({
+          label: "Open in Split View",
+          accelerator: getCurrentShortcut("tab.toggleSplitView"),
+          click: () => {
+            tabsController.createSplitView([activePairCandidate.id, tab.id], "horizontal");
+          }
+        })
+      );
+    }
+  } else if (existingGroup.mode === "split") {
+    contextMenu.append(
+      new MenuItem({
+        label: "Swap Split Panes",
+        click: () => {
+          tabsController.swapSplitPanes(existingGroup.groupId);
+        }
+      })
+    );
+    contextMenu.append(
+      new MenuItem({
+        label: existingGroup.splitDirection === "horizontal" ? "Stack Panes Vertically" : "Arrange Panes Side by Side",
+        click: () => {
+          tabsController.setSplitDirection(
+            existingGroup.groupId,
+            existingGroup.splitDirection === "horizontal" ? "vertical" : "horizontal"
+          );
+        }
+      })
+    );
+    contextMenu.append(
+      new MenuItem({
+        label: "Exit Split View",
+        accelerator: getCurrentShortcut("tab.toggleSplitView"),
+        click: () => {
+          tabsController.ungroupTabGroup(existingGroup.groupId, tab.id);
+        }
+      })
+    );
+  } else if (existingGroup.mode === "glance") {
+    contextMenu.append(
+      new MenuItem({
+        label: "Promote Glance to Full Tab",
+        click: () => {
+          tabsController.dismissGlance(existingGroup.groupId, true);
+        }
+      })
+    );
+    contextMenu.append(
+      new MenuItem({
+        label: "Close Glance",
+        click: () => {
+          tabsController.dismissGlance(existingGroup.groupId, false);
+        }
+      })
+    );
+  }
+
   if (process.platform === "darwin" && isSafariInstalled() && isHttpOrHttpsUrl(tab.url)) {
     contextMenu.append(
       new MenuItem({
@@ -662,4 +751,30 @@ ipcMain.handle("tabs:wake-tab", (_event, tabId: number) => {
   if (!lifecycle) return false;
   lifecycle.wakeUp();
   return true;
+});
+
+// --- Split View & Glance ---
+
+ipcMain.handle("tabs:create-split-view", (_event, tabIds: [number, number], direction?: SplitDirection) => {
+  return tabsController.createSplitView(tabIds, direction ?? "horizontal") !== null;
+});
+
+ipcMain.handle("tabs:set-split-ratio", (_event, groupId: string, ratio: number) => {
+  return tabsController.setSplitRatio(groupId, ratio);
+});
+
+ipcMain.handle("tabs:set-split-direction", (_event, groupId: string, direction: SplitDirection) => {
+  return tabsController.setSplitDirection(groupId, direction);
+});
+
+ipcMain.handle("tabs:swap-split-panes", (_event, groupId: string) => {
+  return tabsController.swapSplitPanes(groupId);
+});
+
+ipcMain.handle("tabs:ungroup-tab-group", (_event, groupId: string, preferredActiveTabId?: number) => {
+  return tabsController.ungroupTabGroup(groupId, preferredActiveTabId);
+});
+
+ipcMain.handle("tabs:dismiss-glance", (_event, groupId: string, promoteFront?: boolean) => {
+  return tabsController.dismissGlance(groupId, promoteFront);
 });

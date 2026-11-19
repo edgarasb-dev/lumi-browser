@@ -1,5 +1,18 @@
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
-import { XIcon, Volume2, VolumeX, Folder, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  XIcon,
+  Volume2,
+  VolumeX,
+  Folder,
+  ChevronDown,
+  ChevronRight,
+  Columns2,
+  Rows2,
+  Layers,
+  ArrowLeftRight,
+  Ungroup,
+  Maximize2
+} from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { TabGroup as TabGroupType } from "@/components/providers/tabs-provider";
@@ -502,14 +515,96 @@ export const TabGroup = memo(
               }
             }}
             className={cn(
-              "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer select-none",
+              "group/header flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer select-none",
               "text-black/60 dark:text-white/60 hover:text-black/90 dark:hover:text-white/90",
               "hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
             )}
           >
             {isCollapsed ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-            <Folder className="size-3.5 text-amber-500/80" />
-            <span className="truncate flex-1">Tab Group</span>
+            {tabGroup.mode === "split" ? (
+              tabGroup.splitDirection === "vertical" ? (
+                <Rows2 className="size-3.5 text-sky-500/90" />
+              ) : (
+                <Columns2 className="size-3.5 text-sky-500/90" />
+              )
+            ) : tabGroup.mode === "glance" ? (
+              <Layers className="size-3.5 text-violet-500/90" />
+            ) : (
+              <Folder className="size-3.5 text-amber-500/80" />
+            )}
+            <span className="truncate flex-1">
+              {tabGroup.mode === "split" ? "Split View" : tabGroup.mode === "glance" ? "Glance" : "Tab Group"}
+            </span>
+
+            {tabGroup.mode === "split" && (
+              <div
+                className="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => lumi.tabs.swapSplitPanes(tabGroup.id)}
+                  title="Swap Split Panes"
+                  className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/15"
+                >
+                  <ArrowLeftRight className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    lumi.tabs.setSplitDirection(
+                      tabGroup.id,
+                      tabGroup.splitDirection === "vertical" ? "horizontal" : "vertical"
+                    )
+                  }
+                  title={
+                    tabGroup.splitDirection === "vertical"
+                      ? "Switch to Side-by-Side Split"
+                      : "Switch to Top/Bottom Split"
+                  }
+                  className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/15"
+                >
+                  {tabGroup.splitDirection === "vertical" ? (
+                    <Columns2 className="size-3" />
+                  ) : (
+                    <Rows2 className="size-3" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => lumi.tabs.ungroupTabGroup(tabGroup.id, focusedTab?.id)}
+                  title="Unsplit Tabs"
+                  className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/15"
+                >
+                  <Ungroup className="size-3" />
+                </button>
+              </div>
+            )}
+
+            {tabGroup.mode === "glance" && (
+              <div
+                className="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => lumi.tabs.dismissGlance(tabGroup.id, true)}
+                  title="Promote Glance Tab to Full Tab"
+                  className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/15"
+                >
+                  <Maximize2 className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => lumi.tabs.dismissGlance(tabGroup.id, false)}
+                  title="Dismiss Glance Overlay"
+                  className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/15"
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </div>
+            )}
+
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/10 dark:bg-white/10 font-semibold tabular-nums">
               {tabs.length}
             </span>

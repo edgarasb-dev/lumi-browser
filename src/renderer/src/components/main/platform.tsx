@@ -94,7 +94,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [platform, setPlatform] = useState<Platform>("unknown");
 
   useEffect(() => {
-    // Wrapped in try-catch so it still works when `flow` is not available
+    // Wrapped in try-catch so it still works when `lumi` is not available
     // Because of electron preload scripts not running in iframes
     // https://www.google.com/search?q=electron+preload+not+working+in+iframe
     try {

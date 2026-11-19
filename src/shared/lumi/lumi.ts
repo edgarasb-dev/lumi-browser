@@ -16,6 +16,8 @@ import { LumiPasskeyAPI } from "~/lumi/interfaces/browser/passkey";
 import { LumiPromptsAPI } from "~/lumi/interfaces/browser/prompts";
 import { LumiContentBlockerAPI } from "~/lumi/interfaces/browser/content-blocker";
 import { LumiFavouritesAPI } from "~/lumi/interfaces/browser/favourites";
+import { LumiReaderAPI } from "~/lumi/interfaces/browser/reader";
+import { LumiDownloadsAPI } from "~/lumi/interfaces/browser/downloads";
 
 import { LumiProfilesAPI } from "~/lumi/interfaces/sessions/profiles";
 import { LumiSpacesAPI } from "~/lumi/interfaces/sessions/spaces";
@@ -53,6 +55,8 @@ export type LumiAPI = {
   prompts: LumiPromptsAPI;
   contentBlocker: LumiContentBlockerAPI;
   favourites: LumiFavouritesAPI;
+  reader: LumiReaderAPI;
+  downloads: LumiDownloadsAPI;
 
   // Session APIs
   profiles: LumiProfilesAPI;

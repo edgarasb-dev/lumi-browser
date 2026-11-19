@@ -16,6 +16,7 @@ import { SpaceSwitcher } from "@/components/browser-ui/browser-sidebar/_componen
 import { SpacePagesCarousel } from "@/components/browser-ui/browser-sidebar/_components/space-pages-carousel";
 import { UpdateBanner } from "@/components/browser-ui/browser-sidebar/_components/update-banner";
 import { BottomExtrasMenu } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-extras-menu";
+import { DownloadsButton } from "@/components/browser-ui/browser-sidebar/_components/downloads-button";
 import { SpaceScratchpad } from "./_components/space-scratchpad";
 import { useWindowDrag } from "@/hooks/use-window-drag";
 
@@ -98,7 +99,10 @@ export function SidebarInner({ direction, variant }: { direction: AttachedDirect
       <UpdateBanner />
       {/* Bottom Section */}
       <div className="shrink-0 flex items-center justify-between h-4 my-2">
-        <BottomExtrasMenu />
+        <div className="flex items-center gap-0.5">
+          <BottomExtrasMenu />
+          <DownloadsButton />
+        </div>
         <SpaceSwitcher />
         <SpaceScratchpad />
       </div>

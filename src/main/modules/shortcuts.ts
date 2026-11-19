@@ -48,6 +48,18 @@ const typedShortcuts = [
     category: "Tab"
   },
   {
+    id: "tab.togglePin",
+    name: "Pin / Unpin Tab",
+    shortcut: "CommandOrControl+Shift+P",
+    category: "Tab"
+  },
+  {
+    id: "tab.toggleSplitView",
+    name: "Toggle Split View",
+    shortcut: "CommandOrControl+Shift+\\",
+    category: "Tab"
+  },
+  {
     id: "tab.reopenClosed",
     name: "Reopen Closed Tab",
     shortcut: "Shift+CommandOrControl+T",
@@ -121,6 +133,12 @@ const typedShortcuts = [
     id: "tab.findInPage",
     name: "Find in Page",
     shortcut: "CommandOrControl+F",
+    category: "Tab"
+  },
+  {
+    id: "tab.toggleReaderMode",
+    name: "Toggle Reader Mode",
+    shortcut: "CommandOrControl+Alt+R",
     category: "Tab"
   }
 ] as const satisfies ShortcutAction[];

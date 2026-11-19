@@ -143,6 +143,7 @@ export function serializeTabForRenderer(tab: Tab, preSleepState?: PreSleepState 
     fullScreen: tab.fullScreen,
     isPictureInPicture: tab.isPictureInPicture,
     asleep: tab.asleep,
+    readerMode: tab.readerMode || undefined,
     ephemeral: tab.ephemeral || undefined
   };
 }
@@ -160,6 +161,8 @@ export function serializeTabGroup(tabGroup: TabGroup): PersistedTabGroupData {
     tabUniqueIds: tabGroup.tabs.map((tab) => tab.uniqueId),
     glanceFrontTabUniqueId:
       tabGroup.mode === "glance" ? tabGroup.tabs.find((t) => t.id === tabGroup.frontTabId)?.uniqueId : undefined,
+    splitDirection: tabGroup.mode === "split" ? tabGroup.splitDirection : undefined,
+    splitRatio: tabGroup.mode === "split" ? tabGroup.splitRatio : undefined,
     position: tabGroup.position
   };
 }
@@ -176,6 +179,8 @@ export function serializeTabGroupForRenderer(tabGroup: TabGroup): TabGroupData {
     spaceId: tabGroup.spaceId,
     tabIds: tabGroup.tabs.map((tab) => tab.id),
     glanceFrontTabId: tabGroup.mode === "glance" ? tabGroup.frontTabId : undefined,
+    splitDirection: tabGroup.mode === "split" ? tabGroup.splitDirection : undefined,
+    splitRatio: tabGroup.mode === "split" ? tabGroup.splitRatio : undefined,
     position: tabGroup.position
   };
 }

@@ -20,6 +20,7 @@ import "./auto-update-controller";
 import "./loaded-profiles-controller";
 import "./tabs-controller";
 import "./pinned-tabs-controller";
+import "./downloads-controller";
 import "./handoff-controller";
 import "./safari-sync-controller";
 import "./sessions-controller";

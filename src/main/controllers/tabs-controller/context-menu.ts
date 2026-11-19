@@ -64,7 +64,7 @@ export function createTabContextMenu(
       };
 
       // Create all menu sections
-      const openLinkItems = createOpenLinkItems(parameters, createNewTab);
+      const openLinkItems = createOpenLinkItems(tabsController, tab, parameters, createNewTab);
       const navigationItems = createNavigationItems(navigationHistory, webContents, canGoBack, canGoForward);
       const extensionItems = createExtensionItems(tab, webContents, parameters);
       const textHistoryItems = createTextHistoryItems(webContents);
@@ -134,6 +134,8 @@ export function createTabContextMenu(
 }
 
 function createOpenLinkItems(
+  tabsController: TabsController,
+  sourceTab: Tab,
   parameters: Electron.ContextMenuParams,
   createNewTab: (url: string, window?: BrowserWindow) => Promise<void>
 ): Electron.MenuItemConstructorOptions[] {
@@ -141,14 +143,28 @@ function createOpenLinkItems(
     {
       label: "Open Link in New Tab",
       click: () => {
-        createNewTab(parameters.linkURL);
+        void createNewTab(parameters.linkURL);
+      }
+    },
+    {
+      label: "Open Link in Split View",
+      enabled: !sourceTab.ephemeral && sourceTab.getWindow().browserWindowType === "normal",
+      click: () => {
+        void tabsController.openUrlInSplit(sourceTab, parameters.linkURL, "horizontal");
+      }
+    },
+    {
+      label: "Open Link in Glance",
+      enabled: !sourceTab.ephemeral && sourceTab.getWindow().browserWindowType === "normal",
+      click: () => {
+        void tabsController.openUrlInGlance(sourceTab, parameters.linkURL);
       }
     },
     {
       label: "Open Link in New Window",
       click: async () => {
         const newWindow = await browserWindowsController.create();
-        createNewTab(parameters.linkURL, newWindow);
+        void createNewTab(parameters.linkURL, newWindow);
       }
     }
   ];

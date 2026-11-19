@@ -6,6 +6,7 @@ import { browserWindowsController } from "@/controllers/windows-controller/inter
 import { shouldArchiveTab } from "@/saving/tabs";
 import { app } from "electron";
 import { GlanceTabGroup } from "@/controllers/tabs-controller/tab-groups/glance";
+import { SplitTabGroup } from "@/controllers/tabs-controller/tab-groups/split";
 import type { BrowserWindowCreationOptions, BrowserWindowType } from "@/controllers/windows-controller/types/browser";
 
 /**
@@ -136,6 +137,16 @@ async function restoreTabGroups(
         const frontTabId = uniqueIdToTabId.get(groupData.glanceFrontTabUniqueId);
         if (frontTabId !== undefined && group instanceof GlanceTabGroup) {
           group.setFrontTab(frontTabId);
+        }
+      }
+
+      // Restore split view geometry
+      if (groupData.mode === "split" && group instanceof SplitTabGroup) {
+        if (groupData.splitDirection) {
+          group.setSplitDirection(groupData.splitDirection);
+        }
+        if (typeof groupData.splitRatio === "number") {
+          group.setSplitRatio(groupData.splitRatio);
         }
       }
     } catch (error) {

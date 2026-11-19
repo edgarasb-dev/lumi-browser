@@ -4,8 +4,10 @@ permissions:
   contents: write
 
 on:
-  # Builds the app when a new tag is created
+  # Builds and releases automatically when a v* tag is pushed OR when package.json version on main has no matching tag yet
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
@@ -17,20 +19,40 @@ run-name: Release ${{ github.ref_name }}
 jobs:
   create-release:
     runs-on: ubuntu-24.04
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      tag: ${{ steps.check.outputs.tag }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - name: Ensure GitHub Release exists
-        continue-on-error: true
+      - name: Check release status and ensure tag & GitHub Release exist
+        id: check
         run: |
           VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
           TAG="v$VERSION"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+              echo "Tag $TAG already exists on origin; skipping release build."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Tag $TAG does not exist yet on origin; creating and pushing tag for $GITHUB_SHA..."
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+
           CODENAME=$(python3 -c "
           import json
           v = json.load(open('package.json'))['version']
           codenames = {'0.1.0': 'Spark', '0.2.0': 'Glow', '0.3.0': 'Prism', '0.4.0': 'Flare', '0.5.0': 'Aurora', '1.0.0': 'Lumina', '2.0.0': 'Sol'}
-          print(codenames.get(v, ''))
+          parts = v.split('.')
+          base = f'{parts[0]}.{parts[1]}.0' if len(parts) >= 2 else v
+          print(codenames.get(v) or codenames.get(base, ''))
           ")
           if [ -n "$CODENAME" ]; then
             TITLE="Lumi $TAG \"$CODENAME\""
@@ -39,12 +61,14 @@ jobs:
           fi
           echo "Ensuring release exists for $TAG with title: $TITLE..."
           gh release view "$TAG" || gh release create "$TAG" --title "$TITLE" --generate-notes || true
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     needs: create-release
+    if: needs.create-release.outputs.should_release == 'true'
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -165,7 +189,8 @@ jobs:
 
   # Merge latest-mac.yml across arm64 + x64 before uploading so neither overwrites the other
   publish-macos:
-    needs: release
+    needs: [create-release, release]
+    if: needs.create-release.outputs.should_release == 'true'
     runs-on: ubuntu-24.04
     steps:
       - name: Check out Git repository
@@ -253,8 +278,7 @@ jobs:
 
       - name: Upload macOS assets and merged latest-mac.yml
         run: |
-          VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
-          TAG="v$VERSION"
+          TAG="${{ needs.create-release.outputs.tag }}"
           gh release upload "$TAG" mac-publish/* --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

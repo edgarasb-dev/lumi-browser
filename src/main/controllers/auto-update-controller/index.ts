@@ -7,6 +7,12 @@ import { app } from "electron";
 import { autoUpdater, ProgressInfo, UpdateInfo, UpdateCheckResult } from "electron-updater";
 import { spawnSync } from "node:child_process";
 import { UpdateStatus } from "~/types/updates";
+import {
+  checkMacAdhocEligibility,
+  downloadAndVerifyMacZip,
+  prepareAndLaunchMacAdhocInstall,
+  selectMacZipAsset
+} from "./mac-adhoc-updater";
 
 // Mock Data //
 type MockUpdateData = {
@@ -45,6 +51,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   private lastChecked: number | null = null;
   private mockDownloadIntervalId: NodeJS.Timeout | null = null;
   private mockBytesDownloaded: number = 0;
+  private isDownloadingAdhoc: boolean = false;
+  private adhocDownloadedUpdate: { version: string; zipPath: string; sha512: string } | null = null;
 
   private isMacCodeSigned(): boolean {
     if (process.platform !== "darwin") return true;
@@ -59,14 +67,24 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     }
   }
 
+  private shouldUseAdhocMacSelfUpdater(): boolean {
+    if (MOCK_DATA_ENABLED) return false;
+    if (process.platform !== "darwin") return false;
+    if (process.env["FLATPAK_ID"]) return false;
+    if (!app.isPackaged) return false;
+    return !this.isMacCodeSigned();
+  }
+
   public isAutoUpdateSupported(platform: NodeJS.Platform): boolean {
     if (MOCK_DATA_ENABLED) return MOCK_DATA.isSupported;
 
     // Flatpak updates are managed by the Flatpak runtime, not electron-updater
     if (process.env["FLATPAK_ID"]) return false;
 
-    // macOS Squirrel.Mac requires a valid Apple Developer ID signature to replace apps in-place
-    if (platform === "darwin" && !this.isMacCodeSigned()) return false;
+    if (platform === "darwin") {
+      if (this.isMacCodeSigned()) return true;
+      return checkMacAdhocEligibility().eligible;
+    }
 
     return SUPPORTED_PLATFORMS.includes(platform);
   }
@@ -106,6 +124,16 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       this.lastChecked = Date.now();
       if (!result?.isUpdateAvailable) {
         this.availableUpdate = null;
+        this.adhocDownloadedUpdate = null;
+      } else if (
+        this.shouldUseAdhocMacSelfUpdater() &&
+        getSettingValueById("autoUpdate") === true &&
+        this.isAutoUpdateSupported(process.platform) &&
+        !this.isDownloadingAdhoc &&
+        !this.updateDownloaded
+      ) {
+        // Trigger verified .zip self-updater automatically instead of Squirrel.Mac
+        this.downloadUpdate();
       }
       this.emit("status-changed");
       return result;
@@ -134,6 +162,7 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       if (this.availableUpdate?.version !== updateInfo.version) {
         this.updateDownloaded = false;
         this.downloadProgress = null;
+        this.adhocDownloadedUpdate = null;
       }
       this.availableUpdate = updateInfo;
       this.lastError = null;
@@ -145,6 +174,7 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       this.availableUpdate = null;
       this.downloadProgress = null;
       this.updateDownloaded = false;
+      this.adhocDownloadedUpdate = null;
       this.lastError = null;
       this.emit("status-changed");
     });
@@ -232,8 +262,76 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     }
 
     // Real download logic
-    if (this.downloadProgress || this.updateDownloaded || !this.isAutoUpdateSupported(process.platform)) {
+    if (
+      this.downloadProgress ||
+      this.isDownloadingAdhoc ||
+      this.updateDownloaded ||
+      !this.isAutoUpdateSupported(process.platform)
+    ) {
       return false;
+    }
+
+    if (this.shouldUseAdhocMacSelfUpdater()) {
+      const updateInfo = this.availableUpdate;
+      if (!updateInfo) {
+        return false;
+      }
+
+      const eligibility = checkMacAdhocEligibility();
+      if (!eligibility.eligible) {
+        this.lastError = eligibility.reason || "Automatic updates are unavailable in this location";
+        this.emit("status-changed");
+        return false;
+      }
+
+      const asset = selectMacZipAsset(updateInfo);
+      if (!asset) {
+        this.lastError = "No SHA-512-verified macOS update archive found for this architecture";
+        this.emit("status-changed");
+        return false;
+      }
+
+      this.isDownloadingAdhoc = true;
+      this.lastError = null;
+      this.downloadProgress = {
+        bytesPerSecond: 0,
+        percent: 0,
+        total: asset.size ?? 0,
+        transferred: 0,
+        delta: 0
+      };
+      this.emit("status-changed");
+
+      downloadAndVerifyMacZip(asset, updateInfo.version, (progress) => {
+        this.downloadProgress = progress;
+        this.lastError = null;
+        this.emit("status-changed");
+      })
+        .then((zipPath) => {
+          this.isDownloadingAdhoc = false;
+          this.downloadProgress = null;
+          this.updateDownloaded = true;
+          this.adhocDownloadedUpdate = {
+            version: updateInfo.version,
+            zipPath,
+            sha512: asset.sha512
+          };
+          this.lastError = null;
+          debugPrint("AUTO_UPDATER", "Verified ad-hoc macOS update archive:", zipPath);
+          this.emit("status-changed");
+        })
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          debugError("AUTO_UPDATER", "Ad-hoc macOS download failed:", message);
+          this.isDownloadingAdhoc = false;
+          this.downloadProgress = null;
+          this.updateDownloaded = false;
+          this.adhocDownloadedUpdate = null;
+          this.lastError = message;
+          this.emit("status-changed");
+        });
+
+      return true;
     }
 
     autoUpdater.downloadUpdate().catch((err: unknown) => {
@@ -246,19 +344,49 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     return true;
   }
 
-  public installUpdate(): boolean {
-    if (this.updateDownloaded) {
-      markUpdateStarted(app.getVersion());
-      autoUpdater.quitAndInstall();
-      return true;
+  public async installUpdate(): Promise<boolean> {
+    if (!this.updateDownloaded) {
+      return false;
     }
-    return false;
+
+    if (this.shouldUseAdhocMacSelfUpdater()) {
+      const downloaded = this.adhocDownloadedUpdate;
+      if (!downloaded) {
+        return false;
+      }
+
+      try {
+        await prepareAndLaunchMacAdhocInstall({
+          zipPath: downloaded.zipPath,
+          sha512: downloaded.sha512,
+          expectedVersion: downloaded.version,
+          onBeforeQuit: async () => {
+            await markUpdateStarted(app.getVersion());
+          }
+        });
+        return true;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        debugError("AUTO_UPDATER", "Ad-hoc macOS install failed:", message);
+        this.updateDownloaded = false;
+        this.adhocDownloadedUpdate = null;
+        this.lastError = message;
+        this.emit("status-changed");
+        return false;
+      }
+    }
+
+    await markUpdateStarted(app.getVersion());
+    autoUpdater.quitAndInstall();
+    return true;
   }
 
   private async updateAutoUpdaterConfig() {
     const autoUpdate = getSettingValueById("autoUpdate") as boolean | undefined;
     const canAutoUpdate = this.isAutoUpdateSupported(process.platform);
-    autoUpdater.autoDownload = autoUpdate === true && canAutoUpdate;
+    // Keep electron-updater autoDownload disabled for ad-hoc macOS so Squirrel.Mac is never invoked;
+    // AutoUpdateController handles downloading and verifying the .zip directly instead.
+    autoUpdater.autoDownload = autoUpdate === true && canAutoUpdate && !this.shouldUseAdhocMacSelfUpdater();
   }
 
   public async initialize() {

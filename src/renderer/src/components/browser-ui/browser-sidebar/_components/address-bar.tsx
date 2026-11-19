@@ -8,6 +8,7 @@ import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provi
 import { BrowserActionList } from "@/components/browser-ui/browser-sidebar/_components/browser-action-list";
 import { AdblockShield } from "./adblock-shield";
 import { FavouriteButton } from "./favourite-button";
+import { ReaderButton } from "./reader-button";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { useWindowDrag } from "@/hooks/use-window-drag";
 
@@ -89,6 +90,7 @@ export const AddressBar = memo(function AddressBar() {
         {isPlaceholder ? "Search or Enter URL..." : simplifiedUrl}
       </p>
       <div className="ml-auto flex items-center gap-0.5 shrink-0 remove-app-drag address-bar-actions">
+        <ReaderButton />
         <FavouriteButton />
         <AdblockShield />
         <PinnedBrowserActions />

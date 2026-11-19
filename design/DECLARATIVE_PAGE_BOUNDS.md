@@ -200,7 +200,7 @@ overlay (`PortalComponent`) and does not affect `BrowserContent` bounds.
 ## New Shared Types
 
 ```typescript
-// src/shared/flow/types.ts
+// src/shared/lumi/types.ts
 
 export interface PageLayoutParams {
   /** Pixel height of the topbar (0 when not applicable, e.g. macOS with left sidebar). */
@@ -436,7 +436,7 @@ function BrowserContent() {
       sidebarVisible,
       sidebarAnimating: isAnimating,
     };
-    flow.page.setLayoutParams(params);
+    lumi.page.setLayoutParams(params);
   }, [topbarHeight, topbarVisible, sidebarVisible, sidebarSide, isAnimating,
       recordedSidebarSizeRef]);
 

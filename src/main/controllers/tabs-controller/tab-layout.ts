@@ -2,10 +2,12 @@ import { Tab } from "./tab";
 import { TabBoundsController, isRectangleEqual } from "./bounds";
 import { TabLifecycleManager } from "./tab-lifecycle";
 import { getCurrentTimestamp } from "@/modules/utils";
-import { TabGroupMode } from "~/types/tabs";
+import { SplitDirection, TabGroupMode } from "~/types/tabs";
 import { type LayerType } from "~/layers";
 import { Rectangle } from "electron";
 import { type TabsController } from "./index";
+
+export const SPLIT_PANE_GAP = 8;
 
 /**
  * Manages tab layout: bounds calculation, visibility, z-index positioning.
@@ -20,6 +22,7 @@ import { type TabsController } from "./index";
 export class TabLayoutManager {
   private lastTabGroupMode: TabGroupMode | null = null;
   private lastBorderRadius: number | null = null;
+  private lastLogicalVisible: boolean = false;
 
   constructor(
     private readonly tab: Tab,
@@ -37,6 +40,7 @@ export class TabLayoutManager {
   onViewDestroyed(): void {
     this.boundsController.resetLastAppliedBounds();
     this.lastBorderRadius = null;
+    this.lastLogicalVisible = false;
   }
 
   /**
@@ -81,16 +85,22 @@ export class TabLayoutManager {
    * - Z-index management
    * - Spring-animated bounds transitions
    */
-  updateLayout(): void {
+  updateLayout(immediate = false): void {
     const { tab, tabsController, boundsController } = this;
     const { visible } = tab;
     const window = tab.getWindow();
 
-    // Sync view visibility (only if view exists — sleeping tabs have no view)
-    const wasVisible = tab.layer ? tab.layer.isVisible() : false;
-    if (tab.layer && wasVisible !== visible) {
-      tab.layer.setVisible(visible);
+    // Sync view visibility (only if view exists — sleeping tabs have no view).
+    // Note: when Reader Mode is active on a visible tab, keep logical visibility
+    // true while hiding the WebContentsView layer so the React ReaderView is revealed.
+    const wasLogicalVisible = this.lastLogicalVisible;
+    this.lastLogicalVisible = visible;
+    const shouldShowView = visible && !tab.readerMode;
+    if (tab.layer && tab.layer.isVisible() !== shouldShowView) {
+      tab.layer.setVisible(shouldShowView);
+    }
 
+    if (wasLogicalVisible !== visible) {
       // Handle PiP transitions on visibility change
       if (visible) {
         this.lifecycleManager.exitPictureInPicture();
@@ -111,8 +121,8 @@ export class TabLayoutManager {
     }
 
     // Update lastActiveAt on visibility transitions
-    const justHidden = wasVisible && !visible;
-    const justShown = !wasVisible && visible;
+    const justHidden = wasLogicalVisible && !visible;
+    const justShown = !wasLogicalVisible && visible;
     if (justHidden || justShown) {
       tab.updateStateProperty("lastActiveAt", getCurrentTimestamp());
     }
@@ -127,6 +137,10 @@ export class TabLayoutManager {
 
     // Auto-wake sleeping tabs when they become visible
     this.lifecycleManager.wakeUp();
+
+    if (tab.readerMode) {
+      return;
+    }
 
     // Get base bounds and fullscreen state.
     // In fullscreen, bypass the renderer-reported pageBounds and use the
@@ -164,7 +178,18 @@ export class TabLayoutManager {
       layerType = isFront ? "tab" : "tabBack";
     } else if (tabGroup.mode === "split") {
       newTabGroupMode = "split";
-      // TODO: Implement split tab group layout
+      const tabsInGroup = tabGroup.tabs;
+      const paneIndex = Math.max(
+        0,
+        tabsInGroup.findIndex((t) => t.id === tab.id)
+      );
+      newBounds = this.calculateSplitBounds(
+        pageBounds,
+        paneIndex,
+        tabsInGroup.length,
+        tabGroup.splitRatio,
+        tabGroup.splitDirection
+      );
     }
 
     // Update z-index via setWindow
@@ -175,11 +200,12 @@ export class TabLayoutManager {
       this.lastTabGroupMode = newTabGroupMode;
     }
 
-    // Apply calculated bounds with spring animation
+    // Apply calculated bounds with spring animation (or immediately during interactive split drag)
     if (newBounds) {
       const useImmediateUpdate =
-        newTabGroupMode === lastTabGroupMode &&
-        isRectangleEqual(boundsController.bounds, boundsController.targetBounds);
+        immediate ||
+        (newTabGroupMode === lastTabGroupMode &&
+          isRectangleEqual(boundsController.bounds, boundsController.targetBounds));
 
       if (useImmediateUpdate) {
         boundsController.setBoundsImmediate(newBounds);
@@ -187,6 +213,64 @@ export class TabLayoutManager {
         boundsController.setBounds(newBounds);
       }
     }
+  }
+
+  /**
+   * Calculates bounds for a tab inside a Split View group.
+   * Leaves an 8px gap between panes so the renderer splitter handle sits cleanly in-between.
+   */
+  private calculateSplitBounds(
+    pageBounds: Rectangle,
+    paneIndex: number,
+    totalPanes: number,
+    ratio: number,
+    direction: SplitDirection
+  ): Rectangle {
+    if (totalPanes <= 1) {
+      return pageBounds;
+    }
+
+    const effectiveTotal = Math.max(2, totalPanes);
+    const gapTotal = SPLIT_PANE_GAP * (effectiveTotal - 1);
+
+    if (direction === "vertical") {
+      const availableHeight = Math.max(0, pageBounds.height - gapTotal);
+      if (effectiveTotal === 2) {
+        const firstHeight = Math.floor(availableHeight * ratio);
+        if (paneIndex === 0) {
+          return { x: pageBounds.x, y: pageBounds.y, width: pageBounds.width, height: firstHeight };
+        }
+        return {
+          x: pageBounds.x,
+          y: pageBounds.y + firstHeight + SPLIT_PANE_GAP,
+          width: pageBounds.width,
+          height: Math.max(0, availableHeight - firstHeight)
+        };
+      }
+      const sliceHeight = Math.floor(availableHeight / effectiveTotal);
+      const y = pageBounds.y + paneIndex * (sliceHeight + SPLIT_PANE_GAP);
+      const height = paneIndex === effectiveTotal - 1 ? Math.max(0, pageBounds.y + pageBounds.height - y) : sliceHeight;
+      return { x: pageBounds.x, y, width: pageBounds.width, height };
+    }
+
+    const availableWidth = Math.max(0, pageBounds.width - gapTotal);
+    if (effectiveTotal === 2) {
+      const firstWidth = Math.floor(availableWidth * ratio);
+      if (paneIndex === 0) {
+        return { x: pageBounds.x, y: pageBounds.y, width: firstWidth, height: pageBounds.height };
+      }
+      return {
+        x: pageBounds.x + firstWidth + SPLIT_PANE_GAP,
+        y: pageBounds.y,
+        width: Math.max(0, availableWidth - firstWidth),
+        height: pageBounds.height
+      };
+    }
+
+    const sliceWidth = Math.floor(availableWidth / effectiveTotal);
+    const x = pageBounds.x + paneIndex * (sliceWidth + SPLIT_PANE_GAP);
+    const width = paneIndex === effectiveTotal - 1 ? Math.max(0, pageBounds.x + pageBounds.width - x) : sliceWidth;
+    return { x, y: pageBounds.y, width, height: pageBounds.height };
   }
 
   /**

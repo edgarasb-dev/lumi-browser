@@ -25,7 +25,7 @@ interface ActiveToast {
 }
 
 // CONFIGURATION //
-const TOAST_WIDTH = 220;
+const TOAST_WIDTH = 250;
 const TOAST_HEIGHT = 46;
 const TOAST_PADDING = 8;
 const TOAST_CONFIGURATIONS = {
@@ -33,6 +33,24 @@ const TOAST_CONFIGURATIONS = {
     generate: () => ({
       message: "Copied Current URL",
       duration: 4500
+    })
+  },
+  readerUnavailable: {
+    generate: () => ({
+      message: "No article detected on page",
+      duration: 3200
+    })
+  },
+  downloadStarted: {
+    generate: (filename: string) => ({
+      message: `Downloading ${filename}`,
+      duration: 3000
+    })
+  },
+  downloadCompleted: {
+    generate: (filename: string) => ({
+      message: `Downloaded ${filename}`,
+      duration: 4200
     })
   }
 } satisfies Record<string, ToastConfiguration<any[]>>;

@@ -1,6 +1,7 @@
 export const TAB_SCHEMA_VERSION = 1;
 
 export type TabGroupMode = "normal" | "glance" | "split";
+export type SplitDirection = "horizontal" | "vertical";
 
 export type NavigationEntry = {
   title: string;
@@ -49,6 +50,8 @@ export type PersistedTabGroupData = {
   spaceId: string;
   tabUniqueIds: string[];
   glanceFrontTabUniqueId?: string;
+  splitDirection?: SplitDirection;
+  splitRatio?: number;
   position: number;
 };
 
@@ -71,6 +74,7 @@ export type TabData = Omit<PersistedTabData, "navHistory" | "navHistoryIndex"> &
   fullScreen: boolean;
   isPictureInPicture: boolean;
   asleep: boolean;
+  readerMode?: boolean;
   ephemeral?: boolean; // true for pinned-tab-associated tabs that shouldn't appear in the sidebar tab list
 };
 
@@ -85,6 +89,8 @@ export type TabGroupData = {
   spaceId: string;
   tabIds: number[]; // runtime webContents IDs
   glanceFrontTabId?: number;
+  splitDirection?: SplitDirection;
+  splitRatio?: number;
   position: number;
 };
 

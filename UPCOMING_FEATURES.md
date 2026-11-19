@@ -6,52 +6,59 @@ A comprehensive overview of planned upcoming features and completed engineering 
 
 ## 📊 Roadmap Summary
 
-| Category                          | Completed | Planned | Total  |
-| :-------------------------------- | :-------: | :-----: | :----: |
-| **Tab Management & Multitasking** |     4     |    3    |   7    |
-| **Navigation, History & Search**  |     3     |    2    |   5    |
-| **Spaces & Personalization**      |     3     |    0    |   3    |
-| **Native Platform & Performance** |     2     |    1    |   3    |
-| **Privacy, Media & Ecosystem**    |     2     |    1    |   3    |
-| **Brand & Open-Source Identity**  |     2     |    0    |   2    |
-| **Total**                         |  **16**   |  **7**  | **23** |
+| Category                          | Completed | In Progress | Planned | Total  |
+| :-------------------------------- | :-------: | :---------: | :-----: | :----: |
+| **Tab Management & Multitasking** |     7     |      0      |    0    |   7    |
+| **Navigation, History & Search**  |     5     |      0      |    0    |   5    |
+| **Spaces & Personalization**      |     3     |      0      |    0    |   3    |
+| **Native Platform & Performance** |     3     |      0      |    0    |   3    |
+| **Privacy, Media & Ecosystem**    |     3     |      0      |    0    |   3    |
+| **Brand & Open-Source Identity**  |     2     |      0      |    0    |   2    |
+| **Total**                         |  **23**   |    **0**    |  **0**  | **23** |
 
 ---
 
-## 🗺️ Upcoming Features Roadmap (Planned)
+## 🗺️ Upcoming Features Roadmap (Live Progress)
 
-| Feature                                          | Category            | Difficulty             | Estimated Effort | Status     |
-| :----------------------------------------------- | :------------------ | :--------------------- | :--------------- | :--------- |
-| **Pinned Tabs in Spaces**                        | Tab Management      | 🟡 Moderate (3.5/5)    | 4–5 hours        | ⏳ Pending |
-| **Split View & Glance Tab Groups**               | Tab Management      | 🟠 Moderate–Hard (4/5) | 6–8 hours        | ⏳ Pending |
-| **Reader Mode**                                  | Tab Management      | 🟡 Moderate (3/5)      | 3–5 hours        | ⏳ Pending |
-| **Next-Gen Omnibox & Zero Suggest**              | Navigation & Search | 🟡 Moderate (3/5)      | 3–5 hours        | ⏳ Pending |
-| **Chromium-Inspired History & `lumi://history`** | Navigation & Search | 🟡 Moderate (3/5)      | 4–6 hours        | ⏳ Pending |
-| **Declarative Page Bounds Engine**               | Native Platform     | 🟡 Moderate (2.5/5)    | 2–3 hours        | ⏳ Pending |
-| **Native Download Manager**                      | Media & Files       | 🟠 Moderate–Hard (4/5) | 5–7 hours        | ⏳ Pending |
+| Feature                                          | Category            | Difficulty             | Estimated Effort | Status  |
+| :----------------------------------------------- | :------------------ | :--------------------- | :--------------- | :------ |
+| **Pinned Tabs in Spaces**                        | Tab Management      | 🟡 Moderate (3.5/5)    | 4–5 hours        | ✅ Done |
+| **Split View & Glance Tab Groups**               | Tab Management      | 🟠 Moderate–Hard (4/5) | 6–8 hours        | ✅ Done |
+| **Reader Mode**                                  | Tab Management      | 🟡 Moderate (3/5)      | 3–5 hours        | ✅ Done |
+| **Next-Gen Omnibox & Zero Suggest**              | Navigation & Search | 🟡 Moderate (3/5)      | 3–5 hours        | ✅ Done |
+| **Chromium-Inspired History & `lumi://history`** | Navigation & Search | 🟡 Moderate (3/5)      | 4–6 hours        | ✅ Done |
+| **Declarative Page Bounds Engine**               | Native Platform     | 🟡 Moderate (2.5/5)    | 2–3 hours        | ✅ Done |
+| **Native Download Manager**                      | Media & Files       | 🟠 Moderate–Hard (4/5) | 5–7 hours        | ✅ Done |
 
 ---
 
 ## ✅ Completed Milestones
 
-| Feature                                       | Category            | Difficulty             | Shipped Version |
-| :-------------------------------------------- | :------------------ | :--------------------- | :-------------- |
-| **Custom Search Engines & Presets**           | Search & Tools      | 🟢 Easy (1/5)          | v0.1.0          |
-| **Preview Tabs & Hover Cards**                | Tab Management      | 🟢 Easy (1.5/5)        | v0.1.0          |
-| **Space Scratchpad & Quick Notes**            | Spaces & Notes      | 🟢 Easy (1.5/5)        | v0.1.0          |
-| **Reorder Tabs (Shortcuts & Menus)**          | Tab Management      | 🟡 Easy–Moderate (2/5) | v0.1.0          |
-| **Space Themes & Custom Colors**              | Spaces & UI         | 🟢 Easy–Moderate (2/5) | v0.1.0          |
-| **Adblock Shield & Privacy Counter**          | Privacy & Tools     | 🟢 Easy–Moderate (2/5) | v0.1.0          |
-| **Rebranding to Lumi (Phase 1: Inception)**   | Project Identity    | 🟢 Easy–Moderate (2/5) | v0.1.0          |
-| **Command Palette (`Cmd + K`)**               | Search & Tools      | 🟡 Moderate (2.5/5)    | v0.1.0          |
-| **Tab Snooze & Memory Auto-Archive**          | Tab Management      | 🟡 Moderate (2.5/5)    | v0.1.0          |
-| **Favourites & Quick Bookmarks**              | Navigation          | 🟡 Moderate (3/5)      | v0.1.0          |
-| **Collapsible Tab Groups / Folders**          | Tab Management      | 🟡 Moderate (3/5)      | v0.1.0          |
-| **Horizontal Topbar vs Vertical Sidebar**     | Layout & Navigation | 🔴 Hard (4.5/5)        | v0.1.0          |
-| **Multi-Platform DMG & Release CI**           | Packaging & DevOps  | 🟡 Moderate (3/5)      | v0.1.1          |
-| **macOS Liquid Glass Icon**                   | Native Platform     | 🟡 Moderate (3/5)      | v0.1.1          |
-| **Rebranding Phase 2: Complete Flow Removal** | Project Identity    | 🟡 Moderate (3/5)      | v0.1.2          |
-| **Safari Connectivity & External Sync**       | Ecosystem           | 🔴 Very Hard (5/5)     | v0.1.3          |
+| Feature                                          | Category            | Difficulty             | Shipped Version |
+| :----------------------------------------------- | :------------------ | :--------------------- | :-------------- |
+| **Custom Search Engines & Presets**              | Search & Tools      | 🟢 Easy (1/5)          | v0.1.0          |
+| **Preview Tabs & Hover Cards**                   | Tab Management      | 🟢 Easy (1.5/5)        | v0.1.0          |
+| **Space Scratchpad & Quick Notes**               | Spaces & Notes      | 🟢 Easy (1.5/5)        | v0.1.0          |
+| **Reorder Tabs (Shortcuts & Menus)**             | Tab Management      | 🟡 Easy–Moderate (2/5) | v0.1.0          |
+| **Space Themes & Custom Colors**                 | Spaces & UI         | 🟢 Easy–Moderate (2/5) | v0.1.0          |
+| **Adblock Shield & Privacy Counter**             | Privacy & Tools     | 🟢 Easy–Moderate (2/5) | v0.1.0          |
+| **Rebranding to Lumi (Phase 1: Inception)**      | Project Identity    | 🟢 Easy–Moderate (2/5) | v0.1.0          |
+| **Command Palette (`Cmd + K`)**                  | Search & Tools      | 🟡 Moderate (2.5/5)    | v0.1.0          |
+| **Tab Snooze & Memory Auto-Archive**             | Tab Management      | 🟡 Moderate (2.5/5)    | v0.1.0          |
+| **Favourites & Quick Bookmarks**                 | Navigation          | 🟡 Moderate (3/5)      | v0.1.0          |
+| **Collapsible Tab Groups / Folders**             | Tab Management      | 🟡 Moderate (3/5)      | v0.1.0          |
+| **Horizontal Topbar vs Vertical Sidebar**        | Layout & Navigation | 🔴 Hard (4.5/5)        | v0.1.0          |
+| **Multi-Platform DMG & Release CI**              | Packaging & DevOps  | 🟡 Moderate (3/5)      | v0.1.1          |
+| **macOS Liquid Glass Icon**                      | Native Platform     | 🟡 Moderate (3/5)      | v0.1.1          |
+| **Rebranding Phase 2: Complete Flow Removal**    | Project Identity    | 🟡 Moderate (3/5)      | v0.1.2          |
+| **Safari Connectivity & External Sync**          | Ecosystem           | 🔴 Very Hard (5/5)     | v0.1.5          |
+| **Chromium-Inspired History & `lumi://history`** | Navigation & Search | 🟡 Moderate (3/5)      | v0.1.5          |
+| **Declarative Page Bounds Engine**               | Native Platform     | 🟡 Moderate (2.5/5)    | v0.1.5          |
+| **Pinned Tabs in Spaces**                        | Tab Management      | 🟡 Moderate (3.5/5)    | v0.1.5          |
+| **Split View & Glance Tab Groups**               | Tab Management      | 🟠 Moderate–Hard (4/5) | v0.1.5          |
+| **Reader Mode**                                  | Tab Management      | 🟡 Moderate (3/5)      | v0.1.5          |
+| **Next-Gen Omnibox & Zero Suggest**              | Navigation & Search | 🟡 Moderate (3/5)      | v0.1.5          |
+| **Native Download Manager**                      | Media & Files       | 🟠 Moderate–Hard (4/5) | v0.1.5          |
 
 ---
 
@@ -63,115 +70,102 @@ Organized by functional domain.
 
 ## Domain 1: Tab Architecture & Advanced Multitasking
 
-### 1. ⏳ Pinned Tabs in Spaces
+### 1. ✅ Pinned Tabs in Spaces
 
 - **Description:** Allow tabs to be pinned specifically per space, sitting as an anchored top grid in that space.
 - **Difficulty:** 🟡 Moderate (3.5/5)
-- **Estimated Effort:** 4–5 hours
+- **Status:** [x] Done (Finalized in v0.1.5)
 - **How we will do it:**
-  - **Storage & Schema:** Extend tab state / SQLite schema with an `is_pinned` flag and `pinned_order` scoped to `space_id`.
-  - **Sidebar Layout:** In `browser-sidebar`, split the space's tabs into two distinct regions:
-    - **Pinned Section (Top):** Compact icon-only or mini-pill grid anchored at the top of the space.
-    - **Normal Tabs (Bottom):** Regular scrollable tab list with group support.
-  - **Interactions:** Right-click context menu ("Pin Tab in Space"), drag-and-drop between Pinned and Normal zones, and dedicated shortcut (`Cmd + Shift + P`).
+  - [x] **Storage & Schema:** SQLite `pinned_tabs` table + `pinnedTabsController` scoped to `profileId` with per-space ephemeral associations.
+  - [x] **Sidebar Layout:** `PinGrid` anchored at top of `browser-sidebar`, plus normal scrollable tab list below.
+  - [x] **Interactions:** Drag-and-drop between Pinned and Normal zones, right-click context menu ("Pin Tab"), and dedicated shortcut (`Cmd + Shift + P` via `tab.togglePin`).
 
 ---
 
-### 2. ⏳ Split View & Glance Multi-Tab Groups
+### 2. ✅ Split View & Glance Multi-Tab Groups
 
-- **Source Document:** [`design/TAB_REWRITE_PLAN.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/design/TAB_REWRITE_PLAN.md) & [`design/LAYERING_SYSTEM.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/design/LAYERING_SYSTEM.md)
+- **Source Document:** [`design/TAB_REWRITE_PLAN.md`](design/TAB_REWRITE_PLAN.md) & [`design/LAYERING_SYSTEM.md`](design/LAYERING_SYSTEM.md)
 - **Description:** Advanced multitasking tab layouts enabling side-by-side split browsing and peek-and-glance overlay tabs within a single window and space.
 - **Difficulty:** 🟠 Moderate to Hard (4/5)
-- **Estimated Effort:** 6–8 hours
-- **How we will do it:**
+- **Status:** [x] Done (Completed in v0.1.5)
+- **How we did it:**
   - **Glance Mode (`GlanceTabGroup`):**
-    - Float a secondary preview/reference tab (`ViewLayer.TAB_FRONT`) over the primary active tab (`ViewLayer.TAB_BACK`).
-    - Dismissible on backdrop click or `Escape` key without losing navigation context or unmounting the background tab.
+    - [x] Float a secondary preview/reference tab (`ViewLayer.TAB`) over the primary active tab (`ViewLayer.TAB_BACK`).
+    - [x] Page link & tab context menu triggers ("Open Link in Glance"), sidebar/topbar quick promote & dismiss controls, and clickable outer backdrop in `BrowserContent`.
   - **Split View (`SplitTabGroup`):**
-    - Side-by-side (50/50, 70/30) or top/bottom dual `WebContentsView` layout within a single space.
-    - Draggable splitter divider with synchronized bounds resize.
-    - Coordinated with `TabBoundsController` spring physics for fluid layout transitions.
-  - **Persistence:** Save group state into SQLite with string IDs (`PersistedTabGroupData`), linking tabs by `uniqueId`.
+    - [x] Side-by-side (`horizontal`) and top/bottom (`vertical`) multi-pane `WebContentsView` layout within `TabLayoutManager` with an 8px gap.
+    - [x] Interactive draggable splitter divider in `BrowserContent` with double-click reset, Swap Panes, Rotate Split Orientation, Unsplit, and shortcut (`Cmd + Shift + \`).
+    - [x] Persisted `splitDirection` and `splitRatio` in `PersistedTabGroupData` + SQLite (`drizzle/0004_split_view_tab_groups.sql`).
 
 ---
 
-### 3. ⏳ Reader Mode
+### 3. ✅ Reader Mode
 
 - **Description:** Clean, distraction-free reading view for articles, blogs, and news pages with font and theme options.
 - **Difficulty:** 🟡 Moderate (3/5)
-- **Estimated Effort:** 3–5 hours
-- **How we will do it:**
-  - Inject Mozilla Readability script into the active page when article content is detected.
-  - Present distilled article in an elegant overlay or dedicated reader view with typography controls (font family, font size, line spacing) and themes (Light, Dark, Sepia).
+- **Status:** [x] Done (Completed in v0.1.5)
+- **How we did it:**
+  - [x] Distill clean article content via Readability-style DOM scoring & allowlisted HTML sanitization in [`reader-mode.ts`](src/main/modules/reader-mode.ts) + double-sanitized renderer rendering.
+  - [x] Synchronize `tab.readerMode` across `TabLayoutManager` (hiding the underlying `WebContentsView` layer cleanly while preserving scroll & navigation state) and per-pane `BrowserContent` `<ReaderView />`.
+  - [x] Added Light / Sepia / Dark themes, Serif / Sans / Mono fonts, font size, line height, max width controls persisted via datastore, address bar `ReaderButton`, View menu item, and `Cmd + Option + R` shortcut.
 
 ---
 
 ## Domain 2: Navigation, History & Search Intelligence
 
-### 4. ⏳ Next-Gen Omnibox Pipeline & Zero Suggest
+### 4. ✅ Next-Gen Omnibox Pipeline & Zero Suggest
 
-- **Source Document:** [`src/renderer/src/lib/omnibox-new/README.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/src/renderer/src/lib/omnibox-new/README.md) & [`docs/references/omnibox.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/docs/references/omnibox.md)
+- **Source Document:** [`src/renderer/src/lib/omnibox-new/README.md`](src/renderer/src/lib/omnibox-new/README.md) & [`docs/references/omnibox.md`](docs/references/omnibox.md)
 - **Description:** High-performance omnibox autocomplete architecture featuring single-frame synchronous suggestion batching, empty-input Zero Suggest, and frecency ranking.
 - **Difficulty:** 🟡 Moderate (3/5)
-- **Estimated Effort:** 3–5 hours
-- **How we will do it:**
-  - **Synchronous vs Asynchronous Suggestion Pipeline:**
-    - Synchronous tier flushes in a single frame: `Verbatim` (direct URL / bangs) + `Quick History` (in-memory warm cache) + `Open Tabs` (active space primed cache) + `Pedals` (browser actions).
-    - Asynchronous tier fetches remote search suggestions with debounced cancellation and seamlessly merges below top synchronous results to prevent UI jumping.
-  - **Zero Suggest:** When the omnibox receives focus with empty input, instantly display top shortcuts, recent search queries, and smart clipboard paste actions.
-  - **Action Pedals:** Quick omnibox jump commands for browser actions (`Settings`, `History`, `Downloads`, `Clear Browsing Data`, `New Private Window`).
-  - **Frecency Ranking:** Combine match quality scoring with visit frequency and exponential recency time-decay.
+- **Status:** [x] Done (Completed in v0.1.5)
+- **How we did it:**
+  - [x] **Synchronous vs Asynchronous Suggestion Pipeline:** Single-frame synchronous flush (`Verbatim`, `Quick History`, `Open Tabs`, `Pedals`) + debounced asynchronous search suggestions.
+  - [x] **Zero Suggest:** Empty-input open tabs and top frecency history suggestions.
+  - [x] **Action Pedals:** Quick omnibox jump commands (`Settings`, `History`, `Downloads`, `Clear Browsing Data`, `New Window`, `Incognito Window`, `Extensions`) in `pedals.ts`, `pedal-glyph.tsx`, and `omnibox/main.tsx`.
+  - [x] **Frecency Ranking:** Match quality combined with typed/visit frequency and exponential time decay.
 
 ---
 
-### 5. ⏳ Chromium-Inspired Browsing History & `lumi://history`
+### 5. ✅ Chromium-Inspired Browsing History & `lumi://history`
 
-- **Source Document:** [`design/chromium-inspired-browsing-history.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/design/chromium-inspired-browsing-history.md)
-- **Description:** Complete browser history persistence and dedicated internal page (`lumi://history`) modeled after Chromium's dual-table visit architecture, with 90-day retention, day grouping, and search filtering.
+- **Source Document:** [`design/chromium-inspired-browsing-history.md`](design/chromium-inspired-browsing-history.md)
+- **Status:** [x] Done (Verified in v0.1.5)
+- **Description:** Complete browser history persistence and dedicated internal page (`lumi://history`) modeled after Chromium's dual-table visit architecture, with automatic retention pruning, day grouping, and search filtering.
 - **Difficulty:** 🟡 Moderate (3/5)
-- **Estimated Effort:** 4–6 hours
-- **How we will do it:**
-  - **SQLite Dual-Table Model:**
-    - `history_urls`: Stores canonical `(profile_id, url)` entries with `visit_count`, `typed_count`, and `last_visit_time`.
-    - `history_visits`: Stores individual navigation timestamp entries with foreign key cascading delete to `history_urls`.
-  - **Typed Count & Address Bar Scoring:** Distinguish between clicked links and directly typed omnibox navigations (`typedFromAddressBar`), heavily boosting typed URLs in autocomplete rankings.
-  - **Automatic 90-Day Retention Pruning:** Automatically purge navigation visits older than 90 days on startup and reconcile orphan URL aggregate rows.
-  - **Dedicated `lumi://history` Page:**
-    - Day-by-day chronological grouping (Today, Yesterday, Last 7 Days).
-    - Instant debounced search filtering by page title or URL.
-    - Contextual actions: Open in new tab, copy link, remove single visit, remove all visits for this domain, and full profile history wipe.
+- **How it was implemented:**
+  - **SQLite Dual-Table Model (`saving/db/schema.ts`):** `history_urls` + `history_visits` with cascading foreign keys and per-profile scoping.
+  - **Typed Count & Address Bar Scoring (`saving/history/browsing-history.ts`):** Distinguishes `typedFromAddressBar` navigations for omnibox ranking.
+  - **Retention Pruning (`pruneBrowsingHistory`):** Purges old visits and reconciles URL aggregate counts on startup.
+  - **Dedicated `lumi://history` Page (`routes/history/page.tsx`):** Day-by-day grouping, debounced search filtering, copy link, open in new tab, single/site delete, and Clear History dialog.
 
 ---
 
 ## Domain 3: Native Platform Polish & Performance
 
-### 6. ⏳ Declarative Page Bounds Engine
+### 6. ✅ Declarative Page Bounds Engine
 
-- **Source Document:** [`design/DECLARATIVE_PAGE_BOUNDS.md`](file:///Users/edgarasbareika/Desktop/flow-browser/flow-browser/design/DECLARATIVE_PAGE_BOUNDS.md)
+- **Source Document:** [`design/DECLARATIVE_PAGE_BOUNDS.md`](design/DECLARATIVE_PAGE_BOUNDS.md)
+- **Status:** [x] Done (Verified in v0.1.5)
 - **Description:** Arithmetic zero-latency layout synchronization between the renderer and Electron main process, eliminating DOM reflows and sidebar tween gaps.
 - **Difficulty:** 🟡 Moderate (2.5/5)
-- **Estimated Effort:** 2–3 hours
-- **How we will do it:**
-  - **Parameter Broadcast:** Instead of measuring pixel coordinates via `getBoundingClientRect()` on every resize/transition frame, broadcast discrete layout parameters (`sidebarWidth`, `topbarHeight`, `sidebarVisible`, `outerPadding`).
-  - **Main Process Bounds Calculation:** Electron main process computes exact `WebContentsView` dimensions arithmetically from `getContentSize()` and layout parameters.
-  - **Eliminates Sidebar Tween Gap:** Smooths out the 100ms sidebar margin transition without snapping or lagging WebContents rendering.
+- **How it was implemented:**
+  - **Parameter Broadcast (`browser-content.tsx`):** Computes `PageLayoutParams` (`sidebarWidth`, `topbarHeight`, `sidebarVisible`, `contentTopOffset`) in `useLayoutEffect` and dispatches via `lumi.page.setLayoutParams`.
+  - **Main Process Bounds Calculation (`windows-controller/types/browser.ts`, `tabs-controller/bounds.ts`):** Arithmetically computes exact `WebContentsView` bounds with spring interpolation and zero layout reflows.
 
 ---
 
 ## Domain 4: Media, File Management & Ecosystem
 
-### 7. ⏳ Native Download Manager
+### 7. ✅ Native Download Manager
 
 - **Description:** Full file download manager for files downloaded from the web with real-time speed, progress rings, and historical tracking.
 - **Difficulty:** 🟠 Moderate to Hard (4/5)
-- **Estimated Effort:** 5–7 hours
-- **How we will do it:**
-  - **Main Process:** Intercept Electron's `session.defaultSession.on('will-download')`.
-  - **Tracking & Storage:** Track real-time progress (`bytesReceived`, `totalBytes`, `speed`, state: `progressing` / `interrupted` / `completed` / `cancelled`), with download history stored in SQLite.
-  - **UI / UX:**
-    - Downloads toolbar button and popover showing active progress rings and recent downloads.
-    - "Show in Finder", "Open File", "Cancel", and "Retry" actions.
-    - Completion toast notifications via `sonner`.
+- **Status:** [x] Done (Completed in v0.1.5)
+- **How we did it:**
+  - [x] Hooked Electron session `will-download` across `defaultSession` and profile sessions in [`downloads-controller/index.ts`](src/main/controllers/downloads-controller/index.ts).
+  - [x] Persisted download history in SQLite `downloads` table (`drizzle/0005_native_downloads.sql`) alongside real-time `receivedBytes`, `totalBytes`, smoothed `speedBytesPerSec`, and state tracking.
+  - [x] Built `DownloadsProvider`, `DownloadsButton` progress ring + popover (`Pause`, `Resume`, `Cancel`, `Retry`, `Open`, `Show in Finder`, `Clear`), `BottomExtrasMenu` entry, `lumi://downloads` internal manager page (`routes/downloads/page.tsx`), and toast completion alerts (`MinimalToastProvider` & `sonner`).
 
 ---
 
@@ -215,7 +209,7 @@ Detailed records of delivered features organized by domain.
 - **How it was implemented:**
   - **Storage & Engine (`saving/favourites.ts`):** Persistent storage in DataStore (`getDatastore("favourites")`), with URL normalization, UUID generation, duplicate prevention, and event broadcasting.
   - **Main IPC (`ipc/browser/favourites.ts`):** `favourites:get-all`, `favourites:add`, `favourites:remove`, `favourites:is-favourite` handlers, broadcasting updates via `listeners-manager`.
-  - **Preload API (`FlowFavouritesAPI`):** Added `flow.favourites` with full typed async methods and change subscription.
+  - **Preload API (`LumiFavouritesAPI`):** Added `lumi.favourites` with full typed async methods and change subscription.
   - **Address Bar Star Button (`FavouriteButton`):** Dynamic Star button in the address bar that shines gold when favorited, toggles on click, and listens to the universal `Cmd + D` shortcut.
   - **Quick Menu Integration:** Added Favourites section to `BottomExtrasMenu` for 1-click opening of bookmarked pages.
 
@@ -229,7 +223,7 @@ Detailed records of delivered features organized by domain.
 - **Status:** [x] Done (Shipped in v0.1.0)
 - **How it was implemented:**
   - Added snapshot capture caching in Main process (`captureTabPreview` and IPC handler `tabs:get-tab-preview`).
-  - Added `getTabPreview` API to preload and `FlowTabsAPI`.
+  - Added `getTabPreview` API to preload and `LumiTabsAPI`.
   - Built a sleek glassmorphic `TabPreviewCard` component with `motion/react` spring animations.
   - Shows page title, clean domain badge, URL path, live 16:9 thumbnail preview (or domain fallback), audio/mute badges, and sleeping state.
   - Integrated into `SidebarTab` with an optimal 350ms hover delay, smart above/below positioning within the sidebar, and quick actions (Click to switch, Mute, Close).
@@ -245,7 +239,7 @@ Detailed records of delivered features organized by domain.
   - **Context Menu:** Updated sidebar tab right-click context menu with intuitive "Snooze Tab (Save Memory)" and "Wake Tab" actions.
   - **Sidebar Visual Indicator:** Sleeping tabs display an elegant soft `Zzz` pill badge and muted typography while sleeping to visibly indicate RAM savings.
   - **Preview Card Quick Controls:** Added instant 1-click Snooze/Wake moon button directly on the tab preview card.
-  - **Preload API:** Exposed `flow.tabs.snoozeTab(tabId)` and `flow.tabs.wakeTab(tabId)`.
+  - **Preload API:** Exposed `lumi.tabs.snoozeTab(tabId)` and `lumi.tabs.wakeTab(tabId)`.
 
 ---
 
@@ -280,7 +274,7 @@ Detailed records of delivered features organized by domain.
 - **Status:** [x] Done (Shipped in v0.1.0)
 - **How it was implemented:**
   - **Storage & IPC:** Saved per-space markdown content into `getDatastore("space-notes")` keyed by `spaceId`, with `spaces:get-notes` and `spaces:save-notes` IPC handlers.
-  - **Preload APIs:** Added `flow.spaces.getSpaceNotes(spaceId)` and `flow.spaces.saveSpaceNotes(spaceId, content)`.
+  - **Preload APIs:** Added `lumi.spaces.getSpaceNotes(spaceId)` and `lumi.spaces.saveSpaceNotes(spaceId, content)`.
   - **Renderer UI (`SpaceScratchpad`):**
     - Integrated notepad trigger icon in the sidebar bottom bar (with active dot badge if notes exist for the current space).
     - Glassmorphic modal editor with automatic debounced auto-save (400ms).
@@ -314,7 +308,7 @@ Detailed records of delivered features organized by domain.
     - Wrapped `blocker.onBeforeRequest` and `blocker.onInjectCosmeticFilters` to cleanly bypass network blocking and cosmetic CSS/script injection on whitelisted domains.
     - Persisted user domain whitelist and lifetime blocked count in `DataStore` with debounced sync.
   - **IPC & Preload:**
-    - Exposed `flow.contentBlocker` with `getTabStats`, `toggleDomainWhitelist`, `getWhitelistedDomains`, `isDomainWhitelisted`, `getTotalBlocked`, and live event listeners `onStatsUpdated` / `onWhitelistChanged`.
+    - Exposed `lumi.contentBlocker` with `getTabStats`, `toggleDomainWhitelist`, `getWhitelistedDomains`, `isDomainWhitelisted`, `getTotalBlocked`, and live event listeners `onStatsUpdated` / `onWhitelistChanged`.
   - **UI / UX (`AdblockShield`):**
     - Integrated privacy shield indicator into `AddressBar`.
     - Live badge counter for blocked trackers/ads on the active page, emerald shield when protected, amber warning badge when paused.
@@ -339,13 +333,13 @@ Detailed records of delivered features organized by domain.
 - **Description:** Rebranded the browser to **Lumi**, establishing distinct branding, assets, and identity while honoring the original authors under GNU GPLv3.
 - **Difficulty:** 🟢 Easy to Moderate (2/5)
 - **Status:** [x] Done (Shipped in v0.1.0)
-- **Note:** Deep scheme deprecation (`flow://` $\rightarrow$ `lumi://`), Linux packaging renaming, and code namespace migrations are actively planned under **Part 1, Domain 5: Rebranding Phase 2**.
+- **Note:** Deep scheme deprecation (`flow://` $\rightarrow$ `lumi://`), Linux packaging renaming, and code namespace migrations were completed under **Rebranding Phase 2**.
 - **How it was implemented:**
   - **App Metadata & Packaging:**
     - Update `package.json` (`"name": "lumi-browser"`, `"productName": "Lumi"`).
     - Update `electron-builder.ts` (`appId: "dev.lumi.browser"`, `productName: "Lumi"`, `executableName: "lumi"`).
   - **Visual Identity & Assets:**
-    - Design and create modern Lumi application icons (`build/icon.png`, `build/icon.icns`, `favicon.png`).
+    - Design and create modern Lumi application icons (`build/icon.png`, `build/icon.icns`, macOS `AppIcon.icon`).
     - Replace in-app branding text, welcome/onboarding dialogs, and window titles to reference Lumi.
   - **Legal Notices & Attribution (GPLv3 Compliance):**
     - Preserve the root `LICENSE` (GNU GPLv3).
@@ -389,7 +383,7 @@ Detailed records of delivered features organized by domain.
 
 - **Description:** Unified bridge connecting Lumi to macOS Safari, encrypted iCloud Drive snapshots, and iOS/mobile browsers over local Wi-Fi and Bonjour.
 - **Difficulty:** 🔴 Very Hard (5/5)
-- **Status:** [x] Done (Shipped in v0.1.3)
+- **Status:** [x] Done (Shipped in v0.1.5)
 - **How it was implemented:**
   - **macOS Safari Bridge (`src/main/modules/safari-sync/safari-bridge.ts`):**
     - Non-intrusive Safari open-tab discovery via JXA (`osascript -l JavaScript`) when Safari is running, plus `"Open in Safari"` in the tab right-click context menu.

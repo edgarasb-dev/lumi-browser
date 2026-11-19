@@ -1,6 +1,6 @@
 # Hot Reloading
 
-This guide explains how to set up hot reloading for Flow Browser development.
+This guide explains how to set up hot reloading for Lumi Browser development.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ Hot reloading allows you to see your changes in real-time without manually resta
    bun run dev:server
    ```
 
-3. In another terminal, start Flow Browser:
+3. In another terminal, start Lumi Browser:
    ```bash
    bun run start
    ```

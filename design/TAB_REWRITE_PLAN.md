@@ -421,12 +421,12 @@ Updated IPC channels:
 - `tabs:get-data` -- serialization uses new `serializeTabForRenderer` / `serializeTabGroupForRenderer`
 - `tabs:show-context-menu` -- add "Reopen Closed Tab" option
 
-### 5b. Flow API interface (`src/shared/flow/interfaces/browser/tabs.ts`)
+### 5b. Lumi API interface (`src/shared/lumi/interfaces/browser/tabs.ts`)
 
 Add new methods:
 
 ```typescript
-interface FlowTabsAPI {
+interface LumiTabsAPI {
   // ... existing methods ...
   getRecentlyClosed(): Promise<RecentlyClosedTabData[]>;
   restoreRecentlyClosed(uniqueId: string): Promise<boolean>;
@@ -481,7 +481,7 @@ Add to the sidebar tab context menu:
 new MenuItem({
   label: "Reopen Closed Tab",
   enabled: hasRecentlyClosed,
-  click: () => flow.tabs.restoreRecentlyClosed(mostRecentClosedTab.uniqueId)
+  click: () => lumi.tabs.restoreRecentlyClosed(mostRecentClosedTab.uniqueId)
 });
 ```
 
@@ -666,7 +666,7 @@ src/main/ipc/browser/tabs.ts               -- IPC handlers (thinner, delegates t
 - [x] Add `tabs:restore-recently-closed` IPC
 - [x] Add `tabs:clear-recently-closed` IPC
 - [x] Add `tabs:batch-move-tabs` IPC
-- [x] Update `FlowTabsAPI` interface with new methods
+- [x] Update `LumiTabsAPI` interface with new methods
 - [x] Update preload bindings
 - [x] Add "Reopen Closed Tab" to sidebar context menu
 

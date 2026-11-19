@@ -15,11 +15,12 @@ import { spacesController } from "@/controllers/spaces-controller";
 import { loadedProfilesController } from "@/controllers/loaded-profiles-controller";
 import { setWindowSpace } from "@/ipc/session/spaces";
 import { WebContents } from "electron";
-import { TabGroupMode } from "~/types/tabs";
+import { TabGroupMode, SplitDirection } from "~/types/tabs";
 import { FLAGS } from "@/modules/flags";
 import { quitController } from "@/controllers/quit-controller";
 import { clearPlaceholdersForTab, isSyncExcludedTab, isTabSyncEnabled, registerTabsController } from "./tab-sync";
 import { storeSnapshot } from "@/controllers/sessions-controller/protocols/_protocols/lumi-internal/tab-snapshot";
+import { readerModeController } from "@/controllers/reader-mode-controller";
 
 export const NEW_TAB_URL = "lumi://new-tab";
 const ARCHIVE_CHECK_INTERVAL_MS = 10 * 1000;
@@ -346,6 +347,10 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
         layoutManager.onViewDestroyed();
       }
 
+      if (properties.includes("url")) {
+        readerModeController.onTabUrlChanged(tab.id, tab.url);
+      }
+
       // Content-only changes (title, url, isLoading, etc.) use the
       // lightweight content-changed path which only serializes THIS tab
       // instead of all tabs in the window.
@@ -388,9 +393,17 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       this.persistTab(tab);
     });
     tab.on("focused", () => {
-      if (this.isTabActive(tab)) {
-        this.setFocusedTab(tab);
+      if (!this.isTabActive(tab)) return;
+      const win = tab.getWindow();
+      const prevFocused = this.getFocusedTab(win.id, tab.spaceId);
+      if (prevFocused?.id === tab.id) return;
+
+      const group = this.getTabGroupByTabId(tab.id);
+      if (group?.mode === "split") {
+        group.setFocusedTab(tab.id);
       }
+      this.setFocusedTab(tab);
+      windowTabsChanged(win.id);
     });
 
     // Handle fullscreen changes — update layout
@@ -408,6 +421,7 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       lifecycleManager.onDestroy();
       boundsController.destroy();
       clearPlaceholdersForTab(tab.id);
+      readerModeController.clearTab(tab.id);
 
       // During quit, skip all persistence and tab management — the database
       // is closed and windows are being torn down. Accessing them would crash.
@@ -650,13 +664,27 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
    * Activate a tab/group in its window, applying popup window policy first.
    */
   public activateTab(tabOrGroup: Tab | TabGroup) {
-    const { window, spaceId } = this.getActivationContext(tabOrGroup);
+    let target: Tab | TabGroup = tabOrGroup;
+    if (tabOrGroup instanceof Tab) {
+      const group = this.getTabGroupByTabId(tabOrGroup.id);
+      if (group) {
+        if (group.mode === "split") {
+          group.setFocusedTab(tabOrGroup.id);
+        } else if (group.mode === "glance") {
+          group.setFrontTab(tabOrGroup.id);
+          this.refreshTabGroupLayout(group);
+        }
+        target = group;
+      }
+    }
+
+    const { window, spaceId } = this.getActivationContext(target);
 
     if (window && !window.destroyed && window.browserWindowType === "popup" && window.currentSpaceId !== spaceId) {
       setWindowSpace(window, spaceId);
     }
 
-    this.setActiveTab(tabOrGroup);
+    this.setActiveTab(target);
   }
 
   private indexOfActiveInOrderedList(windowId: number, spaceId: string, ordered: (Tab | TabGroup)[]): number {
@@ -714,7 +742,11 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     } else {
       windowId = tabOrGroup.windowId;
       spaceId = tabOrGroup.spaceId;
-      tabToFocus = tabOrGroup.tabs.length > 0 ? tabOrGroup.tabs[0] : undefined;
+      if (tabOrGroup.mode === "glance") {
+        tabToFocus = tabOrGroup.tabs.find((t) => t.id === tabOrGroup.frontTabId) ?? tabOrGroup.tabs[0];
+      } else {
+        tabToFocus = tabOrGroup.tabs.find((t) => t.id === tabOrGroup.focusedTabId) ?? tabOrGroup.tabs[0];
+      }
       idToStore = tabOrGroup.groupId;
       window = browserWindowsController.getWindowById(windowId);
     }
@@ -1399,6 +1431,149 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     if (wasActive) {
       this.removeActiveTab(tabGroup.windowId, tabGroup.spaceId, groupPosition);
     }
+  }
+
+  private refreshTabGroupLayout(tabGroup: TabGroup, immediate = false) {
+    for (const tab of tabGroup.tabs) {
+      if (!tab.visible) continue;
+      this.getTabManagers(tab.id)?.layout.updateLayout(immediate);
+    }
+  }
+
+  public createSplitView(tabIds: [number, number], direction: SplitDirection = "horizontal"): TabGroup | null {
+    const first = this.getTabById(tabIds[0]);
+    const second = this.getTabById(tabIds[1]);
+    if (!first || !second || first.id === second.id) return null;
+    if (first.ephemeral || second.ephemeral) return null;
+
+    if (second.getWindow().id !== first.getWindow().id) {
+      second.setWindow(first.getWindow());
+    }
+    if (second.spaceId !== first.spaceId) {
+      second.setSpace(first.spaceId);
+    }
+
+    const group = this.createTabGroup("split", [first.id, second.id]);
+    if (group instanceof SplitTabGroup) {
+      group.setSplitDirection(direction);
+    }
+    this.activateTab(group);
+    windowTabsChanged(group.windowId);
+    return group;
+  }
+
+  public async openUrlInGlance(sourceTab: Tab, url: string): Promise<TabGroup | null> {
+    if (sourceTab.isDestroyed) return null;
+    const newTab = await this.createTab(sourceTab.getWindow().id, sourceTab.profileId, sourceTab.spaceId, undefined, {
+      url
+    });
+    newTab.updateStateProperty("position", sourceTab.position + 0.5);
+    this.normalizePositions(sourceTab.getWindow().id, sourceTab.spaceId);
+
+    const existingGroup = this.getTabGroupByTabId(sourceTab.id);
+    if (existingGroup?.mode === "glance") {
+      existingGroup.addTab(newTab.id);
+      existingGroup.setFrontTab(newTab.id);
+      this.activateTab(existingGroup);
+      windowTabsChanged(existingGroup.windowId);
+      return existingGroup;
+    }
+
+    const glanceGroup = this.createTabGroup("glance", [sourceTab.id, newTab.id]);
+    if (glanceGroup instanceof GlanceTabGroup) {
+      glanceGroup.setFrontTab(newTab.id);
+    }
+    this.activateTab(glanceGroup);
+    windowTabsChanged(glanceGroup.windowId);
+    return glanceGroup;
+  }
+
+  public async openUrlInSplit(
+    sourceTab: Tab,
+    url: string,
+    direction: SplitDirection = "horizontal"
+  ): Promise<TabGroup | null> {
+    if (sourceTab.isDestroyed) return null;
+    const newTab = await this.createTab(sourceTab.getWindow().id, sourceTab.profileId, sourceTab.spaceId, undefined, {
+      url
+    });
+    newTab.updateStateProperty("position", sourceTab.position + 0.5);
+    this.normalizePositions(sourceTab.getWindow().id, sourceTab.spaceId);
+    return this.createSplitView([sourceTab.id, newTab.id], direction);
+  }
+
+  public setSplitRatio(groupId: string, ratio: number): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group || group.mode !== "split") return false;
+    group.setSplitRatio(ratio);
+    this.refreshTabGroupLayout(group, true);
+    windowTabsChanged(group.windowId);
+    return true;
+  }
+
+  public setSplitDirection(groupId: string, direction: SplitDirection): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group || group.mode !== "split") return false;
+    group.setSplitDirection(direction);
+    this.refreshTabGroupLayout(group);
+    windowTabsChanged(group.windowId);
+    return true;
+  }
+
+  public swapSplitPanes(groupId: string): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group || group.mode !== "split") return false;
+    if (!group.swapPanes()) return false;
+    this.refreshTabGroupLayout(group);
+    windowTabsChanged(group.windowId);
+    return true;
+  }
+
+  public ungroupTabGroup(groupId: string, preferredActiveTabId?: number): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group) return false;
+
+    const wasActive = this.getActiveTab(group.windowId, group.spaceId) === group;
+    const focusedInSpace = this.getFocusedTab(group.windowId, group.spaceId);
+    const tabsInGroup = [...group.tabs];
+    const targetTab =
+      (preferredActiveTabId !== undefined ? tabsInGroup.find((t) => t.id === preferredActiveTabId) : undefined) ??
+      (focusedInSpace ? tabsInGroup.find((t) => t.id === focusedInSpace.id) : undefined) ??
+      tabsInGroup[0];
+
+    this.destroyTabGroup(groupId);
+
+    if (wasActive && targetTab && !targetTab.isDestroyed) {
+      this.activateTab(targetTab);
+    }
+    for (const t of tabsInGroup) {
+      if (!t.isDestroyed && t.id !== targetTab?.id && t.visible) {
+        this.getTabManagers(t.id)?.layout.hide();
+      }
+    }
+    if (targetTab && !targetTab.isDestroyed) {
+      this.getTabManagers(targetTab.id)?.layout.updateLayout();
+    }
+    windowTabsChanged(group.windowId);
+    return true;
+  }
+
+  public dismissGlance(groupId: string, promoteFront = false): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group || group.mode !== "glance") return false;
+
+    const frontTab = group.tabs.find((t) => t.id === group.frontTabId);
+    const backTab = group.tabs.find((t) => t.id !== group.frontTabId);
+
+    if (promoteFront) {
+      return this.ungroupTabGroup(groupId, frontTab?.id);
+    }
+
+    const ok = this.ungroupTabGroup(groupId, backTab?.id);
+    if (frontTab && !frontTab.isDestroyed) {
+      frontTab.destroy();
+    }
+    return ok;
   }
 
   /**
