@@ -23,8 +23,6 @@ import {
 import { useAppUpdates } from "@/components/providers/app-updates-provider";
 import { cn } from "@/lib/utils";
 
-const DOWNLOAD_PAGE = "https://github.com/edgarasb-dev/lumi-browser/releases";
-
 interface UpdateState {
   currentVersion: string;
   dialogOpen: boolean;
@@ -39,7 +37,8 @@ export function UpdateCard() {
     isAutoUpdateSupported,
     checkForUpdates,
     downloadUpdate,
-    installUpdate
+    installUpdate,
+    openDownloadPage
   } = useAppUpdates();
 
   const [state, setState] = useState<UpdateState>({
@@ -66,10 +65,6 @@ export function UpdateCard() {
       checkForUpdates();
     }
   }, [checkForUpdates, updateStatus, isAutoUpdateSupported]);
-
-  const openDownloadPage = () => {
-    lumi.tabs.newTab(DOWNLOAD_PAGE, true);
-  };
 
   const handleInstallUpdate = async () => {
     const success = await installUpdate();

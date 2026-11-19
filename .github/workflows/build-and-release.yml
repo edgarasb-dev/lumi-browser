@@ -126,10 +126,8 @@ jobs:
 
       - name: Build for macOS
         if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel'
-        run: bun run build:mac -p always
+        run: bun run build:mac -p never
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}
           EP_GH_IGNORE_TIME: "true"
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -164,3 +162,100 @@ jobs:
             dist/*.yml
             dist/*.blockmap
             dist/*.flatpak
+
+  # Merge latest-mac.yml across arm64 + x64 before uploading so neither overwrites the other
+  publish-macos:
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.10
+
+      - name: Download macOS arm64 artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: macos-latest
+          path: mac-arm64
+
+      - name: Download macOS x64 artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: macos-15-intel
+          path: mac-x64
+
+      - name: Merge latest-mac.yml and stage assets
+        run: |
+          bun -e '
+          import fs from "node:fs";
+          import path from "node:path";
+
+          type MacManifestFile = { url: string; sha512?: string; size?: number; blockMapSize?: number };
+          type MacManifest = { version?: string; files?: MacManifestFile[]; path?: string; sha512?: string; releaseDate?: string };
+
+          const outDir = "mac-publish";
+          fs.mkdirSync(outDir, { recursive: true });
+
+          const dirs = ["mac-arm64", "mac-x64"].filter((dir) => fs.existsSync(dir));
+          if (dirs.length === 0) {
+            console.error("No macOS build artifacts were downloaded.");
+            process.exit(1);
+          }
+
+          const manifests: MacManifest[] = [];
+          for (const dir of dirs) {
+            for (const entry of fs.readdirSync(dir)) {
+              const srcPath = path.join(dir, entry);
+              if (entry === "latest-mac.yml") {
+                manifests.push(Bun.YAML.parse(fs.readFileSync(srcPath, "utf8")) as MacManifest);
+              } else if (fs.statSync(srcPath).isFile()) {
+                fs.copyFileSync(srcPath, path.join(outDir, entry));
+              }
+            }
+          }
+
+          if (manifests.length === 0) {
+            console.error("No latest-mac.yml manifests found.");
+            process.exit(1);
+          }
+
+          const seen = new Set<string>();
+          const mergedFiles: MacManifestFile[] = [];
+          for (const manifest of manifests) {
+            for (const file of manifest.files ?? []) {
+              if (!seen.has(file.url)) {
+                seen.add(file.url);
+                mergedFiles.push(file);
+              }
+            }
+          }
+
+          const primary = manifests[0];
+          const lines = [`version: ${primary.version}`, "files:"];
+          for (const file of mergedFiles) {
+            lines.push(`  - url: ${file.url}`);
+            if (file.sha512) lines.push(`    sha512: ${file.sha512}`);
+            if (file.size != null) lines.push(`    size: ${file.size}`);
+            if (file.blockMapSize != null) lines.push(`    blockMapSize: ${file.blockMapSize}`);
+          }
+          if (primary.path) lines.push(`path: ${primary.path}`);
+          if (primary.sha512) lines.push(`sha512: ${primary.sha512}`);
+          if (primary.releaseDate) lines.push(`releaseDate: '\''${primary.releaseDate}'\''`);
+
+          fs.writeFileSync(path.join(outDir, "latest-mac.yml"), lines.join("\n") + "\n");
+          '
+
+      - name: Upload macOS assets and merged latest-mac.yml
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
+          TAG="v$VERSION"
+          gh release upload "$TAG" mac-publish/* --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

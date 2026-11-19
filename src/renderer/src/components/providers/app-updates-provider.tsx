@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
 import { UpdateStatus } from "~/types/updates";
 
+const RELEASES_URL = "https://github.com/edgarasb-dev/lumi-browser/releases";
+
 interface AppUpdatesContextType {
   updateStatus: UpdateStatus | null;
   isCheckingForUpdates: boolean;
@@ -11,6 +13,7 @@ interface AppUpdatesContextType {
   checkForUpdates: () => Promise<boolean>;
   downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
+  openDownloadPage: () => void;
 }
 
 interface AppUpdatesProviderProps {
@@ -116,6 +119,10 @@ export function AppUpdatesProvider({ children }: AppUpdatesProviderProps) {
     }
   }, []);
 
+  const openDownloadPage = useCallback(() => {
+    lumi.tabs.newTab(RELEASES_URL, true);
+  }, []);
+
   const value = {
     updateStatus,
     isCheckingForUpdates,
@@ -125,7 +132,8 @@ export function AppUpdatesProvider({ children }: AppUpdatesProviderProps) {
     hasUpdated,
     checkForUpdates,
     downloadUpdate,
-    installUpdate
+    installUpdate,
+    openDownloadPage
   };
 
   return <AppUpdatesContext.Provider value={value}>{children}</AppUpdatesContext.Provider>;

@@ -112,6 +112,7 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       debugError("AUTO_UPDATER", "Check for updates failed:", errorMsg);
+      this.downloadProgress = null;
       this.lastError = errorMsg;
       this.lastChecked = Date.now();
       this.emit("status-changed");
@@ -123,12 +124,17 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     autoUpdater.on("error", (error) => {
       const message = error instanceof Error ? error.message : String(error);
       debugError("AUTO_UPDATER", "Auto-updater error:", message);
+      this.downloadProgress = null;
       this.lastError = message;
       this.emit("status-changed");
     });
 
     autoUpdater.on("update-available", (updateInfo) => {
       debugPrint("AUTO_UPDATER", "Update Available", updateInfo);
+      if (this.availableUpdate?.version !== updateInfo.version) {
+        this.updateDownloaded = false;
+        this.downloadProgress = null;
+      }
       this.availableUpdate = updateInfo;
       this.lastError = null;
       this.emit("status-changed");
@@ -137,6 +143,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     autoUpdater.on("update-not-available", (updateInfo) => {
       debugPrint("AUTO_UPDATER", "Update Not Available", updateInfo);
       this.availableUpdate = null;
+      this.downloadProgress = null;
+      this.updateDownloaded = false;
       this.lastError = null;
       this.emit("status-changed");
     });
@@ -228,7 +236,13 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       return false;
     }
 
-    autoUpdater.downloadUpdate();
+    autoUpdater.downloadUpdate().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      debugError("AUTO_UPDATER", "Download update failed:", message);
+      this.downloadProgress = null;
+      this.lastError = message;
+      this.emit("status-changed");
+    });
     return true;
   }
 

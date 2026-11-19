@@ -4,30 +4,52 @@ import { useAppUpdates } from "@/components/providers/app-updates-provider";
 import { useSettings } from "@/components/providers/settings-provider";
 import { SettingsInput } from "@/components/settings/sections/general/basic-settings-cards";
 import { cn } from "@/lib/utils";
-import { Download, RefreshCw, ArrowUpCircle } from "lucide-react";
+import { Download, RefreshCw, ArrowUpCircle, ExternalLink } from "lucide-react";
 
 export function UpdateBanner() {
   const [hovered, setHovered] = useState(false);
   const { settings } = useSettings();
-  const { updateStatus, isDownloadingUpdate, isInstallingUpdate, downloadUpdate, installUpdate } = useAppUpdates();
+  const {
+    updateStatus,
+    isDownloadingUpdate,
+    isInstallingUpdate,
+    isAutoUpdateSupported,
+    downloadUpdate,
+    installUpdate,
+    openDownloadPage
+  } = useAppUpdates();
 
   const autoUpdateSetting = settings.find((setting) => setting.id === "autoUpdate");
 
   const isDownloaded = updateStatus?.updateDownloaded === true;
-  const hasUpdate = updateStatus?.availableUpdate !== null;
-  const downloadFailed = updateStatus?.downloadProgress && updateStatus.downloadProgress.percent === -1;
+  const hasUpdate = Boolean(updateStatus?.availableUpdate);
+  const hasError = Boolean(updateStatus?.error);
 
   if (!hasUpdate && !isDownloaded && !isDownloadingUpdate && !isInstallingUpdate) {
     return null;
   }
 
-  const onButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const onButtonClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
 
     if (isDownloaded) {
-      installUpdate();
-    } else if (hasUpdate && !isDownloadingUpdate) {
-      downloadUpdate();
+      const success = await installUpdate();
+      if (!success) {
+        openDownloadPage();
+      }
+      return;
+    }
+
+    if (hasUpdate && !isAutoUpdateSupported) {
+      openDownloadPage();
+      return;
+    }
+
+    if (hasUpdate && !isDownloadingUpdate) {
+      const started = await downloadUpdate();
+      if (!started) {
+        openDownloadPage();
+      }
     }
   };
 
@@ -35,7 +57,8 @@ export function UpdateBanner() {
     if (isInstallingUpdate) return "Installing...";
     if (isDownloadingUpdate) return "Downloading...";
     if (isDownloaded) return "Install Update";
-    if (downloadFailed) return "Retry Download";
+    if (!isAutoUpdateSupported) return "Download Manually";
+    if (hasError) return "Retry Download";
     return "Download Update";
   };
 
@@ -45,6 +68,9 @@ export function UpdateBanner() {
     }
     if (isDownloaded) {
       return <ArrowUpCircle className="size-3.5 mr-1.5" />;
+    }
+    if (!isAutoUpdateSupported) {
+      return <ExternalLink className="size-3.5 mr-1.5" />;
     }
     return <Download className="size-3.5 mr-1.5" />;
   };
@@ -96,7 +122,7 @@ export function UpdateBanner() {
                   transition={{ delay: 0.05, duration: 0.25 }}
                   className="flex flex-col gap-1.5 px-3 pt-1.5 pb-2.5"
                 >
-                  {autoUpdateSetting && (
+                  {isAutoUpdateSupported && autoUpdateSetting && (
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-black/60 dark:text-white/60">Auto Update</span>
                       <SettingsInput setting={autoUpdateSetting} />
@@ -116,7 +142,7 @@ export function UpdateBanner() {
                       "cursor-pointer"
                     )}
                     onClick={onButtonClick}
-                    disabled={(isInstallingUpdate || isDownloadingUpdate) && !downloadFailed}
+                    disabled={isInstallingUpdate || isDownloadingUpdate}
                   >
                     {getButtonIcon()}
                     {getButtonText()}
