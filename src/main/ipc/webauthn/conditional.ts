@@ -14,7 +14,8 @@ interface PendingConditionalMediation {
   selectedPasskey: PublicKeyCredentialDescriptor | null;
   result: AssertCredentialResult | AssertCredentialErrorCodes | null;
   cleanup: () => void;
-  state: // Starting & Started
+  state:
+    // Starting & Started
     | "starting"
     | "started"
     // Selected Passkey & Processing Authentication

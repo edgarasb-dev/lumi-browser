@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.2.1" date="2026-11-20">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.2.1</url>
+      <description>
+        <p>Upgrade Electron to v45.2.1+wvcus (Chromium 156) and core dependencies, fix Chrome Web Store preload packaging and install flow, fix sidebar popover window drag sticking, and fix the blank macOS application menu item.</p>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-11-20">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.2.0</url>
       <description>

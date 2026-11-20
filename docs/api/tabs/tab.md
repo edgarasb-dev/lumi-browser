@@ -26,9 +26,7 @@ const tab = new Tab(
   },
   {
     window: browserWindowInstance, // Optional: Assign to a window immediately
-    webContentsViewOptions: {
-      /* ... */
-    } // Optional: Customize WebContentsView
+    webContentsViewOptions: {/* ... */} // Optional: Customize WebContentsView
   }
 );
 ```

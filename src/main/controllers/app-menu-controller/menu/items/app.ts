@@ -28,7 +28,7 @@ export const createAppMenu = (): MenuItemConstructorOptions => ({
     { type: "separator" },
     { role: "hide" },
     { role: "hideOthers" },
-    { role: "showAllTabs" },
+    { role: "unhide" },
     { type: "separator" },
     { role: "quit" }
   ]

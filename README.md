@@ -10,10 +10,10 @@
   </p>
 
   <p>
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.2.0-2563EB?style=flat-square&logo=github" alt="Release v0.2.0" /></a>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.2.1-2563EB?style=flat-square&logo=github" alt="Release v0.2.1" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-10B981?style=flat-square" alt="License GPL-3.0" /></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-6366F1?style=flat-square" alt="Platforms" />
-    <img src="https://img.shields.io/badge/Electron-41+-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 41+" />
+    <img src="https://img.shields.io/badge/Electron-45+-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 45+" />
     <img src="https://img.shields.io/badge/React-19-0EA5E9?style=flat-square&logo=react&logoColor=white" alt="React 19" />
     <img src="https://img.shields.io/badge/TailwindCSS-v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="TailwindCSS v4" />
   </p>
@@ -75,7 +75,7 @@ Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, f
 
 |                               **Persistent Split Side Panel & Markdown Checklists**                                |                               **Unified Site Control Center, Zoom & Permissions**                                |
 | :----------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/screenshots/showcase-split-sidepanel.png" width="460" alt="Split Side Panel Scratchpad" /> | <img src="./docs/assets/screenshots/showcase-site-controls.png" width="460" alt="Unified Site Control Center" /> |
+| <img src="./docs/assets/screenshots/showcase-split-sidepanel.png" width="460" alt="Split Side Panel Scratchpad" /> | <img src="./docs/assets/screenshots/showcase-site-controls.png" width="340" alt="Unified Site Control Center" /> |
 
 |                                   **Inline Calculators, Units & Color Converters**                                   |                               **Focus / Zen Mode & Floating Pomodoro Pill**                                |
 | :------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------: |
@@ -140,11 +140,11 @@ Lumi provides fast, offline-ready internal routes via the `lumi://` protocol:
 
 Pre-built binaries are published on the [GitHub Releases](https://github.com/edgarasb-dev/lumi-browser/releases) page:
 
-| Platform    | Package Format          | Architecture                            |
-| :---------- | :---------------------- | :-------------------------------------- |
-| **macOS**   | `.dmg` / `.zip`         | Apple Silicon (`arm64`) & Intel (`x64`) |
-| **Windows** | `.exe` (NSIS Installer) | 64-bit (`x64`)                          |
-| **Linux**   | `.AppImage` / `.deb`    | `x64` & `arm64`                         |
+| Platform    | Package Format          | Architecture            |
+| :---------- | :---------------------- | :---------------------- |
+| **macOS**   | `.dmg` / `.zip`         | Apple Silicon (`arm64`) |
+| **Windows** | `.exe` (NSIS Installer) | 64-bit (`x64`)          |
+| **Linux**   | `.AppImage` / `.deb`    | `x64` & `arm64`         |
 
 ---
 

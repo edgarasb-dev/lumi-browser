@@ -149,7 +149,10 @@ export async function handleGetCredential(
     return result.error;
   }
 
-  return result.data;
+  return {
+    ...result.data,
+    userHandle: result.data.userHandle ?? ""
+  };
 }
 
 ipcMain.handle("webauthn:get", async (event, options: CredentialRequestOptions | undefined) => {

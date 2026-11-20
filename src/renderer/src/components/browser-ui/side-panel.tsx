@@ -103,6 +103,7 @@ function renderInteractiveMarkdown(
 
 export function SidePanel() {
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
+  const currentSpaceId = currentSpace?.id;
   const focusedTab = useFocusedTab();
   const { isZenMode } = useFocusMode();
   const {
@@ -128,15 +129,15 @@ export function SidePanel() {
   const webHostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!currentSpace?.id) return;
+    if (!currentSpaceId) return;
     let active = true;
-    void lumi.spaces.getSpaceNotes(currentSpace.id).then((content) => {
+    void lumi.spaces.getSpaceNotes(currentSpaceId).then((content) => {
       if (active) setNotes(content || "");
     });
     return () => {
       active = false;
     };
-  }, [currentSpace?.id]);
+  }, [currentSpaceId]);
 
   useEffect(() => {
     return () => {
@@ -151,16 +152,16 @@ export function SidePanel() {
   const persistNotes = useCallback(
     (nextValue: string) => {
       setNotes(nextValue);
-      if (!currentSpace?.id) return;
+      if (!currentSpaceId) return;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
-        void lumi.spaces.saveSpaceNotes(currentSpace.id, nextValue).then(() => {
+        void lumi.spaces.saveSpaceNotes(currentSpaceId, nextValue).then(() => {
           setSavedNotice(true);
           setTimeout(() => setSavedNotice(false), 1200);
         });
       }, 300);
     },
-    [currentSpace?.id]
+    [currentSpaceId]
   );
 
   const handleInsertChecklist = () => {

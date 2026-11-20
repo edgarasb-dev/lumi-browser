@@ -221,23 +221,13 @@ export interface AssertCredentialResult {
  * Error codes for creating a credential.
  */
 export type CreateCredentialErrorCodes =
-  | "TypeError"
-  | "AbortError"
-  | "NotAllowedError"
-  | "SecurityError"
-  | "InvalidStateError"
-  | "NotSupportedError";
+  "TypeError" | "AbortError" | "NotAllowedError" | "SecurityError" | "InvalidStateError" | "NotSupportedError";
 
 /**
  * Error codes for asserting a credential.
  */
 export type AssertCredentialErrorCodes =
-  | "NotAllowedError"
-  | "SecurityError"
-  | "TypeError"
-  | "AbortError"
-  | "NotSupportedError"
-  | "OperationError";
+  "NotAllowedError" | "SecurityError" | "TypeError" | "AbortError" | "NotSupportedError" | "OperationError";
 
 /**
  * A description of a key type and algorithm.

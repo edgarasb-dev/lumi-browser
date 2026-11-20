@@ -1,8 +1,32 @@
-import { resolve } from "path";
+import { copyFileSync, mkdirSync } from "fs";
+import { createRequire } from "module";
+import { basename, resolve } from "path";
 import { defineConfig } from "electron-vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { generateRoutes } from "./scripts/frontend-routes-generator/generator";
+
+const require = createRequire(import.meta.url);
+
+/**
+ * Bundled `electron-chrome-web-store` and `electron-chrome-extensions` resolve their preload
+ * scripts relative to `__dirname` when packaged in ASAR. Copying them beside the main bundle
+ * guarantees Chrome Web Store and extension APIs load cleanly in release builds.
+ */
+function copyExtensionPreloadsPlugin() {
+  const preloadIds = ["electron-chrome-web-store/preload", "electron-chrome-extensions/preload"];
+  return {
+    name: "copy-extension-preloads",
+    writeBundle(options: { dir?: string }) {
+      const outDir = options.dir ? resolve(options.dir) : resolve("out/main");
+      mkdirSync(outDir, { recursive: true });
+      for (const id of preloadIds) {
+        const src = require.resolve(id);
+        copyFileSync(src, resolve(outDir, basename(src)));
+      }
+    }
+  };
+}
 
 const routes = await generateRoutes();
 
@@ -83,7 +107,8 @@ export default defineConfig({
         ...mainAliases,
         ...sharedAliases
       }
-    }
+    },
+    plugins: [copyExtensionPreloadsPlugin()]
   },
   preload: {
     ...commonOptions,

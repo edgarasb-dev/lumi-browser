@@ -54,8 +54,4 @@ export interface InstantAnswerSuggestion extends OmniboxSuggestionBase {
 }
 
 export type OmniboxSuggestion =
-  | SearchSuggestion
-  | WebsiteSuggestion
-  | OpenTabSuggestion
-  | PedalSuggestion
-  | InstantAnswerSuggestion;
+  SearchSuggestion | WebsiteSuggestion | OpenTabSuggestion | PedalSuggestion | InstantAnswerSuggestion;

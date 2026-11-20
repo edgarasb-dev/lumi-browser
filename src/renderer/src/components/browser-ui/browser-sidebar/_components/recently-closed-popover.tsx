@@ -31,6 +31,7 @@ function getHostname(url: string): string {
 
 export function RecentlyClosedPopover({ compact = false }: { compact?: boolean }) {
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
+  const currentSpaceId = currentSpace?.id;
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"closed" | "snapshots">("closed");
   const [recentTabs, setRecentTabs] = useState<RecentlyClosedTabData[]>([]);
@@ -45,14 +46,14 @@ export function RecentlyClosedPopover({ compact = false }: { compact?: boolean }
     try {
       const [closedList, snapList] = await Promise.all([
         lumi.tabs.getRecentlyClosed(),
-        lumi.snapshots.list(currentSpace?.id)
+        lumi.snapshots.list(currentSpaceId)
       ]);
       setRecentTabs(closedList);
       setSnapshots(snapList);
     } catch {
       // ignore refresh failures
     }
-  }, [currentSpace?.id]);
+  }, [currentSpaceId]);
 
   useEffect(() => {
     if (open) {

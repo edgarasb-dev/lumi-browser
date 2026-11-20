@@ -1,12 +1,5 @@
 export type SettingsSectionId =
-  | "general"
-  | "appearance"
-  | "search"
-  | "privacy"
-  | "spaces"
-  | "profiles"
-  | "shortcuts"
-  | "about";
+  "general" | "appearance" | "search" | "privacy" | "spaces" | "profiles" | "shortcuts" | "about";
 
 export interface SettingsSearchEntry {
   id: string;

@@ -1,4 +1,4 @@
-import { app, BrowserWindow as ElectronBrowserWindow, clipboard, dialog, nativeImage } from "electron";
+import { app, BrowserWindow as ElectronBrowserWindow, clipboard, ClipboardItem, dialog } from "electron";
 import fs from "fs/promises";
 import path from "path";
 import sharp from "sharp";
@@ -177,11 +177,14 @@ export async function captureFullScrollTabPage(tab: Tab): Promise<CapturedPageRe
   };
 }
 
-export function copyCapturedDataUrl(dataUrl: string): boolean {
+export async function copyCapturedDataUrl(dataUrl: string): Promise<boolean> {
   try {
-    const img = nativeImage.createFromDataURL(dataUrl);
-    if (img.isEmpty()) return false;
-    clipboard.writeImage(img);
+    const pngBuffer = decodePngDataUrl(dataUrl);
+    if (!pngBuffer) return false;
+    const item = new ClipboardItem({
+      "image/png": new Blob([new Uint8Array(pngBuffer)], { type: "image/png" })
+    });
+    await clipboard.write([item]);
     return true;
   } catch {
     return false;

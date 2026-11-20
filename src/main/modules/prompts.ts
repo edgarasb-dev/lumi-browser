@@ -19,7 +19,7 @@ function removePromptById(prompts: PromptState[], id: string) {
 }
 
 function processPromptQueue() {
-  for (let i = 0; i < promptQueue.length; ) {
+  for (let i = 0; i < promptQueue.length;) {
     const queuedPrompt = promptQueue[i];
     const tabAlreadyHasActivePrompt = activePrompts.some((prompt) => prompt.tabId === queuedPrompt.tabId);
 

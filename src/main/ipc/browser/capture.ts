@@ -31,8 +31,8 @@ ipcMain.handle("capture:full-page", async (event) => {
   return await captureFullScrollTabPage(tab);
 });
 
-ipcMain.handle("capture:copy-data-url", (_event, dataUrl: string) => {
-  return copyCapturedDataUrl(dataUrl);
+ipcMain.handle("capture:copy-data-url", async (_event, dataUrl: string) => {
+  return await copyCapturedDataUrl(dataUrl);
 });
 
 ipcMain.handle("capture:save-png", async (event, dataUrl: string, suggestedFilename?: string) => {

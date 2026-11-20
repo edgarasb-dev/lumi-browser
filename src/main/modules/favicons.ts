@@ -263,8 +263,7 @@ function storeFaviconInDb(imageHash: string, resizedImageBuffer: Buffer, url: st
 
   const storeTx = database.transaction(() => {
     const existingFavicon = database.prepare("SELECT id FROM favicons WHERE hash = ? LIMIT 1").get(imageHash) as
-      | { id: number }
-      | undefined;
+      { id: number } | undefined;
 
     let iconId: number;
     if (existingFavicon) {
@@ -278,8 +277,7 @@ function storeFaviconInDb(imageHash: string, resizedImageBuffer: Buffer, url: st
     }
 
     const existingUrl = database.prepare("SELECT id FROM favicon_urls WHERE url = ? LIMIT 1").get(url) as
-      | { id: number }
-      | undefined;
+      { id: number } | undefined;
 
     if (existingUrl) {
       database.prepare("UPDATE favicon_urls SET icon_id = ? WHERE url = ?").run(iconId, url);
@@ -467,8 +465,7 @@ export async function hasFavicon(url: string): Promise<boolean> {
   try {
     const database = getDb();
     const row = database.prepare("SELECT COUNT(*) as count FROM favicon_urls WHERE url = ?").get(normalizedURL) as
-      | { count: number }
-      | undefined;
+      { count: number } | undefined;
     return (row && Number(row.count) > 0) ?? false;
   } catch (error) {
     debugError("FAVICONS", "Error checking favicon:", error);

@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-2022]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-latest, windows-2022]
 
     steps:
       - name: Check out Git repository
@@ -133,11 +133,11 @@ jobs:
           GYP_MSVS_VERSION: 2022
 
       - name: Install Castlabs EVS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel' || matrix.os == 'windows-2022'
+        if: matrix.os == 'macos-latest' || matrix.os == 'windows-2022'
         run: python3 -m pip install castlabs-evs==1.1.5 --break-system-packages
 
       - name: Login to Castlabs EVS (macOS)
-        if: (matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel') && env.ACCOUNT_NAME != '' && env.PASSWD != ''
+        if: matrix.os == 'macos-latest' && env.ACCOUNT_NAME != '' && env.PASSWD != ''
         continue-on-error: true
         run: python3 -m castlabs_evs.account --no-ask reauth -A "$ACCOUNT_NAME" -P "$PASSWD"
         env:
@@ -164,9 +164,11 @@ jobs:
           EP_GH_IGNORE_TIME: "true"
 
       - name: Build for macOS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel'
-        run: bun run build:mac:ci -p never
+        if: matrix.os == 'macos-latest'
+        run: bun run build:mac:ci -p always
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}
           EP_GH_IGNORE_TIME: "true"
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -185,123 +187,9 @@ jobs:
           EP_GH_IGNORE_TIME: "true"
           GYP_MSVS_VERSION: 2022
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ${{ matrix.os }}
-          retention-days: 1
-          path: |
-            dist/*.exe
-            dist/*.zip
-            dist/*.dmg
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
-            dist/*.tar.gz
-            dist/*.yml
-            dist/*.blockmap
-            dist/*.flatpak
-
-  # Merge latest-mac.yml across arm64 + x64 before uploading so neither overwrites the other
-  publish-macos:
-    needs: [create-release, release]
-    if: needs.create-release.outputs.should_release == 'true'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: 1.3.10
-
-      - name: Download macOS arm64 artifacts
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: macos-latest
-          path: mac-arm64
-
-      - name: Download macOS x64 artifacts
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: macos-15-intel
-          path: mac-x64
-
-      - name: Merge latest-mac.yml and stage assets
-        run: |
-          bun -e '
-          import fs from "node:fs";
-          import path from "node:path";
-
-          type MacManifestFile = { url: string; sha512?: string; size?: number; blockMapSize?: number };
-          type MacManifest = { version?: string; files?: MacManifestFile[]; path?: string; sha512?: string; releaseDate?: string };
-
-          const outDir = "mac-publish";
-          fs.mkdirSync(outDir, { recursive: true });
-
-          const dirs = ["mac-arm64", "mac-x64"].filter((dir) => fs.existsSync(dir));
-          if (dirs.length === 0) {
-            console.error("No macOS build artifacts were downloaded.");
-            process.exit(1);
-          }
-
-          const manifests: MacManifest[] = [];
-          for (const dir of dirs) {
-            for (const entry of fs.readdirSync(dir)) {
-              const srcPath = path.join(dir, entry);
-              if (entry === "latest-mac.yml") {
-                manifests.push(Bun.YAML.parse(fs.readFileSync(srcPath, "utf8")) as MacManifest);
-              } else if (fs.statSync(srcPath).isFile()) {
-                fs.copyFileSync(srcPath, path.join(outDir, entry));
-              }
-            }
-          }
-
-          if (manifests.length === 0) {
-            console.error("No latest-mac.yml manifests found.");
-            process.exit(1);
-          }
-
-          const seen = new Set<string>();
-          const mergedFiles: MacManifestFile[] = [];
-          for (const manifest of manifests) {
-            for (const file of manifest.files ?? []) {
-              if (!seen.has(file.url)) {
-                seen.add(file.url);
-                mergedFiles.push(file);
-              }
-            }
-          }
-
-          const primary = manifests[0];
-          const lines = [`version: ${primary.version}`, "files:"];
-          for (const file of mergedFiles) {
-            lines.push(`  - url: ${file.url}`);
-            if (file.sha512) lines.push(`    sha512: ${file.sha512}`);
-            if (file.size != null) lines.push(`    size: ${file.size}`);
-            if (file.blockMapSize != null) lines.push(`    blockMapSize: ${file.blockMapSize}`);
-          }
-          if (primary.path) lines.push(`path: ${primary.path}`);
-          if (primary.sha512) lines.push(`sha512: ${primary.sha512}`);
-          if (primary.releaseDate) lines.push(`releaseDate: '\''${primary.releaseDate}'\''`);
-
-          fs.writeFileSync(path.join(outDir, "latest-mac.yml"), lines.join("\n") + "\n");
-          '
-
-      - name: Upload macOS assets and merged latest-mac.yml
-        run: |
-          TAG="${{ needs.create-release.outputs.tag }}"
-          gh release upload "$TAG" mac-publish/* --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Publish the draft release only once all OS builds and merged macOS assets have been uploaded
+  # Publish the draft release only once all OS builds have been uploaded
   publish-release:
-    needs: [create-release, release, publish-macos]
+    needs: [create-release, release]
     if: needs.create-release.outputs.should_release == 'true'
     runs-on: ubuntu-24.04
     steps:

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] — 2026-11-20
+
+### Codename: Glow
+
+### Changed
+
+- **Chromium & Electron Engine Upgrade**: Upgraded `@castlabs/electron-releases` from `v41.1.1+wvcus` (Chromium 146) to `v45.2.1+wvcus` (Chromium `156.0.8078.75`) along with compatible dependency updates (`@ghostery/adblocker-electron`, `better-sqlite3`, `drizzle-orm`, `electron-updater`, `react`, `tailwindcss`, `vite`, `@base-ui/react`, `motion`, and native ABI tooling).
+- **macOS Release Targets**: Streamlined macOS CI and release distribution exclusively for Apple Silicon (`arm64`), removing legacy Intel (`x64`) builds.
+
+### Fixed
+
+- **Chrome Web Store & Extension Packaging**: Bundled `chrome-web-store.preload.js` and `chrome-extension-api.preload.js` alongside `out/main/` so packaged releases expose extension APIs properly, and added Chrome `Sec-CH-UA` headers for Chrome Web Store requests (`"Add to Lumi"` works out of the box).
+- **Sidebar Popover Drag Sticking (`useWindowDrag`)**: Guarded against synthetic clicks bubbling across `createPortal` boundaries, cleared drag state if the left mouse button is released over a web page or external window (`(e.buttons & 1) === 0`), and reset on blur/pointer-cancel/contextmenu.
+- **macOS App Menu Blank Item**: Replaced invalid `{ role: "showAllTabs" }` under the application menu with `{ role: "unhide" }` (`Show All`).
+
+---
+
 ## [0.2.0] — 2026-11-20
 
 ### Codename: Glow

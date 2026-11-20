@@ -55,10 +55,13 @@ export function SidebarInner({ direction, variant }: { direction: AttachedDirect
         target.closest("button") ||
         target.closest("input") ||
         target.closest("textarea") ||
+        target.closest("select") ||
+        target.closest("label") ||
         target.closest("a") ||
         target.closest("[data-tab-id]") ||
         target.closest(".tab-group") ||
         target.closest("[role='button']") ||
+        target.closest("[role='menuitem']") ||
         target.closest("[data-no-drag]") ||
         target.closest("[data-slot='sidebar-scroll-area-scrollbar']")
       );

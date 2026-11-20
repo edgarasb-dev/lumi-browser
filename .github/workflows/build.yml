@@ -174,7 +174,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-2022]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-2022]
 
     steps:
       - name: Check out Git repository
@@ -239,7 +239,7 @@ jobs:
           USE_SYSTEM_FPM: ${{ matrix.os == 'ubuntu-24.04-arm' }}
 
       - name: Build for macOS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel'
+        if: matrix.os == 'macos-latest'
         run: bun run build:mac:ci -p never
 
       - name: Build for Windows
@@ -277,8 +277,7 @@ jobs:
         Download the artifacts for:
         - [Linux](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/ubuntu-latest.zip)
         - [Linux (arm64)](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/ubuntu-24.04-arm.zip)
-        - [macOS](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/macos-latest.zip)
-        - [macOS (Intel)](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/macos-15-intel.zip)
+        - [macOS (Apple Silicon)](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/macos-latest.zip)
         - [Windows](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/windows-latest.zip)
         - [Flatpak (x64)](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/flatpak-ubuntu-latest.zip)
         - [Flatpak (arm64)](https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/flatpak-ubuntu-24.04-arm.zip)
