@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] — 2026-11-20
+
+### Codename: Glow
+
+### Added
+
+- **Unified Site Control Center**: Per-origin page zoom stepping, persisted `Ask / Allow / Block` site permissions (Camera, Microphone, Location, Notifications, Clipboard, MIDI, Serial), Ghostery blocker telemetry & whitelist toggle, **Smart Night Shade** dynamic dark CSS injection, and quick site storage cleanup.
+- **Omnibox Superpowers**: Inline math evaluator, CSS & physical unit converter, `#hex` / `rgb` / `hsl` live color swatches, timezone converter, QR code sharing card, and dynamic workspace command pedals (`open_bangs`, `toggle_zen_mode`, `toggle_side_panel`, `capture_region`, `capture_full_page`, `recently_closed`, `save_snapshot`).
+- **Live Media Mini-Player & Universal PiP**: Real-time background audio playback controls and Picture-in-Picture toggle across tabs.
+- **Focus / Zen Mode, Workspace Snapshots & Recently Closed**: `⌘⇧Z` distraction-free Zen chrome mode with floating Pomodoro timer pill and optional Focus distraction blocklist, SQLite-backed `workspace_snapshots` save/restore (`drizzle/0006_snapshots_and_widgets.sql`), and a unified Recently Closed Tabs popover.
+- **Persistent Split Side Panel & Page Capture**: `⌘⇧.` resizable right panel (`side-panel-controller.ts`) with Markdown checklist Scratchpad v2 and live Companion `WebContentsView`, plus `⌘⇧2` built-in Page Capture (`sharp`-stitched full scrolling, visible viewport, or region crop with Canvas annotations, clipboard copy, and PNG export).
+- **Global Settings Search (`⌘F`) & Appearance Controls**: Instant fuzzy cross-section search with row jump/highlight, wireframe layout pickers, and live mini-Lumi theme previews for Spaces & Profiles.
+
+### Changed
+
+- **Native Liquid Glass UI Overhaul**: Unified macOS `under-window` / `popover` vibrancy and Lumi Sapphire accent palette across Settings, Browser Sidebar/Topbar/Address Bar, Command Palette, Modular New Tab v2 (Studio Wallpapers & widgets), First-Run Onboarding, and `lumi://*` internal routes (`about`, `bangs`, `downloads`, `extensions`, `games`, `history`, `error`).
+- **CI Performance & Node 24 Readiness**: Added Bun/Electron dependency caching across GitHub Actions workflows and upgraded actions to Node 24-compatible versions.
+- **Documentation**: Rebuilt `README.md` with updated Retina screenshots, showcase gallery grids, keyboard shortcuts reference, and `lumi://*` index.
+
+### Fixed
+
+- **macOS Dock Activation & Settings Z-Order**: Tracked MRU `focusOrder` in `WindowsController` and updated `app.on("activate")` so clicking Lumi's Dock icon raises `SettingsWindow` above browser windows whenever it is open, alongside persistent window bounds and `⌘W` support.
+
+### Removed
+
+- **Safari Sync**: Removed Safari Bridge, iCloud Drive encrypted sync, Local Wi-Fi / Bonjour companion server, and associated Settings/Onboarding screens per user feedback.
+
+---
+
 ## [0.1.7] — 2026-11-19
 
 ### Codename: Spark

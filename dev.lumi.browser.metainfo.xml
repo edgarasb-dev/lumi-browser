@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.2.0" date="2026-11-20">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.2.0</url>
+      <description>
+        <p>Lumi Glow: Native Liquid Glass UI overhaul across Settings, Browser Chrome, Command Palette, Onboarding, and internal pages; Dock/Settings z-order restoration; Unified Site Control Center; Omnibox instant tools; Focus/Zen Mode, Workspace Snapshots, Persistent Split Side Panel, and Built-in Page Capture.</p>
+      </description>
+    </release>
     <release version="0.1.7" date="2026-11-19">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.1.7</url>
       <description>

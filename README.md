@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.7-2563EB?style=flat-square&logo=github" alt="Release v0.1.7" /></a>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.2.0-2563EB?style=flat-square&logo=github" alt="Release v0.2.0" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-10B981?style=flat-square" alt="License GPL-3.0" /></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-6366F1?style=flat-square" alt="Platforms" />
     <img src="https://img.shields.io/badge/Electron-41+-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 41+" />
@@ -87,8 +87,8 @@ Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, f
 
 <div align="center">
 
-|                                    **Native Vibrancy Settings & Layout Wireframes**                                    |                                **Custom Spaces & Live Theme Preview**                                |
-| :--------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
+|                                    **Native Vibrancy Settings & Layout Wireframes**                                    |                                            **Custom Spaces & Live Theme Preview**                                             |
+| :--------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
 | <img src="./docs/assets/screenshots/beta-settings-1.png" width="460" alt="Liquid Glass Settings and Layout Pickers" /> | <img src="./docs/assets/screenshots/showcase-spaces-settings.png" width="460" alt="Spaces Settings and Live Theme Preview" /> |
 
 |                                 **Search Bangs Directory (`lumi://bangs`)**                                  |                              **Liquid Glass First-Run Onboarding**                              |
