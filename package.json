@@ -45,7 +45,7 @@
     "script:generate-frontend-routes": "bun run scripts/frontend-routes-generator/generator.ts --run-as-script",
     "script:prune-frontend-routes": "bun run scripts/frontend-routes-generator/pruner.ts",
     "script:sync-bangs": "bun run scripts/sync-bangs.ts",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "node node_modules/electron/install.js && electron-builder install-app-deps",
     "reset": "rm -rf dist && rm -rf out && rm -rf yalc.lock && rm -rf .yalc && rm -rf node_modules && bun pm cache rm && echo 'Reset complete!'"
   },
   "dependencies": {
