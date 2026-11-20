@@ -10,13 +10,17 @@ import { SpaceSwitcher } from "@/components/browser-ui/browser-sidebar/_componen
 import { SpaceScratchpad } from "@/components/browser-ui/browser-sidebar/_components/space-scratchpad";
 import { BottomExtrasMenu } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-extras-menu";
 import { DownloadsButton } from "@/components/browser-ui/browser-sidebar/_components/downloads-button";
+import { RecentlyClosedPopover } from "@/components/browser-ui/browser-sidebar/_components/recently-closed-popover";
 import { TabPreviewCard } from "@/components/browser-ui/browser-sidebar/_components/tab-preview-card";
+import { MediaMiniPlayer } from "@/components/browser-ui/media-mini-player";
+import { useSidePanel } from "@/components/providers/side-panel-provider";
 import { useSetting } from "@/components/providers/settings-provider";
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
 import {
   Plus,
   X,
   PanelLeft,
+  PanelRight,
   Volume2,
   VolumeX,
   Columns2,
@@ -100,11 +104,11 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
           }
         }}
         className={cn(
-          "group relative flex items-center gap-1.5 h-8 px-2.5 rounded-lg max-w-[210px] min-w-[110px] flex-1 remove-app-drag",
+          "group relative flex items-center gap-1.5 h-8 px-2.5 rounded-xl max-w-[210px] min-w-[110px] flex-1 remove-app-drag",
           "text-xs select-none transition-all duration-150 cursor-pointer",
           isActive
-            ? "bg-white/95 dark:bg-white/20 text-black/90 dark:text-white/90 shadow-xs border border-white/40 dark:border-white/10 font-medium backdrop-blur-md"
-            : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/12 text-black/70 dark:text-white/70 border border-transparent"
+            ? "bg-white/90 dark:bg-white/[0.18] text-black/90 dark:text-white/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] border border-black/[0.06] dark:border-white/[0.14] font-medium backdrop-blur-md"
+            : "bg-black/[0.045] dark:bg-white/[0.05] hover:bg-black/[0.09] dark:hover:bg-white/[0.11] text-black/70 dark:text-white/75 border border-transparent"
         )}
         title={tab.title}
       >
@@ -186,6 +190,7 @@ export function TopbarLayout() {
   const { getTabGroups, activeTabGroup } = useTabsGroups();
   const focusedTab = useFocusedTab();
   const [, setNavigationLayout] = useSetting<"sidebar" | "topbar">("navigationLayout");
+  const { isOpen: sidePanelOpen, toggleOpen: toggleSidePanel } = useSidePanel();
 
   // Measure element height and report as contentTopOffset so WebContentsView sits right below topbar
   useLayoutEffect(() => {
@@ -351,7 +356,22 @@ export function TopbarLayout() {
         </div>
 
         <div className="shrink-0 flex items-center gap-1 remove-app-drag">
+          <MediaMiniPlayer variant="topbar" />
           <DownloadsButton />
+          <RecentlyClosedPopover compact />
+          <button
+            type="button"
+            onClick={toggleSidePanel}
+            title="Toggle Split Side Panel (Cmd+Shift+.)"
+            className={cn(
+              "size-7 rounded-lg flex items-center justify-center transition-colors",
+              sidePanelOpen
+                ? "bg-primary/20 text-primary dark:bg-primary/30"
+                : "text-black/65 hover:bg-black/8 hover:text-black/90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+            )}
+          >
+            <PanelRight className="size-3.5" />
+          </button>
           <SpaceScratchpad />
           <BottomExtrasMenu />
         </div>

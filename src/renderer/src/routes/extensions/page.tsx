@@ -1,9 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { InternalPageShell } from "@/components/main/internal-page-shell";
 import { Button } from "@/components/ui/button";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Puzzle } from "lucide-react";
 import { toast } from "sonner";
 
 import ExtensionCard from "./components/extension-card";
@@ -60,111 +61,93 @@ function ExtensionsPage() {
   const selectedExtension = extensions.find((ext) => ext.id === selectedExtensionId);
 
   return (
-    <div className="max-w-screen min-h-screen bg-background p-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-4xl mx-auto"
-      >
+    <InternalPageShell
+      title="Extensions"
+      subtitle={`${extensions.length} installed`}
+      icon={<Puzzle className="size-4" />}
+      maxWidth="4xl"
+      headerActions={
+        !selectedExtension ? (
+          <a href={CHROME_WEB_STORE_URL} target="_blank" rel="noopener noreferrer" className="no-underline">
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+              <ExternalLink className="size-3.5" />
+              Chrome Web Store
+            </Button>
+          </a>
+        ) : undefined
+      }
+    >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         {!selectedExtension ? (
-          <>
-            <div className="mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold text-foreground">Lumi Extensions</h1>
-                  <p className="text-muted-foreground mt-1">Manage your browser extensions</p>
+          <Card className="lumi-glass-panel">
+            <CardContent className="p-5">
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Switch checked={isDeveloperMode} onCheckedChange={setIsDeveloperMode} disabled id="developer-mode" />
+                  <label
+                    htmlFor="developer-mode"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Developer mode
+                  </label>
                 </div>
+                {isDeveloperMode && (
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm">
+                      Load unpacked
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Pack extension
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Update
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {extensions.length > 0 ? (
+                <div className="space-y-2">
+                  {extensions.map((extension) => (
+                    <ExtensionCard
+                      key={extension.id}
+                      extension={extension}
+                      isProcessing={isProcessing}
+                      setExtensionEnabled={setExtensionEnabled}
+                      onDetailsClick={handleDetailsClick}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <h3 className="mb-2 text-lg font-medium">No extensions installed</h3>
+                  <p className="mb-6 text-sm text-muted-foreground">
+                    Install extensions to enhance your browsing experience
+                  </p>
+                  <a href={CHROME_WEB_STORE_URL} target="_blank" rel="noopener noreferrer">
+                    <Button className="gap-2">
+                      <ExternalLink size={16} />
+                      Browse Chrome Web Store
+                    </Button>
+                  </a>
+                </div>
+              )}
+
+              <div className="mt-8 border-t border-black/8 py-4 text-center dark:border-white/10">
                 <a
                   href={CHROME_WEB_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center justify-center gap-1 text-sm text-primary hover:text-primary/80"
                 >
-                  <Button variant="outline" className="gap-2">
-                    <ExternalLink size={16} />
-                    Get more extensions
-                  </Button>
+                  <ExternalLink size={14} />
+                  Browse more extensions in the Chrome Web Store
                 </a>
               </div>
-            </div>
-
-            <Card className="border-border">
-              <CardContent>
-                <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={isDeveloperMode}
-                        onCheckedChange={setIsDeveloperMode}
-                        disabled
-                        id="developer-mode"
-                      />
-                      <label
-                        htmlFor="developer-mode"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Developer mode
-                      </label>
-                    </div>
-                  </div>
-                  {/* TODO: Add developer mode & Allow Loading Unpacked Extensions */}
-                  {isDeveloperMode && (
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        Load unpacked
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Pack extension
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Update
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {extensions.length > 0 ? (
-                  <div className="space-y-2">
-                    {extensions.map((extension) => (
-                      <ExtensionCard
-                        key={extension.id}
-                        extension={extension}
-                        isProcessing={isProcessing}
-                        setExtensionEnabled={setExtensionEnabled}
-                        onDetailsClick={handleDetailsClick}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <h3 className="text-lg font-medium mb-2">No extensions installed</h3>
-                    <p className="text-muted-foreground mb-6">Install extensions to enhance your browsing experience</p>
-                    <a href={CHROME_WEB_STORE_URL} target="_blank" rel="noopener noreferrer">
-                      <Button className="gap-2">
-                        <ExternalLink size={16} />
-                        Browse Chrome Web Store
-                      </Button>
-                    </a>
-                  </div>
-                )}
-
-                <div className="mt-8 text-center py-4 border-t border-border">
-                  <a
-                    href={CHROME_WEB_STORE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:text-primary/80 flex items-center justify-center gap-1"
-                  >
-                    <ExternalLink size={14} />
-                    Browse more extensions in the Chrome Web Store
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-          </>
+            </CardContent>
+          </Card>
         ) : (
-          <Card className="border-border">
+          <Card className="lumi-glass-panel">
             <CardContent className="p-6">
               <ExtensionDetails
                 extension={selectedExtension}
@@ -178,7 +161,7 @@ function ExtensionsPage() {
           </Card>
         )}
       </motion.div>
-    </div>
+    </InternalPageShell>
   );
 }
 

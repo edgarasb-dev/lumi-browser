@@ -90,9 +90,16 @@ export class BaseWindow<
   }
 
   public showImmediately(focus: boolean = true) {
-    this.browserWindow.show();
+    if (this.browserWindow.isDestroyed()) return;
+    if (this.browserWindow.isMinimized()) {
+      this.browserWindow.restore();
+    }
     if (focus) {
+      this.browserWindow.show();
+      this.browserWindow.moveTop();
       this.browserWindow.focus();
+    } else {
+      this.browserWindow.showInactive();
     }
   }
 

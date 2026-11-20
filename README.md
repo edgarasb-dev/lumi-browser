@@ -1,110 +1,164 @@
 <div align="center">
 
-  <img src="./build/icon.png" alt="Lumi Browser Logo" width="120" height="120" style="border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);" />
+  <img src="./build/icon.png" alt="Lumi Browser Logo" width="112" height="112" />
 
-# Lumi Browser
+  <h1>Lumi Browser</h1>
 
-**Cleaner browsing, sharper focus.**  
- _A modern, privacy-focused browser with fluid vertical spaces, tab previews, and full Chrome extension support._
-
-  <p align="center">
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.7-blue?style=flat-square&logo=github" alt="Release v0.1.7" /></a>
-    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-emerald?style=flat-square" alt="License GPL-3.0" /></a>
-    <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-purple?style=flat-square" alt="Platforms" />
-    <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 19" />
-    <img src="https://img.shields.io/badge/Electron-35+-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron" />
-    <img src="https://img.shields.io/badge/TailwindCSS-v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="TailwindCSS" />
+  <p>
+    <strong>Cleaner browsing, sharper focus.</strong><br />
+    <em>A privacy-first desktop browser with a Native Liquid Glass workspace, Spaces, Split View, Focus Mode, and Chrome extension support.</em>
   </p>
 
-  <p align="center">
-    <a href="#-features">Features</a> •
-    <a href="#-download--installation">Download</a> •
-    <a href="#-screenshots">Screenshots</a> •
-    <a href="#-development-setup">Development</a> •
-    <a href="#-open-source-heritage">Attribution</a> •
-    <a href="#-license">License</a>
+  <p>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.1.7-2563EB?style=flat-square&logo=github" alt="Release v0.1.7" /></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-10B981?style=flat-square" alt="License GPL-3.0" /></a>
+    <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-6366F1?style=flat-square" alt="Platforms" />
+    <img src="https://img.shields.io/badge/Electron-41+-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 41+" />
+    <img src="https://img.shields.io/badge/React-19-0EA5E9?style=flat-square&logo=react&logoColor=white" alt="React 19" />
+    <img src="https://img.shields.io/badge/TailwindCSS-v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="TailwindCSS v4" />
   </p>
+
+  <p>
+    <a href="#highlights">Highlights</a> ·
+    <a href="#visual-tour">Visual Tour</a> ·
+    <a href="#internal-pages">Internal Pages</a> ·
+    <a href="#keyboard-shortcuts">Shortcuts</a> ·
+    <a href="#download--installation">Download</a> ·
+    <a href="#development-setup">Development</a> ·
+    <a href="#open-source-heritage">Attribution</a>
+  </p>
+
+  <br />
+
+  <img src="./docs/assets/screenshots/beta-browser-1.png" alt="Lumi Browser — Liquid Glass Workspace" width="880" />
 
 </div>
 
 ---
 
-## ✨ Why Lumi?
+<a id="highlights"></a>
 
-Mainstream browsers are bloated, distraction-heavy, and cluttered with telemetry. **Lumi** reimagines the web desktop experience by combining the speed of Chromium with an intentional, zen-like aesthetic:
+## Highlights
 
-- 🌌 **Spaces & Custom Contexts**: Isolate your personal life, school, work projects, and client research into distinct workspaces with dedicated tab groups.
-- 📑 **Flexible Sidebar & Horizontal Topbar**: Switch between a collapsible vertical sidebar with pinned tiles and live previews or a compact frosted-glass horizontal topbar.
-- ⚡ **Lightning Command Palette (`Cmd / Ctrl + K`)**: Instant keyboard-driven navigation. Jump between spaces, search bookmarks, or browse the web in milliseconds.
-- 🧭 **Safari & External Sync**: Import tabs, bookmarks, Reading List, and history from macOS Safari, sync encrypted snapshots via iCloud Drive, and push links from iPhone over local Wi-Fi & Bonjour.
-- 🧩 **Chrome Extension Support**: Full compatibility with the Chrome Web Store. Install your favorite ad blockers, password managers, and productivity extensions.
-- 🛡️ **Native Ad & Tracker Protection**: Built-in adblocker powered by Ghostery engine keeping your browsing fast, private, and lightweight.
-- 🎬 **DRM & Streaming Ready**: Bundled with Widevine DRM support for Netflix, Spotify, Disney+, and YouTube playback.
-- 🎮 **Built-in Offline Essentials**: Lightweight internal utilities and offline games for quick mental breaks (`lumi://games`).
+Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, focused desktop interface designed around workspaces instead of tab clutter:
+
+- **Native Liquid Glass & Adaptive Chrome:** Built with true macOS `under-window` and `popover` vibrancy, Lumi Sapphire accents, Left Sidebar, Right Sidebar, and compact Horizontal Topbar layouts—switching live across all windows.
+- **Spaces, Split View & Workspace Snapshots:** Keep work, study, and personal browsing isolated into themed Spaces with pinned tiles, side-by-side or stacked Split Panes (`⌘⇧\`), Glance overlays, Recently Closed recovery, and SQLite-backed **Workspace Snapshots**.
+- **Command Palette & Instant Tools (`⌘L` / `⌘K`):** Jump across open tabs, history, and 13,500+ search bangs—or type live expressions (`24 * (12 + 3.5)`), unit/CSS conversions (`24px to rem`), colors (`#2563EB`), timezones, or `qr` to copy answers or beam the active tab to mobile.
+- **Unified Site Control Center:** Click the address bar shield to inspect Ghostery blocker telemetry, step per-origin page zoom, toggle **Smart Night Shade**, manage persisted `Ask / Allow / Block` permissions (Camera, Microphone, Location, Notifications, Clipboard), and clear site storage.
+- **Focus Mode, Split Side Panel & Page Capture:** Press `⌘⇧Z` for distraction-free Focus Mode with an integrated Pomodoro timer and optional focus blocklist. Press `⌘⇧.` to open the persistent right **Side Panel** (Markdown checklist Scratchpad v2 + live Companion Web View), or `⌘⇧2` for Area, Visible, or Full Scroll screenshots with built-in Canvas annotation.
+- **Media Mini-Player, Reader Mode & DRM:** Control background audio playback & Picture-in-Picture from any tab, switch articles into double-sanitized Reader View (`⌘⌥R`), install Chrome Web Store extensions, and stream Netflix, Spotify, and YouTube out of the box via bundled Widevine DRM.
 
 ---
 
-## 📸 Screenshots
+<a id="visual-tour"></a>
+
+## Visual Tour
+
+### Core Workspace & Navigation
 
 <div align="center">
 
-|                                 **Main Browser & Vertical Spaces**                                  |                                **Command Palette (`Cmd+K`)**                                 |
-| :-------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/screenshots/beta-browser-1.png" width="460" alt="Main Browser Interface" /> | <img src="./docs/assets/screenshots/beta-command-1.png" width="460" alt="Command Palette" /> |
+|                         **Vertical Spaces, Pinned Grid & Liquid Glass Address Bar**                          |                             **Horizontal Topbar & Frosted Tab Strip**                              |
+| :----------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/beta-browser-1.png" width="460" alt="Vertical Spaces and Address Bar" /> | <img src="./docs/assets/screenshots/beta-topbar-1.png" width="460" alt="Horizontal Topbar Mode" /> |
 
-|                                  **Horizontal Topbar Mode**                                   |                                     **Focused Start Page**                                     |
-| :-------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/screenshots/beta-topbar-1.png" width="460" alt="Horizontal Topbar" /> | <img src="./docs/assets/screenshots/beta-newtab-1.png" width="460" alt="New Tab Experience" /> |
+|                         **Command Palette & Instant Tab Switcher (`⌘L` / `⌘K`)**                          |                         **New Tab v2 with Studio Backdrop & Widgets**                          |
+| :-------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/beta-command-1.png" width="460" alt="Command Palette Zero Suggest" /> | <img src="./docs/assets/screenshots/beta-newtab-1.png" width="460" alt="Modular New Tab v2" /> |
 
-|                                      **Settings & Spaces**                                      |                                   **Safari & External Sync**                                   |
-| :---------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/screenshots/beta-settings-1.png" width="460" alt="Settings & Spaces" /> | <img src="./docs/assets/screenshots/beta-safari-sync-1.png" width="460" alt="Safari & Sync" /> |
+</div>
 
-|                                    **Welcome & Onboarding**                                     |
-| :---------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/screenshots/beta-onboarding-1.png" width="460" alt="Lumi Onboarding" /> |
+### Productivity, Privacy & Focus Capabilities
+
+<div align="center">
+
+|                               **Persistent Split Side Panel & Markdown Checklists**                                |                               **Unified Site Control Center, Zoom & Permissions**                                |
+| :----------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/showcase-split-sidepanel.png" width="460" alt="Split Side Panel Scratchpad" /> | <img src="./docs/assets/screenshots/showcase-site-controls.png" width="460" alt="Unified Site Control Center" /> |
+
+|                                   **Inline Calculators, Units & Color Converters**                                   |                               **Focus / Zen Mode & Floating Pomodoro Pill**                                |
+| :------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/showcase-omnibox-tools.png" width="460" alt="Omnibox Instant Color Converter" /> | <img src="./docs/assets/screenshots/showcase-media-zen.png" width="460" alt="Focus Mode and Timer Pill" /> |
+
+</div>
+
+### Settings, Customization & Built-in Utilities
+
+<div align="center">
+
+|                                    **Native Vibrancy Settings & Layout Wireframes**                                    |                                **Custom Spaces & Live Theme Preview**                                |
+| :--------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/beta-settings-1.png" width="460" alt="Liquid Glass Settings and Layout Pickers" /> | <img src="./docs/assets/screenshots/showcase-spaces-settings.png" width="460" alt="Spaces Settings and Live Theme Preview" /> |
+
+|                                 **Search Bangs Directory (`lumi://bangs`)**                                  |                              **Liquid Glass First-Run Onboarding**                              |
+| :----------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/showcase-internal-pages.png" width="460" alt="Search Bangs Directory" /> | <img src="./docs/assets/screenshots/beta-onboarding-1.png" width="460" alt="Onboarding Flow" /> |
 
 </div>
 
 ---
 
-## 🧭 Internal Navigation Protocols
+<a id="keyboard-shortcuts"></a>
 
-Lumi comes with native, high-performance internal views:
+## Keyboard Shortcuts
 
-| Protocol            | Description                                                  |
-| :------------------ | :----------------------------------------------------------- |
-| `lumi://new-tab`    | Minimalist start screen with quick bookmarks                 |
-| `lumi://settings`   | Granular customization, theme accents, and update management |
-| `lumi://extensions` | Extension manager and Chrome Web Store installer             |
-| `lumi://history`    | Fast, searchable browsing timeline with privacy controls     |
-| `lumi://games`      | Offline casual games hub                                     |
-| `lumi://about`      | System specs, Chromium version, and open source heritage     |
+| Action                            | macOS             | Windows / Linux         |
+| :-------------------------------- | :---------------- | :---------------------- |
+| **Command Palette / Address Bar** | `⌘ + L` / `⌘ + K` | `Ctrl + L` / `Ctrl + K` |
+| **Toggle Sidebar**                | `⌘ + S`           | `Ctrl + S`              |
+| **Toggle Focus / Zen Mode**       | `⌘ + ⇧ + Z`       | `Ctrl + Shift + Z`      |
+| **Toggle Split Side Panel**       | `⌘ + ⇧ + .`       | `Ctrl + Shift + .`      |
+| **Capture Page Screenshot**       | `⌘ + ⇧ + 2`       | `Ctrl + Shift + 2`      |
+| **Toggle Reader Mode**            | `⌘ + ⌥ + R`       | `Ctrl + Alt + R`        |
+| **Find in Page**                  | `⌘ + F`           | `Ctrl + F`              |
+| **Open Settings**                 | `⌘ + ,`           | `Ctrl + ,`              |
 
 ---
 
-## 📦 Download & Installation
+<a id="internal-pages"></a>
 
-Pre-built binaries for all major desktop platforms are available under [Releases](https://github.com/edgarasb-dev/lumi-browser/releases).
+## Internal Pages
 
-| Platform    | Format                  | Architecture                            |
+Lumi provides fast, offline-ready internal routes via the `lumi://` protocol:
+
+| Protocol            | Description                                                                                                       |
+| :------------------ | :---------------------------------------------------------------------------------------------------------------- |
+| `lumi://new-tab`    | Customizable start page with omnibox search, Studio Wallpapers, Speed Dial, Recently Closed, and Space Scratchpad |
+| `lumi://history`    | Infinite-scroll browsing timeline grouped by day with instant search and site-wide cleanup                        |
+| `lumi://downloads`  | Native download manager with filter pills, live transfer speed, pause/resume, and Reveal in Finder                |
+| `lumi://bangs`      | Filterable directory of `!` quick search shortcuts (`!gh`, `!mdn`, `!yt`, and 13,500+ more)                       |
+| `lumi://extensions` | Chrome Web Store extension manager and per-extension permissions inspector                                        |
+| `lumi://games`      | Lightweight offline casual games library                                                                          |
+| `lumi://about`      | Directory of all available internal `lumi://` URLs                                                                |
+
+---
+
+<a id="download--installation"></a>
+
+## Download & Installation
+
+Pre-built binaries are published on the [GitHub Releases](https://github.com/edgarasb-dev/lumi-browser/releases) page:
+
+| Platform    | Package Format          | Architecture                            |
 | :---------- | :---------------------- | :-------------------------------------- |
 | **macOS**   | `.dmg` / `.zip`         | Apple Silicon (`arm64`) & Intel (`x64`) |
 | **Windows** | `.exe` (NSIS Installer) | 64-bit (`x64`)                          |
-| **Linux**   | `.AppImage` / `.deb`    | x64 & ARM64                             |
+| **Linux**   | `.AppImage` / `.deb`    | `x64` & `arm64`                         |
 
 ---
 
-## 🛠️ Development Setup
+<a id="development-setup"></a>
 
-Lumi is built with **Node.js 22+**, **Bun v1.2+**, **Electron**, and **React 19**.
+## Development Setup
+
+Lumi is built with **Node.js 22+**, **Bun v1.2+**, **TypeScript**, **Electron**, **React 19**, **TailwindCSS v4**, and embedded **SQLite** via **Drizzle ORM**.
 
 ### Prerequisites
 
 - **Node.js** v22+
 - **Bun** v1.2.0+ (`curl -fsSL https://bun.sh/install | bash`)
-- **Python 3** & build essentials (for native `better-sqlite3` bindings)
+- **Python 3** and standard C/C++ build tools (`xcode-select --install` on macOS, `build-essential` on Linux) for `better-sqlite3` native compilation
 
 ### Getting Started
 
@@ -113,39 +167,43 @@ Lumi is built with **Node.js 22+**, **Bun v1.2+**, **Electron**, and **React 19*
 git clone https://github.com/edgarasb-dev/lumi-browser.git
 cd lumi-browser
 
-# 2. Install dependencies
+# 2. Install dependencies and rebuild native modules
 bun install
 
 # 3. Launch in development mode
 bun dev
 ```
 
-### Essential Dev Commands
+### Useful Scripts
 
-| Command               | Action                                                       |
-| :-------------------- | :----------------------------------------------------------- |
-| `bun dev`             | Run development instance with hot-reload                     |
-| `bun dev:watch`       | Run development instance with active file watcher            |
-| `bun run build:quick` | Compile production assets and package local unpacked `.app`  |
-| `bun run typecheck`   | Run TypeScript validation across main, preload, and renderer |
-| `bun run lint`        | Run ESLint checks                                            |
-| `bun run format`      | Auto-format source files with Prettier                       |
+| Command               | Description                                                        |
+| :-------------------- | :----------------------------------------------------------------- |
+| `bun dev`             | Run Electron + Vite development instance with hot reload           |
+| `bun dev:watch`       | Run development instance with active file watcher                  |
+| `bun run format`      | Format source files and Markdown with Prettier                     |
+| `bun run lint`        | Run ESLint across the repository                                   |
+| `bun run typecheck`   | Run TypeScript typechecking for main, preload, and renderer        |
+| `bun run build:quick` | Build production assets and package a local unpacked `.app` bundle |
 
 ---
 
-## 📜 Open Source Heritage
+<a id="open-source-heritage"></a>
+
+## Open Source Heritage
 
 Lumi Browser is an open-source project proudly forked from [Flow Browser](https://github.com/multiboxlabs/flow-browser), originally created by **iamEvan** and the **multiboxlabs** team.
 
-We also express gratitude to [Samuel Maddock](https://github.com/samuelmaddock) for [electron-browser-shell](https://github.com/samuelmaddock/electron-browser-shell), and the design philosophies of [Arc](https://arc.net) and [Zen Browser](https://zen-browser.app/).
+We also express deep gratitude to [Samuel Maddock](https://github.com/samuelmaddock) for [electron-browser-shell](https://github.com/samuelmaddock/electron-browser-shell), as well as the ergonomic ideas pioneered by [Arc](https://arc.net) and [Zen Browser](https://zen-browser.app/).
 
 In compliance with the **GNU General Public License v3.0 (GPLv3)**:
 
-- Lumi is, and will always remain, 100% free and open-source.
-- All original copyrights, license headers, and contributor notices are fully preserved.
+- Lumi is, and will always remain, free and open-source software.
+- All original copyright notices, license headers, and contributor attributions are preserved.
 
 ---
 
-## 📄 License
+<a id="license"></a>
+
+## License
 
 This project is licensed under the [GNU General Public License v3.0](./LICENSE).

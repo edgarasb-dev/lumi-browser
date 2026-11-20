@@ -50,9 +50,11 @@ export const zIndexes = {
   // Overlays
   omnibox: 100,
   popover: 99,
+  pageCaptureOverlay: 95,
   floatingSidebar: 30,
 
   // Tab Overlays
+  focusTimerPill: 25,
   webPrompt: 22,
   passkeyConditionalUI: 21,
   findInPage: 20,
@@ -72,9 +74,11 @@ export const focusPriorities = {
   // Overlays
   omnibox: 100,
   popover: 99,
+  pageCaptureOverlay: 95,
   floatingSidebar: 0,
 
   // Tab Overlays
+  focusTimerPill: 25,
   webPrompt: 22,
   passkeyConditionalUI: 0,
   findInPage: 20,

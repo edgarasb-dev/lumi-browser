@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { GlobeIcon, HeartIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { SettingsRow } from "@/components/settings/components/setting-row";
 
-export function SetAsDefaultBrowserSetting() {
+export function SetAsDefaultBrowserSetting({ highlighted = false }: { highlighted?: boolean }) {
   const [isDefault, setIsDefault] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -22,38 +22,25 @@ export function SetAsDefaultBrowserSetting() {
   };
 
   return (
-    <div className="flex flex-row items-center justify-between gap-4 p-3 rounded-md hover:bg-muted/50 transition-colors">
-      <div className="flex-1 space-y-0.5">
-        <Label htmlFor="default-browser-button" className="text-sm font-medium">
+    <SettingsRow
+      id="internal_setAsDefaultBrowser"
+      highlighted={highlighted}
+      icon={<GlobeIcon className="size-4" />}
+      label="Default Web Browser"
+      description="Open links clicked in other apps directly inside Lumi."
+    >
+      {isDefault === null && <Loader2Icon className="animate-spin size-4 text-muted-foreground" />}
+      {isDefault === false && (
+        <Button id="default-browser-button" variant="outline" size="sm" onClick={setDefaultBrowser}>
+          Set as Default
+        </Button>
+      )}
+      {isDefault === true && (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+          <HeartIcon className="size-3.5" />
           Default Browser
-        </Label>
-        <p className="text-xs text-muted-foreground">Set Lumi as your default browser.</p>
-      </div>
-      <div className="flex items-center gap-2">
-        {isDefault === null && <Loader2Icon className="animate-spin h-5 w-5 text-muted-foreground" />}
-        {isDefault === false && (
-          <Button
-            id="default-browser-button"
-            variant="outline"
-            className="h-fit py-1.5 px-3 text-sm"
-            onClick={setDefaultBrowser}
-          >
-            <GlobeIcon className="h-4 w-4 mr-2" />
-            Set to Lumi
-          </Button>
-        )}
-        {isDefault === true && (
-          <Button
-            id="default-browser-button"
-            variant="outline"
-            className="h-fit py-1.5 px-3 text-sm cursor-default"
-            disabled
-          >
-            <HeartIcon className="h-4 w-4 mr-2 text-green-500" />
-            Lumi is Default
-          </Button>
-        )}
-      </div>
-    </div>
+        </span>
+      )}
+    </SettingsRow>
   );
 }

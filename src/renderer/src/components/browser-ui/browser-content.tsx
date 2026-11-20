@@ -5,6 +5,8 @@ import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provi
 import { useAdaptiveTopbar } from "@/components/browser-ui/adaptive-topbar";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { useFocusedTab, useTabsGroups } from "@/components/providers/tabs-provider";
+import { useFocusMode } from "@/components/providers/focus-mode-provider";
+import { useSidePanel } from "@/components/providers/side-panel-provider";
 import { ReaderView } from "@/components/browser-ui/reader-view";
 import type { TabPlaceholderUpdate } from "~/types/tabs";
 import "./browser-content.css";
@@ -28,6 +30,8 @@ const PLACEHOLDER_CLEAR_DELAY_MS = 180;
 function BrowserContent() {
   const { mode, recordedSidebarSizeRef, isAnimating, attachedDirection, onSidebarResize } = useBrowserSidebar();
   const { topbarHeight, topbarVisible, contentTopOffset } = useAdaptiveTopbar();
+  const { isZenMode } = useFocusMode();
+  const { isOpen: isSidePanelOpen, panelWidth: sidePanelWidth } = useSidePanel();
   const { currentSpace } = useSpaces();
   const { activeTabGroup } = useTabsGroups();
   const focusedTab = useFocusedTab();
@@ -110,16 +114,28 @@ function BrowserContent() {
     (sidebarWidth: number) => {
       const params: PageLayoutParams = {
         topbarHeight,
-        topbarVisible,
+        topbarVisible: topbarVisible && !isZenMode,
         sidebarWidth,
         sidebarSide,
         sidebarVisible,
         sidebarAnimating: isAnimating,
-        contentTopOffset
+        contentTopOffset,
+        rightPanelWidth: sidePanelWidth + 10,
+        rightPanelVisible: isSidePanelOpen && !isZenMode
       };
       lumi.page.setLayoutParams(params);
     },
-    [contentTopOffset, isAnimating, sidebarSide, sidebarVisible, topbarHeight, topbarVisible]
+    [
+      contentTopOffset,
+      isAnimating,
+      isSidePanelOpen,
+      isZenMode,
+      sidePanelWidth,
+      sidebarSide,
+      sidebarVisible,
+      topbarHeight,
+      topbarVisible
+    ]
   );
 
   // Send layout params whenever reactive state changes (visibility, animation,
@@ -129,10 +145,13 @@ function BrowserContent() {
   }, [
     topbarHeight,
     topbarVisible,
+    isZenMode,
     sidebarVisible,
     sidebarSide,
     isAnimating,
     contentTopOffset,
+    isSidePanelOpen,
+    sidePanelWidth,
     sendLayoutParams,
     recordedSidebarSizeRef
   ]);
@@ -236,12 +255,11 @@ function BrowserContent() {
     <div
       ref={containerRef}
       className={cn(
-        "rounded-sm",
+        "rounded-lg overflow-hidden",
         "flex-1 relative remove-app-drag",
-        "bg-white/15",
-        // Better shadow for the browser content
+        "bg-white/20 dark:bg-black/25",
+        "ring-1 ring-black/10 dark:ring-white/12",
         "browser-content-shadow"
-        // "shadow-xl shadow-black/20"
       )}
     >
       {placeholderUrl && (

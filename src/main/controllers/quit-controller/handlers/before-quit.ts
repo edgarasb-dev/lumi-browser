@@ -1,5 +1,4 @@
 import { loadedProfilesController } from "@/controllers/loaded-profiles-controller";
-import { safariSyncController } from "@/controllers/safari-sync-controller";
 import { tabPersistenceManager } from "@/saving/tabs";
 import { closeDatabase } from "@/saving/db";
 import { closeFaviconsDatabase } from "@/modules/favicons";
@@ -60,20 +59,7 @@ export function beforeQuit(): boolean | Promise<boolean> {
       return true;
     });
 
-  const shutdownSafariSyncPromise = safariSyncController
-    .shutdown()
-    .then(() => true)
-    .catch((err) => {
-      console.error("[beforeQuit] Failed to shutdown safariSyncController:", err);
-      return true;
-    });
-
-  return Promise.all([
-    flushTabsPromise,
-    flushSessionsDataPromise,
-    closeFaviconsPromise,
-    shutdownSafariSyncPromise
-  ]).then((results) => {
+  return Promise.all([flushTabsPromise, flushSessionsDataPromise, closeFaviconsPromise]).then((results) => {
     return results.every((result) => result);
   });
 }

@@ -36,7 +36,8 @@ export const BasicSettings: BasicSetting[] = [
   // [GENERAL] Auto Update
   {
     id: "autoUpdate",
-    name: "Auto Update",
+    name: "Automatic Updates",
+    description: "Download and verify new Lumi builds in the background.",
     showName: true,
     type: "boolean",
     defaultValue: true
@@ -46,6 +47,7 @@ export const BasicSettings: BasicSetting[] = [
   {
     id: "syncTabsAcrossWindows",
     name: "Sync Tabs Across Windows",
+    description: "Keep tabs and active spaces synchronized between open Lumi windows.",
     showName: true,
     type: "boolean",
     defaultValue: false
@@ -54,7 +56,8 @@ export const BasicSettings: BasicSetting[] = [
   // [GENERAL] Content Blocking
   {
     id: "contentBlocker",
-    name: "Content Blocker (Built-In Adblocker)",
+    name: "Content Blocker Shield",
+    description: "Built-in Ghostery engine blocking ads, trackers, and cookie prompts.",
     showName: true,
     type: "enum",
     defaultValue: "disabled",
@@ -73,7 +76,31 @@ export const BasicSettings: BasicSetting[] = [
       },
       {
         id: "all",
-        name: "Block All (Cookie Notices, etc...)"
+        name: "Strict (Ads, Trackers & Cookie Notices)"
+      }
+    ]
+  },
+
+  // Interface Theme
+  {
+    id: "interfaceTheme",
+    name: "Interface Appearance",
+    description: "Follow macOS/OS appearance or lock Lumi chrome and internal pages to Light or Dark.",
+    showName: true,
+    type: "enum",
+    defaultValue: "system",
+    options: [
+      {
+        id: "system",
+        name: "Match System"
+      },
+      {
+        id: "light",
+        name: "Light"
+      },
+      {
+        id: "dark",
+        name: "Dark"
       }
     ]
   },
@@ -81,8 +108,9 @@ export const BasicSettings: BasicSetting[] = [
   // New Tab Mode
   {
     id: "newTabMode",
-    name: "New Tab Mode",
-    showName: false,
+    name: "New Tab Experience",
+    description: "Choose whether Cmd+T opens the floating Command Palette or the Start Page.",
+    showName: true,
     type: "enum",
     defaultValue: "omnibox",
     options: [
@@ -92,7 +120,7 @@ export const BasicSettings: BasicSetting[] = [
       },
       {
         id: "tab",
-        name: "Page"
+        name: "Start Page"
       }
     ]
   },
@@ -100,8 +128,9 @@ export const BasicSettings: BasicSetting[] = [
   // Command Palette Opacity
   {
     id: "commandPaletteOpacity",
-    name: "Command Palette Opacity",
-    showName: false,
+    name: "Command Palette Material",
+    description: "Control translucency and backdrop blur intensity for the Omnibox.",
+    showName: true,
     type: "enum",
     defaultValue: "tinted",
     options: [
@@ -124,6 +153,7 @@ export const BasicSettings: BasicSetting[] = [
   {
     id: "navigationLayout",
     name: "Navigation Layout",
+    description: "Switch between an Arc-style vertical sidebar and a compact horizontal top bar.",
     showName: true,
     type: "enum",
     defaultValue: "sidebar",
@@ -142,7 +172,8 @@ export const BasicSettings: BasicSetting[] = [
   // Sidebar Side
   {
     id: "sidebarSide",
-    name: "Sidebar Side",
+    name: "Sidebar Anchor Side",
+    description: "Choose which window edge anchors the vertical sidebar.",
     showName: true,
     type: "enum",
     defaultValue: "left",
@@ -153,7 +184,7 @@ export const BasicSettings: BasicSetting[] = [
       },
       {
         id: "right",
-        name: "Right (Experimental)"
+        name: "Right"
       }
     ]
   },
@@ -161,8 +192,9 @@ export const BasicSettings: BasicSetting[] = [
   // Archive Tab After
   {
     id: "archiveTabAfter",
-    name: "Archive Tab After",
-    showName: false,
+    name: "Auto-Archive Inactive Tabs",
+    description: "Automatically clean up idle tabs that haven't been visited recently.",
+    showName: true,
     type: "enum",
     defaultValue: "12h",
     options: [
@@ -192,8 +224,9 @@ export const BasicSettings: BasicSetting[] = [
   // Sleep Tab After
   {
     id: "sleepTabAfter",
-    name: "Sleep Tab After",
-    showName: false,
+    name: "Sleep Background Tabs",
+    description: "Unload inactive background tabs from memory to save battery and RAM.",
+    showName: true,
     type: "enum",
     defaultValue: "never",
     options: [
@@ -243,7 +276,8 @@ export const BasicSettings: BasicSetting[] = [
   // [EXPERIMENTAL] Enable Lumi PDF Viewer
   {
     id: "enableLumiPdfViewer",
-    name: "Enable Lumi PDF Viewer",
+    name: "Built-in Lumi PDF Viewer",
+    description: "Use Lumi's custom PDF reader with annotations instead of Chromium's default viewer.",
     showName: true,
     type: "boolean",
     defaultValue: false
@@ -252,7 +286,8 @@ export const BasicSettings: BasicSetting[] = [
   // [ADVANCED] Enable mv2 extensions
   {
     id: "enableMv2Extensions",
-    name: "Re-enable Manifest V2 extensions [UNSTABLE]",
+    name: "Manifest V2 Extensions Support",
+    description: "Experimental compatibility for legacy MV2 Chrome extensions (requires restart).",
     showName: true,
     type: "boolean",
     defaultValue: false

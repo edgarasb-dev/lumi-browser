@@ -1,5 +1,6 @@
 // App APIs
 import "@/ipc/app/app";
+import "@/ipc/app/actions";
 import "@/ipc/app/extensions";
 import "@/ipc/app/updates";
 import "@/ipc/app/shortcuts";
@@ -21,6 +22,11 @@ import "@/ipc/browser/content-blocker";
 import "@/ipc/browser/favourites";
 import "@/ipc/browser/reader";
 import "@/ipc/browser/downloads";
+import "@/ipc/browser/site-controls";
+import "@/ipc/browser/media-controls";
+import "@/ipc/browser/snapshots";
+import "@/ipc/browser/side-panel";
+import "@/ipc/browser/capture";
 
 // Session APIs
 import "@/ipc/session/profiles";
@@ -31,7 +37,6 @@ import "@/ipc/window/settings";
 import "@/ipc/app/open-external";
 import "@/ipc/app/onboarding";
 import "@/ipc/settings/search-engines";
-import "@/ipc/settings/safari-sync";
 
 // Special
 import "@/ipc/listeners-manager";

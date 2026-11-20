@@ -53,8 +53,7 @@ export const ActionsProvider = ({ children }: ActionsProviderProps) => {
 
   // Exposed method, also used as a callback for the onIncomingAction event
   const handleIncomingAction = useCallback((action: IncomingActionPayload) => {
-    console.log("ActionsProvider: handleIncomingAction received:", action);
-    // TODO: handle generic incoming actions
+    window.dispatchEvent(new CustomEvent("lumi:workspace-action", { detail: action }));
   }, []);
 
   const handleIncomingActionCallbackRef = useRef<typeof handleIncomingAction>(handleIncomingAction);

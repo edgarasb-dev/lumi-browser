@@ -1,42 +1,42 @@
 import { useSettings } from "@/components/providers/settings-provider";
 import { BasicSetting, BasicSettingCard } from "~/types/settings";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { ResetOnboardingCard } from "@/components/settings/sections/general/reset-onboarding-card";
 import { UpdateCard } from "@/components/settings/sections/general/update-card";
 import { SetAsDefaultBrowserSetting } from "@/components/settings/sections/general/set-as-default-browser-setting";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { SettingsGroup, SettingsRow } from "@/components/settings/components/setting-row";
+import { cn } from "@/lib/utils";
+import { Archive, Cpu, FileText, FlaskConical, RefreshCw, Layers } from "lucide-react";
 
 export function SettingsInput({ setting }: { setting: BasicSetting }) {
   const { getSetting, setSetting } = useSettings();
 
   const handleSettingChange = (value: BasicSetting["defaultValue"]) => {
-    setSetting(setting.id, value);
+    void setSetting(setting.id, value);
   };
 
   if (setting.type === "enum") {
     const settingValue = getSetting<string>(setting.id);
     return (
-      <div className={cn(setting.showName === false ? "w-full" : "w-auto")}>
-        <Select value={settingValue} onValueChange={handleSettingChange}>
-          <SelectTrigger className="w-full min-w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="remove-app-drag z-popover">
-            {setting.options.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select value={settingValue} onValueChange={handleSettingChange}>
+        <SelectTrigger className="w-[180px] h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="remove-app-drag z-popover">
+          {setting.options.map((option) => (
+            <SelectItem key={option.id} value={option.id} className="text-xs">
+              {option.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
-  } else if (setting.type === "boolean") {
+  }
+
+  if (setting.type === "boolean") {
     const settingValue = getSetting<boolean>(setting.id);
-    return <Switch checked={settingValue} onCheckedChange={handleSettingChange} />;
+    return <Switch id={setting.id} checked={Boolean(settingValue)} onCheckedChange={handleSettingChange} />;
   }
 
   return null;
@@ -45,68 +45,107 @@ export function SettingsInput({ setting }: { setting: BasicSetting }) {
 export function BasicSettingsCard({ card, transparent }: { card: BasicSettingCard; transparent?: boolean }) {
   const { settings } = useSettings();
 
-  if (card.title === "INTERNAL_UPDATE") {
-    return <UpdateCard />;
-  } else if (card.title === "INTERNAL_ONBOARDING") {
-    return <ResetOnboardingCard />;
-  }
+  if (card.title === "INTERNAL_UPDATE") return <UpdateCard />;
+  if (card.title === "INTERNAL_ONBOARDING") return <ResetOnboardingCard />;
 
   return (
-    <TooltipProvider>
-      <div
-        className={cn(
-          "remove-app-drag rounded-2xl border border-border/50 p-6 shadow-xs",
-          transparent ? "bg-muted/20" : "bg-card/60 backdrop-blur-md"
-        )}
-      >
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold tracking-tight text-foreground">{card.title}</h3>
-          {card.subtitle && <p className="text-xs text-muted-foreground mt-0.5">{card.subtitle}</p>}
-        </div>
-        <div className="space-y-1.5">
-          {card.settings.map((settingId) => {
-            if (settingId === "internal_setAsDefaultBrowser") {
-              return <SetAsDefaultBrowserSetting key={settingId} />;
-            }
-
-            const setting = settings.find((s) => s.id === settingId);
-            if (!setting) return null;
-
-            const settingDescription = (setting as BasicSetting & { description?: string }).description || null;
-
-            return (
-              <div
-                key={setting.id}
-                className="flex flex-row items-center justify-between gap-4 p-3 rounded-xl hover:bg-muted/40 transition-colors"
-              >
-                <div className="flex-1 space-y-0.5">
-                  <Label htmlFor={setting.id} className="text-sm font-medium">
-                    {setting.name}
-                  </Label>
-                  {setting.showName !== false && settingDescription && (
-                    <p className="text-xs text-muted-foreground">{settingDescription}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <SettingsInput setting={setting} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </TooltipProvider>
+    <SettingsGroup
+      title={card.title}
+      description={card.subtitle}
+      contentClassName={cn(transparent && "bg-white/10 dark:bg-white/[0.06] border-white/15")}
+    >
+      {card.settings.map((settingId) => {
+        if (settingId === "internal_setAsDefaultBrowser") {
+          return <SetAsDefaultBrowserSetting key={settingId} />;
+        }
+        const setting = settings.find((s) => s.id === settingId);
+        if (!setting) return null;
+        return (
+          <SettingsRow key={setting.id} id={setting.id} label={setting.name} description={setting.description}>
+            <SettingsInput setting={setting} />
+          </SettingsRow>
+        );
+      })}
+    </SettingsGroup>
   );
 }
 
-export function BasicSettingsCards() {
-  const { cards } = useSettings();
+function BasicSettingRowItem({
+  settingId,
+  icon,
+  highlightedRowId
+}: {
+  settingId: string;
+  icon?: React.ReactNode;
+  highlightedRowId?: string | null;
+}) {
+  const { settings } = useSettings();
+  const setting = settings.find((s) => s.id === settingId);
+  if (!setting) return null;
 
   return (
+    <SettingsRow
+      id={setting.id}
+      label={setting.name}
+      description={setting.description}
+      icon={icon}
+      highlighted={highlightedRowId === setting.id}
+    >
+      <SettingsInput setting={setting} />
+    </SettingsRow>
+  );
+}
+
+export function BasicSettingsCards({ highlightedRowId }: { highlightedRowId?: string | null }) {
+  return (
     <div className="space-y-6">
-      {cards.map((card, index) => (
-        <BasicSettingsCard key={index} card={card} />
-      ))}
+      <SettingsGroup title="Application & Updates">
+        <UpdateCard highlighted={highlightedRowId === "internal_updateCheck"} />
+        <BasicSettingRowItem
+          settingId="autoUpdate"
+          icon={<RefreshCw className="size-4" />}
+          highlightedRowId={highlightedRowId}
+        />
+        <SetAsDefaultBrowserSetting highlighted={highlightedRowId === "internal_setAsDefaultBrowser"} />
+        <BasicSettingRowItem
+          settingId="syncTabsAcrossWindows"
+          icon={<Layers className="size-4" />}
+          highlightedRowId={highlightedRowId}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup
+        title="Tabs & Memory Optimization"
+        description="Balance responsiveness with background battery and RAM savings."
+      >
+        <BasicSettingRowItem
+          settingId="archiveTabAfter"
+          icon={<Archive className="size-4" />}
+          highlightedRowId={highlightedRowId}
+        />
+        <BasicSettingRowItem
+          settingId="sleepTabAfter"
+          icon={<Cpu className="size-4" />}
+          highlightedRowId={highlightedRowId}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup
+        title="Experimental & Troubleshooting"
+        description="Optional capabilities and workspace reset tools."
+      >
+        <BasicSettingRowItem
+          settingId="enableLumiPdfViewer"
+          icon={<FileText className="size-4" />}
+          highlightedRowId={highlightedRowId}
+        />
+        <BasicSettingRowItem
+          settingId="enableMv2Extensions"
+          icon={<FlaskConical className="size-4" />}
+          highlightedRowId={highlightedRowId}
+        />
+        <ResetOnboardingCard highlighted={highlightedRowId === "internal_resetOnboarding"} />
+      </SettingsGroup>
     </div>
   );
 }

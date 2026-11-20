@@ -1,7 +1,8 @@
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Calculator, Clock, Copy, Globe, Palette, QrCode, Search } from "lucide-react";
 import { useState } from "react";
 import type { OmniboxSuggestion } from "@/lib/omnibox-new/types";
 import { WebsiteFavicon } from "@/components/main/website-favicon";
+import { QrCodeSvg } from "@/components/ui/qr-code";
 import { cn } from "@/lib/utils";
 import { PedalGlyph } from "@/components/omnibox/pedal-glyph";
 import { generateTitleFromUrl } from "@/lib/omnibox-new/helpers";
@@ -11,8 +12,6 @@ function pageUrlForFavicon(suggestion: OmniboxSuggestion): string | null {
     case "website":
     case "open-tab":
       return suggestion.url;
-    case "search":
-      return null;
     default:
       return null;
   }
@@ -23,10 +22,9 @@ function primaryLabel(suggestion: OmniboxSuggestion): string {
     case "search":
       return suggestion.query;
     case "website":
-      return suggestion.title;
     case "open-tab":
-      return suggestion.title;
     case "pedal":
+    case "instant-answer":
       return suggestion.title;
   }
 }
@@ -34,11 +32,14 @@ function primaryLabel(suggestion: OmniboxSuggestion): string {
 function actionHint(suggestion: OmniboxSuggestion): { label: string; show: boolean } {
   switch (suggestion.type) {
     case "open-tab":
-      return { label: "Switch to Tab", show: true };
-    // case "search":
-    //   return { label: "Search", show: true };
-    // case "website":
-    //   return { label: "Open", show: true };
+      return { label: "Switch Tab", show: true };
+    case "pedal":
+      return { label: "Command", show: true };
+    case "instant-answer":
+      return {
+        label: suggestion.kind === "qr" ? "Copy Link" : "Copy",
+        show: true
+      };
     default:
       return { label: "", show: false };
   }
@@ -58,23 +59,52 @@ function SuggestionIcon({
   setHasLoadedFavicon,
   className
 }: SuggestionIconProps): React.ReactNode {
+  if (suggestion.type === "instant-answer") {
+    if (suggestion.hexPreview) {
+      return (
+        <span
+          className="size-5 rounded-md border border-black/15 shadow-xs dark:border-white/25"
+          style={{ backgroundColor: suggestion.hexPreview }}
+          aria-hidden
+        />
+      );
+    }
+    const iconClass = cn("size-4", selected ? "text-primary" : "text-zinc-600 dark:text-zinc-300", className);
+    switch (suggestion.kind) {
+      case "math":
+        return <Calculator className={iconClass} strokeWidth={2} />;
+      case "unit":
+        return <ArrowLeftRight className={iconClass} strokeWidth={2} />;
+      case "timezone":
+        return <Clock className={iconClass} strokeWidth={2} />;
+      case "qr":
+        return <QrCode className={iconClass} strokeWidth={2} />;
+      case "color":
+        return <Palette className={iconClass} strokeWidth={2} />;
+    }
+  }
   if (suggestion.type === "pedal") {
     return <PedalGlyph className={className} action={suggestion.action} selected={selected} />;
   }
   if (suggestion.type === "search") {
-    return <Search className={cn("size-3.5 text-zinc-600 dark:text-zinc-100", className)} strokeWidth={2} />;
+    return (
+      <Search
+        className={cn("size-3.5", selected ? "text-primary" : "text-zinc-500 dark:text-zinc-300", className)}
+        strokeWidth={2.2}
+      />
+    );
   }
   if (faviconUrl) {
     return (
       <WebsiteFavicon
         url={faviconUrl}
-        className={cn("size-4 object-cover rounded-[2px] text-zinc-600 dark:text-zinc-100", className)}
+        className={cn("size-4 object-cover rounded-[3px] text-zinc-600 dark:text-zinc-100", className)}
         cacheOnly
         onLoadedChange={setHasLoadedFavicon}
       />
     );
   }
-  return <Search className={cn("size-3.5 text-zinc-600 dark:text-zinc-100", className)} strokeWidth={2} />;
+  return <Globe className={cn("size-3.5 text-zinc-500 dark:text-zinc-300", className)} strokeWidth={2} />;
 }
 
 export type OmniboxSuggestionRowProps = {
@@ -114,18 +144,21 @@ export function OmniboxSuggestionRow({ suggestion, index, selected, onSelect }: 
     >
       <div
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-[10px] text-left",
-          "px-2.5 py-3",
+          "flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-100",
+          suggestion.type === "instant-answer" ? "px-3 py-2.5" : "px-2.5 py-2.5",
           selected
-            ? "bg-black/8 dark:bg-space-background-start/50"
-            : "bg-transparent hover:bg-black/4 dark:hover:bg-white/4"
+            ? "bg-primary/14 ring-1 ring-primary/28 dark:bg-primary/22 dark:ring-primary/35"
+            : "bg-transparent hover:bg-black/4 dark:hover:bg-white/5"
         )}
       >
         <span
           className={cn(
-            "flex size-6 shrink-0",
-            "items-center justify-center overflow-hidden",
-            selected && hasLoadedFavicon ? "rounded-[2px] bg-white dark:bg-white" : "bg-transparent"
+            "flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg",
+            selected && hasLoadedFavicon
+              ? "bg-white shadow-xs"
+              : suggestion.type === "instant-answer" || suggestion.type === "pedal"
+                ? "bg-black/5 dark:bg-white/8"
+                : "bg-transparent"
           )}
         >
           <SuggestionIcon
@@ -135,35 +168,52 @@ export function OmniboxSuggestionRow({ suggestion, index, selected, onSelect }: 
             setHasLoadedFavicon={setHasLoadedFavicon}
           />
         </span>
-        <span className={cn("min-w-0 flex-1 truncate font-sans text-[14px] font-medium leading-tight")}>
-          <span className={cn(selected ? "text-zinc-950 dark:text-white" : "text-zinc-700 dark:text-zinc-200")}>
-            {title}
-          </span>
-          {suggestion.type === "website" && title !== generatedUrlTitle && (
-            <span className={cn(selected ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-500 dark:text-zinc-400")}>
-              {` — ${generatedUrlTitle}`}
+
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-sans text-[14px] font-medium leading-tight">
+            <span className={cn(selected ? "text-zinc-950 dark:text-white" : "text-zinc-800 dark:text-zinc-100")}>
+              {title}
             </span>
+            {suggestion.type === "website" && title !== generatedUrlTitle && (
+              <span className={cn(selected ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-500 dark:text-zinc-400")}>
+                {` — ${generatedUrlTitle}`}
+              </span>
+            )}
+          </div>
+          {suggestion.type === "instant-answer" && (
+            <div className="mt-0.5 truncate text-[12px] text-zinc-500 dark:text-zinc-400">{suggestion.subtitle}</div>
           )}
-        </span>
+        </div>
+
+        {suggestion.type === "instant-answer" && suggestion.qrValue && (
+          <div className="shrink-0 rounded-lg border border-black/10 bg-white p-1 shadow-xs dark:border-white/15">
+            <QrCodeSvg value={suggestion.qrValue} size={68} />
+          </div>
+        )}
+
         {showAction ? (
           <span className="flex shrink-0 items-center gap-2">
             <span
               className={cn(
-                "hidden font-sans text-[12px] sm:inline font-medium",
-                selected ? "text-zinc-700 dark:text-white/90" : "text-zinc-500 dark:text-zinc-400"
+                "hidden font-sans text-[11px] font-medium sm:inline",
+                selected ? "text-primary dark:text-blue-300" : "text-zinc-500 dark:text-zinc-400"
               )}
             >
               {actionLabel}
             </span>
             <span
               className={cn(
-                "flex size-6 items-center justify-center rounded-sm",
+                "flex size-6 items-center justify-center rounded-md transition-colors",
                 selected
-                  ? "bg-white text-zinc-700 dark:text-space-background-start"
-                  : "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-black/6 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
               )}
             >
-              <ArrowRight className="size-4" strokeWidth={3} aria-hidden />
+              {suggestion.type === "instant-answer" ? (
+                <Copy className="size-3.5" strokeWidth={2.2} aria-hidden />
+              ) : (
+                <ArrowRight className="size-3.5" strokeWidth={2.5} aria-hidden />
+              )}
             </span>
           </span>
         ) : null}

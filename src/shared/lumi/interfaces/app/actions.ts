@@ -11,4 +11,9 @@ export interface LumiActionsAPI {
    * Listen for generic incoming actions
    */
   onIncomingAction: IPCListener<[string]>;
+
+  /**
+   * Dispatches a workspace action to the focused browser window
+   */
+  emitAction: (action: string) => void;
 }

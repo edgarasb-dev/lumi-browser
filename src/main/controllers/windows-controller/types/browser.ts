@@ -6,6 +6,7 @@ import { appMenuController } from "@/controllers/app-menu-controller";
 import { LayerManager } from "@/controllers/windows-controller/layer-manager";
 import { FakeWebContentsViewLayer } from "@/controllers/windows-controller/layer-manager/fake-webcontentsview-layer";
 import { Omnibox } from "@/controllers/windows-controller/utils/browser/omnibox";
+import { SidePanelController } from "@/controllers/windows-controller/utils/browser/side-panel-controller";
 import { initializePortalComponentWindows } from "@/controllers/windows-controller/utils/browser/portal-component-windows";
 import { sendMessageToListenersWithWebContents } from "@/ipc/listeners-manager";
 import { fireWindowStateChanged } from "@/ipc/browser/interface";
@@ -56,6 +57,7 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
   public layerManager: LayerManager;
   public coreWebContents: WebContents[];
   public omnibox: Omnibox;
+  public sidePanel: SidePanelController;
 
   constructor(type: BrowserWindowType, options: BrowserWindowCreationOptions = {}) {
     // const hasSizeOptions = "width" in options || "height" in options;
@@ -200,6 +202,9 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
     // Omnibox //
     this.omnibox = new Omnibox(this, type);
     this.coreWebContents.push(this.omnibox.webContents);
+
+    // Persistent Split Side Panel //
+    this.sidePanel = new SidePanelController(this);
     browserWindow.on("focus", () => {
       if (!this.omnibox.isVisible()) {
         return;
@@ -359,8 +364,16 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
     if (this.destroyed || this.browserWindow.isDestroyed()) return;
 
     const [cw, ch] = this.browserWindow.getContentSize();
-    const { topbarHeight, topbarVisible, sidebarWidth, sidebarSide, sidebarVisible, contentTopOffset } =
-      this.layoutParams;
+    const {
+      topbarHeight,
+      topbarVisible,
+      sidebarWidth,
+      sidebarSide,
+      sidebarVisible,
+      contentTopOffset,
+      rightPanelWidth,
+      rightPanelVisible
+    } = this.layoutParams;
 
     // Effective sidebar width (animated or static)
     let effectiveSidebarWidth: number;
@@ -370,13 +383,17 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
       effectiveSidebarWidth = sidebarVisible ? sidebarWidth : 0;
     }
 
+    const effectiveRightPanelWidth = rightPanelVisible ? Math.max(0, rightPanelWidth ?? 0) : 0;
     const PADDING = 10;
     const padTop = (topbarVisible ? topbarHeight : PADDING) + (contentTopOffset ?? 0);
     const padBottom = PADDING;
 
-    const x = (sidebarSide === "left" ? effectiveSidebarWidth : 0) + PADDING;
+    const leftReserve = sidebarSide === "left" ? effectiveSidebarWidth : 0;
+    const rightReserve = (sidebarSide === "right" ? effectiveSidebarWidth : 0) + effectiveRightPanelWidth;
+
+    const x = leftReserve + PADDING;
     const y = padTop;
-    const width = Math.max(0, cw - effectiveSidebarWidth - PADDING * 2);
+    const width = Math.max(0, cw - leftReserve - rightReserve - PADDING * 2);
     const height = Math.max(0, ch - padTop - padBottom);
 
     const newBounds = roundPageBounds({ x, y, width, height });
@@ -431,6 +448,7 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
         }
       }
 
+      this.sidePanel.destroy();
       this.omnibox.destroy();
       this.layerManager.destroy();
     }

@@ -30,6 +30,11 @@ import MinimalToastProvider from "@/components/providers/minimal-toast-provider"
 import { ActionsProvider } from "@/components/providers/actions-provider";
 import { PinnedTabsProvider } from "@/components/providers/pinned-tabs-provider";
 import { DownloadsProvider } from "@/components/providers/downloads-provider";
+import { FocusModeProvider, useFocusMode } from "@/components/providers/focus-mode-provider";
+import { SidePanelProvider } from "@/components/providers/side-panel-provider";
+import { FocusTimerPill } from "@/components/browser-ui/focus-timer-pill";
+import { SidePanel } from "@/components/browser-ui/side-panel";
+import { CaptureOverlay } from "@/components/browser-ui/capture-overlay";
 import BrowserContent from "@/components/browser-ui/browser-content";
 import { TargetUrlIndicator } from "@/components/browser-ui/target-url-indicator";
 import { FindInPage } from "@/components/browser-ui/find-in-page";
@@ -143,22 +148,22 @@ const LoadingIndicator = memo(function LoadingIndicator() {
       <AnimatePresence>
         {isActiveTabLoading && (
           <motion.div
-            className="w-28 h-1 bg-gray-200/30 dark:bg-white/10 rounded-full overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            className="w-32 h-1 bg-black/15 dark:bg-white/12 backdrop-blur-md rounded-full overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
+            initial={{ opacity: 0, scaleX: 0.8 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            exit={{ opacity: 0, scaleX: 0.8 }}
+            transition={{ duration: 0.18 }}
           >
             <motion.div
-              className="h-full bg-gray-800/90 dark:bg-white/90 rounded-full"
+              className="h-full bg-linear-to-r from-primary/70 via-primary to-primary/70 dark:from-white/60 dark:via-white dark:to-white/60 rounded-full"
               initial={{ x: "-100%" }}
               animate={{ x: "100%" }}
               transition={{
-                duration: 1,
+                duration: 0.95,
                 ease: "easeInOut",
                 repeat: Infinity,
                 repeatType: "loop",
-                repeatDelay: 0.1
+                repeatDelay: 0.08
               }}
             />
           </motion.div>
@@ -235,6 +240,7 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
   // components above to prevent the entire layout from rerendering.
   const { mode: sidebarMode, attachedDirection } = useBrowserSidebar();
   const { topbarVisible, topbarHeight } = useAdaptiveTopbar();
+  const { isZenMode } = useFocusMode();
   const [navigationLayout] = useSetting<"sidebar" | "topbar">("navigationLayout");
   const browserContentAnchorRef = useRef<HTMLDivElement>(null);
 
@@ -260,14 +266,17 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
               {isTopbarMode ? (
                 <div className="w-full h-full flex flex-col">
                   <LoadingIndicator />
-                  <TopbarLayout />
+                  {!isZenMode && <TopbarLayout />}
                   <div className="relative flex-1 min-h-0 flex p-2.5 remove-app-drag">
-                    <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
-                    <WebPrompts anchorRef={browserContentAnchorRef} />
-                    <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
-                    <FindInPage anchorRef={browserContentAnchorRef} />
-                    <BrowserContent />
-                    <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
+                    <div className="relative flex-1 min-w-0 h-full flex">
+                      <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
+                      <WebPrompts anchorRef={browserContentAnchorRef} />
+                      <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
+                      <FindInPage anchorRef={browserContentAnchorRef} />
+                      <BrowserContent />
+                      <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
+                    </div>
+                    <SidePanel />
                   </div>
                 </div>
               ) : (
@@ -312,6 +321,8 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
                           </div>
                         </div>
 
+                        <SidePanel />
+
                         {sidebarMode !== "attached-right" ? (
                           <div className="w-2.5 shrink-0" />
                         ) : (
@@ -332,6 +343,8 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
               )}
 
               <ConditionalUpdateEffect />
+              <FocusTimerPill />
+              <CaptureOverlay anchorRef={browserContentAnchorRef} />
             </div>
           </ActionsProvider>
         </DownloadsProvider>
@@ -355,8 +368,12 @@ function BrowserUIWithSettings({ isReady, type }: { isReady: boolean; type: Brow
                 <ExtensionsProviderWithSpaces>
                   <PasskeysRequestProvider>
                     <ActivePromptsProvider>
-                      <TabDisabler />
-                      <InternalBrowserUI isReady={isReady} type={type} />
+                      <FocusModeProvider>
+                        <SidePanelProvider>
+                          <TabDisabler />
+                          <InternalBrowserUI isReady={isReady} type={type} />
+                        </SidePanelProvider>
+                      </FocusModeProvider>
                     </ActivePromptsProvider>
                   </PasskeysRequestProvider>
                 </ExtensionsProviderWithSpaces>

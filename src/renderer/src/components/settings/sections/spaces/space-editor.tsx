@@ -4,10 +4,9 @@ import { ArrowLeft, Loader2, Save, Settings, Trash2, PaintBucket, Check } from "
 import type { Space } from "~/lumi/interfaces/sessions/spaces";
 import { BasicSettingsTab, ThemeSettingsTab } from "./editor-tabs";
 import { DeleteConfirmDialog } from "./space-dialogs";
-import { motion, AnimatePresence } from "motion/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SpaceIcon } from "@/lib/phosphor-icons";
 
-// Main Space Editor Component
 interface SpaceEditorProps {
   space: Space;
   onClose: () => void;
@@ -16,58 +15,41 @@ interface SpaceEditorProps {
 }
 
 export function SpaceEditor({ space, onClose, onDelete, onSpacesUpdate }: SpaceEditorProps) {
-  // State management
   const [editedSpace, setEditedSpace] = useState<Space>({ ...space });
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState("theme");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Update edited space
   const updateEditedSpace = (updates: Partial<Space>) => {
     setEditedSpace((prev) => ({ ...prev, ...updates }));
   };
 
-  // Handle space update
+  const hasChanges =
+    editedSpace.name !== space.name ||
+    editedSpace.bgStartColor !== space.bgStartColor ||
+    editedSpace.bgEndColor !== space.bgEndColor ||
+    editedSpace.icon !== space.icon;
+
   const handleSave = async () => {
     setIsSaving(true);
     setSaveSuccess(false);
     try {
-      // Only send the fields that have changed
       const updatedFields: Partial<Space> = {};
-
-      if (editedSpace.name !== space.name) {
-        updatedFields.name = editedSpace.name;
-      }
-
-      if (editedSpace.bgStartColor !== space.bgStartColor) {
-        updatedFields.bgStartColor = editedSpace.bgStartColor;
-      }
-
-      if (editedSpace.bgEndColor !== space.bgEndColor) {
-        updatedFields.bgEndColor = editedSpace.bgEndColor;
-      }
-
-      if (editedSpace.icon !== space.icon) {
-        updatedFields.icon = editedSpace.icon;
-      }
+      if (editedSpace.name !== space.name) updatedFields.name = editedSpace.name;
+      if (editedSpace.bgStartColor !== space.bgStartColor) updatedFields.bgStartColor = editedSpace.bgStartColor;
+      if (editedSpace.bgEndColor !== space.bgEndColor) updatedFields.bgEndColor = editedSpace.bgEndColor;
+      if (editedSpace.icon !== space.icon) updatedFields.icon = editedSpace.icon;
 
       if (Object.keys(updatedFields).length > 0) {
-        console.log("Updating space:", space.id, updatedFields);
-
         await lumi.spaces.updateSpace(space.profileId, space.id, updatedFields);
-        onSpacesUpdate(); // Refetch spaces after successful update
+        onSpacesUpdate();
         setSaveSuccess(true);
-
-        // Auto-close after short delay
         setTimeout(() => {
-          if (saveSuccess) {
-            onClose();
-          }
-        }, 1500);
+          onClose();
+        }, 700);
       } else {
-        // No changes to save
         onClose();
       }
     } catch (error) {
@@ -77,7 +59,6 @@ export function SpaceEditor({ space, onClose, onDelete, onSpacesUpdate }: SpaceE
     }
   };
 
-  // Handle space deletion with confirmation
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
@@ -91,144 +72,90 @@ export function SpaceEditor({ space, onClose, onDelete, onSpacesUpdate }: SpaceE
     }
   };
 
-  // Handle input field changes
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEditedSpace({
-      ...editedSpace,
-      name: e.target.value
-    });
-  };
-
-  // Detect if there are unsaved changes
-  const hasChanges = () => {
-    return (
-      editedSpace.name !== space.name ||
-      editedSpace.bgStartColor !== space.bgStartColor ||
-      editedSpace.bgEndColor !== space.bgEndColor ||
-      editedSpace.icon !== space.icon
-    );
-  };
-
   return (
-    <motion.div
-      className="z-modal flex flex-col bg-background h-full"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Header Bar */}
-      <motion.div
-        className="flex items-center border-b p-4"
-        initial={{ y: -10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-      >
-        <Button variant="ghost" size="icon" onClick={onClose} className="mr-2">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h2 className="text-lg font-medium">Edit Space</h2>
-          <p className="text-sm text-muted-foreground">Customize your browsing space</p>
+    <div className="space-y-5 remove-app-drag">
+      {/* Editor Header */}
+      <div className="lumi-glass-panel rounded-2xl p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="ghost" size="icon" onClick={onClose} className="size-8 shrink-0">
+            <ArrowLeft className="size-4" />
+          </Button>
+          <div
+            className="size-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs"
+            style={{
+              background:
+                editedSpace.bgStartColor && editedSpace.bgEndColor
+                  ? `linear-gradient(135deg, ${editedSpace.bgStartColor}, ${editedSpace.bgEndColor})`
+                  : "var(--muted)"
+            }}
+          >
+            <SpaceIcon id={editedSpace.icon} className="size-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-foreground truncate">{editedSpace.name || "Untitled Space"}</h2>
+            <p className="text-xs text-muted-foreground">Customize identity, colors &amp; space icon</p>
+          </div>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex items-center gap-2 shrink-0">
           <Button
-            variant="destructive"
+            variant="outline"
             size="sm"
             onClick={() => setDeleteDialogOpen(true)}
-            className="gap-1 transition-all hover:bg-destructive/90"
-            title="Delete space"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-3.5" />
             Delete
           </Button>
-          <AnimatePresence mode="wait">
-            {saveSuccess ? (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Button variant="default" size="sm" className="gap-1 bg-green-600 hover:bg-green-700">
-                  <Check className="h-4 w-4" />
-                  Saved
-                </Button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="save"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSave}
-                  className={`gap-1 transition-all ${hasChanges() ? "bg-primary hover:bg-primary/90" : "bg-muted/80 hover:bg-muted"}`}
-                  disabled={isSaving || !hasChanges()}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {saveSuccess ? (
+            <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-600">
+              <Check className="size-3.5" />
+              Saved
+            </Button>
+          ) : (
+            <Button variant="default" size="sm" onClick={handleSave} disabled={isSaving || !hasChanges}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="size-3.5" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          )}
         </div>
-      </motion.div>
-
-      {/* Content Area with Tabs */}
-      <div className="flex flex-row flex-1 overflow-hidden">
-        <Tabs
-          defaultValue="basic"
-          onValueChange={setActiveTab}
-          value={activeTab}
-          className="flex flex-row flex-1 h-full"
-          orientation="vertical"
-        >
-          {/* Tab Navigation - Always Vertical */}
-          <div className="border-r min-h-0 h-full flex-shrink-0">
-            <div className="p-4">
-              <TabsList className="flex flex-col items-stretch h-auto bg-background p-0 gap-1">
-                <TabsTrigger value="basic" className="w-full data-[state=active]:text-primary flex justify-start gap-2">
-                  <Settings className="h-5 w-5" />
-                  <span>Basic Settings</span>
-                </TabsTrigger>
-                <TabsTrigger value="theme" className="w-full data-[state=active]:text-primary flex justify-start gap-2">
-                  <PaintBucket className="h-5 w-5" />
-                  <span>Theme Settings</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 p-6 overflow-auto">
-            <AnimatePresence mode="wait">
-              <TabsContent value="basic" className="m-0 h-full">
-                <BasicSettingsTab space={space} editedSpace={editedSpace} handleNameChange={handleNameChange} />
-              </TabsContent>
-
-              <TabsContent value="theme" className="m-0 h-full">
-                <ThemeSettingsTab editedSpace={editedSpace} updateEditedSpace={updateEditedSpace} />
-              </TabsContent>
-            </AnimatePresence>
-          </div>
-        </Tabs>
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Horizontal Segmented Tabs (No nested sidebars!) */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <TabsList className="grid w-full max-w-sm grid-cols-2">
+          <TabsTrigger value="theme" className="text-xs gap-1.5">
+            <PaintBucket className="size-3.5" />
+            Theme &amp; Preview
+          </TabsTrigger>
+          <TabsTrigger value="basic" className="text-xs gap-1.5">
+            <Settings className="size-3.5" />
+            Details &amp; IDs
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="theme" className="m-0">
+          <ThemeSettingsTab editedSpace={editedSpace} updateEditedSpace={updateEditedSpace} />
+        </TabsContent>
+
+        <TabsContent value="basic" className="m-0">
+          <BasicSettingsTab
+            space={space}
+            editedSpace={editedSpace}
+            handleNameChange={(e) => setEditedSpace({ ...editedSpace, name: e.target.value })}
+          />
+        </TabsContent>
+      </Tabs>
+
       <DeleteConfirmDialog
         isOpen={deleteDialogOpen}
         onClose={setDeleteDialogOpen}
@@ -236,6 +163,6 @@ export function SpaceEditor({ space, onClose, onDelete, onSpacesUpdate }: SpaceE
         isDeleting={isDeleting}
         onConfirm={handleDeleteConfirm}
       />
-    </motion.div>
+    </div>
   );
 }

@@ -13,7 +13,10 @@ import type { BlockedRequestItem, TabBlockerStats } from "~/lumi/interfaces/brow
 type BlockerInstanceType = "all" | "adsAndTrackers" | "adsOnly";
 
 const SESSION_KEY = "content-blocker";
+const FOCUS_SESSION_KEY = "lumi-focus-blocklist";
 const ContentBlockerDataStore = getDatastore("content-blocker");
+
+const DEFAULT_FOCUS_DOMAINS = ["youtube.com", "x.com", "twitter.com", "reddit.com", "instagram.com", "tiktok.com"];
 
 interface TabStatsData {
   tabId: number;
@@ -36,6 +39,9 @@ class ContentBlocker {
   private tabStatsMap: Map<number, TabStatsData> = new Map();
   private saveTimeout: NodeJS.Timeout | null = null;
   private isDataLoaded: boolean = false;
+  private focusBlockActive: boolean = false;
+  private focusBlockedDomains: string[] = [...DEFAULT_FOCUS_DOMAINS];
+  private focusHookedSessions = new WeakSet<Session>();
 
   /**
    * Load persisted content blocker settings (whitelisted domains and total count)
@@ -372,12 +378,59 @@ class ContentBlocker {
     blocker.enableBlockingInSession(unifiedWebRequests.createSession(session, SESSION_KEY));
   }
 
+  private isUrlFocusBlocked(rawUrl: string): boolean {
+    if (!this.focusBlockActive || !rawUrl) return false;
+    try {
+      const host = new URL(rawUrl).hostname.toLowerCase();
+      return this.focusBlockedDomains.some((d) => host === d || host.endsWith("." + d));
+    } catch {
+      return false;
+    }
+  }
+
+  private attachFocusHook(session: Session): void {
+    if (this.focusHookedSessions.has(session)) return;
+    this.focusHookedSessions.add(session);
+    const wrapped = unifiedWebRequests.createSession(session, FOCUS_SESSION_KEY);
+    wrapped.webRequest.onBeforeRequest((details, callback) => {
+      if (this.focusBlockActive && details.resourceType === "mainFrame" && this.isUrlFocusBlocked(details.url)) {
+        callback({ cancel: true });
+        return;
+      }
+      callback({});
+    });
+  }
+
+  public setFocusBlocklist(active: boolean, domains?: string[]): { active: boolean; domains: string[] } {
+    this.focusBlockActive = active;
+    if (Array.isArray(domains) && domains.length > 0) {
+      this.focusBlockedDomains = domains.map((d) => d.toLowerCase().trim()).filter(Boolean);
+    }
+    if (active) {
+      for (const profile of loadedProfilesController.getAll()) {
+        this.attachFocusHook(profile.session);
+      }
+    }
+    return this.getFocusBlocklist();
+  }
+
+  public getFocusBlocklist(): { active: boolean; domains: string[] } {
+    return {
+      active: this.focusBlockActive,
+      domains: [...this.focusBlockedDomains]
+    };
+  }
+
   /**
    * Updates content blocker configuration based on user settings
    */
   public async updateConfig(): Promise<void> {
     const contentBlockerSetting = getSettingValueById("contentBlocker") as string | undefined;
     const profiles = loadedProfilesController.getAll();
+
+    for (const profile of profiles) {
+      this.attachFocusHook(profile.session);
+    }
 
     switch (contentBlockerSetting) {
       case "all":

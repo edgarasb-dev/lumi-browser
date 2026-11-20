@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { WebsiteFavicon } from "@/components/main/website-favicon";
+import { InternalPageShell } from "@/components/main/internal-page-shell";
 import { simplifyUrl } from "@/lib/url";
 import type { BrowsingHistoryVisit, HistoryVisitsPageCursor } from "~/types/history";
 import { Clock, MoreHorizontal, Search, Trash2 } from "lucide-react";
@@ -167,107 +168,103 @@ function HistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Sticky top bar */}
-      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border/50">
-        <div className="max-w-3xl mx-auto px-6 py-3 flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-foreground tracking-tight shrink-0">History</h1>
-
-          {/* Search — centered */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <input
-              ref={searchRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search history"
-              aria-label="Search history"
-              className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-muted/40 text-sm text-foreground placeholder:text-muted-foreground transition-[border-color,box-shadow] outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 focus:bg-background"
-            />
-          </div>
-
-          <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 text-muted-foreground hover:text-foreground border shrink-0"
-                disabled={!debouncedSearch && visits.length === 0 && !isPending}
-              >
-                <Trash2 className="size-4" />
-                Clear data
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Clear all history?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This removes every visit in this profile from Lumi. This cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => void clearAll()}>Clear history</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+    <InternalPageShell
+      title="History"
+      icon={<Clock className="size-4" />}
+      searchSlot={
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            ref={searchRef}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search browsing history..."
+            aria-label="Search history"
+            className="h-9 w-full rounded-xl border border-black/10 bg-black/4 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary/45 focus:bg-background focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/6"
+          />
         </div>
-      </div>
-
-      {/* Content */}
+      }
+      headerActions={
+        <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              disabled={!debouncedSearch && visits.length === 0 && !isPending}
+            >
+              <Trash2 className="size-3.5" />
+              Clear data
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear all history?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes every visit in this profile from Lumi. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void clearAll()}>Clear history</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      }
+    >
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="max-w-3xl mx-auto w-full px-6 py-6 flex flex-col gap-4"
+        className="flex flex-col gap-4"
       >
         {isPending ? (
-          <div className="py-20 text-center text-muted-foreground text-sm">Loading…</div>
+          <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>
         ) : isError ? (
-          <div className="py-20 text-center space-y-3">
-            <p className="text-foreground font-medium">Could not load history</p>
+          <div className="lumi-glass-panel space-y-3 py-16 text-center">
+            <p className="font-medium text-foreground">Could not load history</p>
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
               Try again
             </Button>
           </div>
         ) : visits.length === 0 ? (
-          <div className="py-20 text-center">
-            <Clock className="size-10 mx-auto text-muted-foreground mb-3 opacity-40" />
-            <p className="text-foreground font-medium">No history found</p>
-            <p className="text-muted-foreground text-sm mt-1">
+          <div className="lumi-glass-panel py-16 text-center">
+            <Clock className="mx-auto mb-3 size-10 text-muted-foreground opacity-40" />
+            <p className="font-medium text-foreground">No history found</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               {debouncedSearch ? "Try a different search." : "Pages you open appear here."}
             </p>
           </div>
         ) : (
           grouped.map((group) => (
-            <Card key={group.dayStart} className="gap-0 py-0 shadow-sm overflow-clip">
-              <CardHeader className="sticky top-15 z-5 px-4 py-2.5! border-border/60 gap-0 border-b bg-muted/95 backdrop-blur-sm">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Card key={group.dayStart} className="lumi-glass-panel gap-0 overflow-clip py-0">
+              <CardHeader className="sticky top-15 z-5 gap-0 border-b border-black/8 bg-background/85 px-4 py-2.5! backdrop-blur-xl dark:border-white/10">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {group.label}
                 </span>
               </CardHeader>
-              <CardContent className="p-1">
+              <CardContent className="p-1.5">
                 <ul>
                   {group.items.map((v) => (
                     <ContextMenu key={v.visitId}>
                       <ContextMenuTrigger asChild>
-                        <li className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors group cursor-default">
+                        <li className="group flex cursor-default items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-black/4 dark:hover:bg-white/6">
                           <a
                             href={v.url}
                             rel="noopener noreferrer"
-                            className="flex min-w-0 flex-1 items-center gap-3 text-left no-underline text-inherit rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                            className="flex min-w-0 flex-1 items-center gap-3 rounded text-left text-inherit no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                           >
-                            <WebsiteFavicon url={v.url} className="size-5 rounded-sm bg-muted shrink-0 object-cover" />
+                            <WebsiteFavicon url={v.url} className="size-5 shrink-0 rounded-sm bg-muted object-cover" />
                             <div className="min-w-0 flex-1">
-                              <span className="text-sm text-foreground truncate block leading-snug">
+                              <span className="block truncate text-sm font-medium leading-snug text-foreground">
                                 {v.title || simplifyUrl(v.url)}
                               </span>
-                              <span className="text-[11px] text-muted-foreground truncate block leading-snug">
+                              <span className="block truncate text-[11px] leading-snug text-muted-foreground">
                                 {simplifyUrl(v.url)}
                               </span>
                             </div>
                             <time
-                              className="text-[11px] text-muted-foreground tabular-nums shrink-0 hidden sm:block"
+                              className="hidden shrink-0 text-[11px] tabular-nums text-muted-foreground sm:block"
                               dateTime={new Date(v.visitTime).toISOString()}
                             >
                               {new Date(v.visitTime).toLocaleTimeString(undefined, {
@@ -281,7 +278,7 @@ function HistoryPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="size-7 shrink-0 opacity-0 group-hover:opacity-60 group-focus-within:opacity-60 hover:opacity-100! focus-visible:opacity-100! transition-opacity"
+                                className="size-7 shrink-0 opacity-0 transition-opacity group-focus-within:opacity-60 group-hover:opacity-60 hover:opacity-100! focus-visible:opacity-100!"
                                 aria-label="More actions"
                               >
                                 <MoreHorizontal className="size-3.5" />
@@ -319,14 +316,14 @@ function HistoryPage() {
         {visits.length > 0 && (
           <div
             ref={loadMoreRef}
-            className="min-h-8 py-4 flex flex-col items-center justify-center gap-1 text-muted-foreground text-sm"
+            className="flex min-h-8 flex-col items-center justify-center gap-1 py-4 text-sm text-muted-foreground"
           >
             {isFetchingNextPage ? <span>Loading more…</span> : null}
             {!hasNextPage && !isFetchingNextPage ? <span>End of history</span> : null}
           </div>
         )}
       </motion.div>
-    </div>
+    </InternalPageShell>
   );
 }
 

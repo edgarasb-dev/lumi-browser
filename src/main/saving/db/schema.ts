@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { NavigationEntry, SplitDirection, TabGroupMode } from "~/types/tabs";
 import { DownloadState } from "~/types/downloads";
+import { SnapshotGroupEntry, SnapshotTabEntry } from "~/types/snapshots";
 
 // --- Tabs Table ---
 
@@ -137,3 +138,22 @@ export const downloads = sqliteTable(
 
 export type DownloadRow = typeof downloads.$inferSelect;
 export type DownloadInsert = typeof downloads.$inferInsert;
+
+// --- Workspace Snapshots Table ---
+
+export const workspaceSnapshots = sqliteTable(
+  "workspace_snapshots",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id").notNull(),
+    spaceId: text("space_id").notNull(),
+    name: text("name").notNull(),
+    createdAt: integer("created_at").notNull(),
+    tabsJson: text("tabs_json", { mode: "json" }).$type<SnapshotTabEntry[]>().notNull(),
+    tabGroupsJson: text("tab_groups_json", { mode: "json" }).$type<SnapshotGroupEntry[]>().notNull()
+  },
+  (table) => [index("idx_workspace_snapshots_space_id").on(table.spaceId)]
+);
+
+export type WorkspaceSnapshotRow = typeof workspaceSnapshots.$inferSelect;
+export type WorkspaceSnapshotInsert = typeof workspaceSnapshots.$inferInsert;

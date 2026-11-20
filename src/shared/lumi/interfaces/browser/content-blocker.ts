@@ -14,12 +14,19 @@ export interface TabBlockerStats {
   totalBlocked: number;
 }
 
+export interface FocusBlocklistState {
+  active: boolean;
+  domains: string[];
+}
+
 export interface LumiContentBlockerAPI {
   getTabStats(tabId: number): Promise<TabBlockerStats>;
   getTotalBlocked(): Promise<number>;
   getWhitelistedDomains(): Promise<string[]>;
   isDomainWhitelisted(domain: string): Promise<boolean>;
   toggleDomainWhitelist(domain: string, whitelisted?: boolean): Promise<boolean>;
+  setFocusBlocklist(active: boolean, domains?: string[]): Promise<FocusBlocklistState>;
+  getFocusBlocklist(): Promise<FocusBlocklistState>;
   onStatsUpdated(
     callback: (data: { tabId?: number; blockedCount?: number; totalBlocked?: number }) => void
   ): () => void;

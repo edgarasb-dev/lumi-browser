@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Plus, X, Save, Trash2, History } from "lucide-react";
+import { Plus, X, Save, RotateCcw, History, Download, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WebsiteFavicon } from "@/components/main/website-favicon";
+import { cn } from "@/lib/utils";
 
 // Interface for quick links
 export interface QuickLink {
@@ -86,16 +87,15 @@ export function QuickLinks({ className = "" }: QuickLinksProps) {
 
   const handleAddLink = () => {
     if (newLinkName.trim() && newLinkUrl.trim()) {
-      // Ensure URL has http:// or https:// prefix
-      let url = newLinkUrl;
-      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      let url = newLinkUrl.trim();
+      if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("lumi://")) {
         url = "https://" + url;
       }
 
       const newLink: QuickLink = {
         id: Date.now().toString(),
-        name: newLinkName,
-        url: url
+        name: newLinkName.trim(),
+        url
       };
 
       setQuickLinks([...quickLinks, newLink]);
@@ -124,108 +124,103 @@ export function QuickLinks({ className = "" }: QuickLinksProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className={`w-full max-w-2xl mt-auto ${className}`}
+      transition={{ duration: 0.35, delay: 0.1 }}
+      className={cn("mx-auto w-full max-w-3xl", className)}
     >
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="text-sm font-medium text-gray-600 dark:text-gray-300">Quick Links</h2>
-        <div className="flex gap-2">
+      <div className="mb-2.5 flex items-center justify-between px-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Speed Dial</h2>
+        <div className="flex gap-1.5">
           <Dialog open={isAddDialogOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs py-1 h-7">
-                <Plus className="w-3 h-3" />
-                <span className="hidden">Add</span>
+              <Button variant="ghost" size="sm" className="h-7 gap-1 px-2.5 text-xs">
+                <Plus className="size-3.5" />
+                Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-[90vw] max-w-md">
+            <DialogContent className="w-[90vw] max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-gray-900 dark:text-gray-100">Add New Quick Link</DialogTitle>
+                <DialogTitle>Add Speed Dial Link</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-2 sm:gap-4">
-                  <Label htmlFor="name" className="text-right text-gray-700 dark:text-gray-300 text-sm sm:text-base">
+              <div className="grid gap-4 py-3">
+                <div className="grid grid-cols-4 items-center gap-3">
+                  <Label htmlFor="name" className="text-right text-sm">
                     Name
                   </Label>
                   <Input
                     id="name"
                     value={newLinkName}
                     onChange={(e) => setNewLinkName(e.target.value)}
-                    className="col-span-3 text-gray-900 dark:text-gray-100"
-                    placeholder="Google"
+                    className="col-span-3"
+                    placeholder="GitHub"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-2 sm:gap-4">
-                  <Label htmlFor="url" className="text-right text-gray-700 dark:text-gray-300 text-sm sm:text-base">
+                <div className="grid grid-cols-4 items-center gap-3">
+                  <Label htmlFor="url" className="text-right text-sm">
                     URL
                   </Label>
                   <Input
                     id="url"
                     value={newLinkUrl}
                     onChange={(e) => setNewLinkUrl(e.target.value)}
-                    className="col-span-3 text-gray-900 dark:text-gray-100"
-                    placeholder="https://google.com"
+                    className="col-span-3"
+                    placeholder="https://github.com"
                   />
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                  className="text-gray-700 dark:text-gray-300"
-                >
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddLink} disabled={!newLinkName || !newLinkUrl}>
-                  <Save className="w-4 h-4 mr-2" />
+                <Button onClick={handleAddLink} disabled={!newLinkName.trim() || !newLinkUrl.trim()}>
+                  <Save className="mr-1.5 size-4" />
                   Save
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={handleResetToDefaults}
-            className="flex items-center gap-1 text-xs py-1 h-7"
+            className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+            title="Reset Speed Dial to defaults"
           >
-            <Trash2 className="w-3 h-3" />
-            <span className="hidden">Reset</span>
+            <RotateCcw className="size-3" />
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 p-2">
-        {quickLinks.map((link, index) => (
-          <motion.div
-            key={link.id}
-            className="relative group"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + index * 0.05 }}
-          >
+      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
+        {quickLinks.map((link) => (
+          <div key={link.id} className="group relative">
             <button
+              type="button"
               onClick={() => handleDeleteLink(link.id)}
-              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-elevated"
-              aria-label={`Delete ${link.name}`}
+              className="absolute -right-1 -top-1 z-10 flex size-5 items-center justify-center rounded-full bg-zinc-900/80 text-white opacity-0 shadow-xs transition-opacity group-hover:opacity-100 hover:bg-destructive dark:bg-zinc-800"
+              aria-label={`Remove ${link.name}`}
             >
-              <X className="w-2 h-2" />
+              <X className="size-3" />
             </button>
             <a
               href={link.url}
-              className="flex flex-col items-center justify-center w-20 bg-white/80 text-gray-800 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 rounded-lg p-2 no-underline shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200"
+              className="lumi-glass-panel flex flex-col items-center justify-center gap-2 px-3 py-3.5 text-center no-underline transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md"
             >
-              <div className="mb-1 flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 overflow-hidden">
+              <div className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-white/85 shadow-xs dark:bg-white/10">
                 {link.url.startsWith("lumi://history") ? (
-                  <History className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+                  <History className="size-5 text-amber-500" />
+                ) : link.url.startsWith("lumi://downloads") ? (
+                  <Download className="size-5 text-primary" />
+                ) : link.url.startsWith("lumi://bangs") ? (
+                  <Sparkles className="size-5 text-violet-500" />
                 ) : (
-                  <WebsiteFavicon url={link.url} favicon={link.favicon} className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <WebsiteFavicon url={link.url} favicon={link.favicon} className="size-5 rounded-xs" />
                 )}
               </div>
-              <div className="font-medium text-xs truncate w-full text-center">{link.name}</div>
+              <div className="w-full truncate text-xs font-medium text-foreground">{link.name}</div>
             </a>
-          </motion.div>
+          </div>
         ))}
       </div>
     </motion.div>

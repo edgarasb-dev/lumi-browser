@@ -6,7 +6,7 @@ import { ReactNode } from "react";
 export const RouteConfig: RouteConfigType = {
   Providers: ({ children }: { children: ReactNode }) => {
     return (
-      <ThemeProvider forceTheme="dark">
+      <ThemeProvider>
         <NuqsProvider>{children}</NuqsProvider>
       </ThemeProvider>
     );

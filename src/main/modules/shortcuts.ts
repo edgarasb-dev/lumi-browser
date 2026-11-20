@@ -130,6 +130,18 @@ const typedShortcuts = [
     category: "Browser"
   },
   {
+    id: "browser.toggleZenMode",
+    name: "Toggle Focus / Zen Mode",
+    shortcut: "CommandOrControl+Shift+Z",
+    category: "Browser"
+  },
+  {
+    id: "browser.toggleSidePanel",
+    name: "Toggle Split Side Panel",
+    shortcut: "CommandOrControl+Shift+.",
+    category: "Browser"
+  },
+  {
     id: "tab.findInPage",
     name: "Find in Page",
     shortcut: "CommandOrControl+F",
@@ -139,6 +151,12 @@ const typedShortcuts = [
     id: "tab.toggleReaderMode",
     name: "Toggle Reader Mode",
     shortcut: "CommandOrControl+Alt+R",
+    category: "Tab"
+  },
+  {
+    id: "tab.capturePage",
+    name: "Capture Page Screenshot",
+    shortcut: "CommandOrControl+Shift+2",
     category: "Tab"
   }
 ] as const satisfies ShortcutAction[];

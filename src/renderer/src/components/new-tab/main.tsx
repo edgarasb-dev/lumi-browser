@@ -1,26 +1,58 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Moon, Sun, Search, GlobeIcon } from "lucide-react";
+import { Check, Moon, Palette, Search, SlidersHorizontal, Sun } from "lucide-react";
 import { useTheme } from "@/components/main/theme";
 import { QuickLinks } from "./quick-links";
+import { NewTabWidgetsGrid } from "./widgets-grid";
+import {
+  STUDIO_WALLPAPERS,
+  WALLPAPER_STORAGE_KEY,
+  WIDGETS_STORAGE_KEY,
+  buildWallpaperStyle,
+  loadWallpaperId,
+  loadWidgetPrefs,
+  type NewTabWidgetPrefs
+} from "./studio-wallpapers";
+import { OmniboxSuggestionRow } from "@/components/omnibox/omnibox-suggestion";
+import { requestOmniboxSuggestions } from "@/lib/omnibox-new";
+import { setOmniboxCurrentProfileId, setOmniboxCurrentSpaceId } from "@/lib/omnibox-new/states";
+import { primeOpenTabsCache, primeQuickHistoryCache } from "@/lib/omnibox-new/suggestors";
+import type { OmniboxSuggestion } from "@/lib/omnibox-new/types";
+import type { Space } from "~/lumi/interfaces/sessions/spaces";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { Omnibox } from "@/lib/omnibox/omnibox";
-import { AutocompleteMatch } from "@/lib/omnibox/types";
-import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 
-const MAX_SUGGESTIONS = 6;
+const MAX_SUGGESTIONS = 7;
 
-function SuggestionIcon({ match }: { match: AutocompleteMatch }) {
-  switch (match.type) {
-    case "history-url":
+const WORKSPACE_PEDAL_ACTIONS = new Set([
+  "toggle_zen_mode",
+  "toggle_side_panel",
+  "capture_region",
+  "capture_full_page",
+  "recently_closed",
+  "save_snapshot"
+]);
+
+function getGreeting(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function suggestionKey(s: OmniboxSuggestion, index: number): string {
+  switch (s.type) {
+    case "search":
+      return `search-${s.query}-${index}`;
+    case "website":
+      return `web-${s.url}-${index}`;
     case "open-tab":
-    case "url-what-you-typed":
-      return <GlobeIcon size={18} className="mr-3 text-gray-400" />;
-    case "verbatim":
-    case "search-query":
-      return <Search size={18} className="mr-3 text-gray-400" />;
-    default:
-      return null;
+      return `tab-${s.spaceId}-${s.tabId}-${index}`;
+    case "pedal":
+      return `pedal-${s.action}-${index}`;
+    case "instant-answer":
+      return `instant-${s.kind}-${index}`;
   }
 }
 
@@ -28,180 +60,391 @@ export function NewTabPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [matches, setMatches] = useState<AutocompleteMatch[]>([]);
+  const [suggestions, setSuggestions] = useState<OmniboxSuggestion[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [activeSpace, setActiveSpace] = useState<Space | null>(null);
+  const [wallpaperId, setWallpaperId] = useState<string>(() => loadWallpaperId());
+  const [widgetPrefs, setWidgetPrefs] = useState<NewTabWidgetPrefs>(() => loadWidgetPrefs());
+  const [now, setNow] = useState<Date>(() => new Date());
+  const [copiedNotice, setCopiedNotice] = useState<string | null>(null);
+
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const searchRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const omniboxRef = useRef<Omnibox | null>(null);
-  const [commandValue, setCommandValue] = useState("");
+  const requestIdRef = useRef(0);
+  const abortRef = useRef<(() => void) | null>(null);
 
-  // Update search query when command value changes
-  useEffect(() => {
-    const match = matches.find((match) => match.destinationUrl === commandValue);
-    if (!match && matches.length > 0) {
-      setCommandValue(matches[0].destinationUrl);
-    }
-  }, [commandValue, matches]);
-
-  // Mount effect
   useEffect(() => {
     setMounted(true);
+    const interval = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Initialize omnibox
+  // Sync active Space metadata and prime omnibox caches
   useEffect(() => {
-    const handleSuggestionsUpdate = (updatedMatches: AutocompleteMatch[]) => {
-      console.log("Received Updated Suggestions:", updatedMatches.length);
-      setMatches(updatedMatches);
+    if (typeof lumi === "undefined") return;
+    let active = true;
+
+    const loadContext = async () => {
+      try {
+        const space = await lumi.spaces.getLastUsedSpace();
+        if (!active) return;
+        setActiveSpace(space);
+        setOmniboxCurrentProfileId(space?.profileId);
+        setOmniboxCurrentSpaceId(space?.id);
+        void primeQuickHistoryCache(space?.profileId, { force: true });
+        void primeOpenTabsCache(space?.id, { force: true });
+      } catch {
+        // ignore context fetch failures
+      }
     };
 
-    omniboxRef.current = new Omnibox(handleSuggestionsUpdate);
-
-    if (omniboxRef.current) {
-      // Initialize with empty query on focus
-      omniboxRef.current.handleInput("", "focus");
-    }
-
-    // Cleanup
+    void loadContext();
     return () => {
-      omniboxRef.current?.stopQuery();
+      active = false;
     };
   }, []);
 
-  // Update omnibox when search query changes
-  useEffect(() => {
-    if (omniboxRef.current) {
-      omniboxRef.current.handleInput(searchQuery, "keystroke");
-    }
-  }, [searchQuery]);
+  const fetchSuggestions = useCallback(
+    (input: string) => {
+      abortRef.current?.();
+      const requestId = ++requestIdRef.current;
+      setOmniboxCurrentProfileId(activeSpace?.profileId);
+      setOmniboxCurrentSpaceId(activeSpace?.id);
+      abortRef.current = requestOmniboxSuggestions({
+        input,
+        requestId,
+        getCurrentRequestId: () => requestIdRef.current,
+        applySuggestions: (items) => {
+          setSuggestions(items.slice(0, MAX_SUGGESTIONS));
+          setSelectedIndex(0);
+        }
+      });
+    },
+    [activeSpace?.id, activeSpace?.profileId]
+  );
 
-  // Handle suggestion click or selection
-  const handleSuggestionSelect = (match: AutocompleteMatch) => {
-    omniboxRef.current?.openMatch(match, "current");
+  useEffect(() => {
+    fetchSuggestions(searchQuery);
+    return () => {
+      abortRef.current?.();
+    };
+  }, [searchQuery, fetchSuggestions]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const commitSuggestion = useCallback((suggestion: OmniboxSuggestion) => {
+    switch (suggestion.type) {
+      case "instant-answer": {
+        void navigator.clipboard.writeText(suggestion.copyValue).catch(() => undefined);
+        setCopiedNotice(`Copied: ${suggestion.copyValue}`);
+        setTimeout(() => setCopiedNotice(null), 1800);
+        return;
+      }
+      case "open-tab":
+        void lumi.tabs.switchToTab(suggestion.tabId);
+        break;
+      case "pedal": {
+        const a = suggestion.action;
+        if (a === "open_settings") {
+          lumi.windows.openSettingsWindow();
+        } else if (a === "open_new_window") {
+          lumi.browser.createWindow();
+        } else if (a === "open_incognito_window") {
+          lumi.browser.createIncognitoWindow();
+        } else if (a === "open_extensions") {
+          void lumi.navigation.goTo("lumi://extensions", undefined, true);
+        } else if (a === "open_history") {
+          void lumi.navigation.goTo("lumi://history", undefined, true);
+        } else if (a === "open_downloads") {
+          void lumi.navigation.goTo("lumi://downloads", undefined, true);
+        } else if (a === "clear_browsing_data") {
+          void lumi.navigation.goTo("lumi://history?clear=1", undefined, true);
+        } else if (a === "open_bangs") {
+          void lumi.navigation.goTo("lumi://bangs", undefined, true);
+        } else if (WORKSPACE_PEDAL_ACTIONS.has(a)) {
+          lumi.actions.emitAction(a);
+        }
+        break;
+      }
+      case "search":
+      case "website":
+        void lumi.navigation.goTo(suggestion.url, undefined, true);
+        break;
+    }
+    setShowSuggestions(false);
+  }, []);
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setShowSuggestions(false);
+      return;
+    }
+    if (e.key === "ArrowDown" && suggestions.length > 0) {
+      e.preventDefault();
+      setShowSuggestions(true);
+      setSelectedIndex((prev) => (prev + 1) % suggestions.length);
+      return;
+    }
+    if (e.key === "ArrowUp" && suggestions.length > 0) {
+      e.preventDefault();
+      setShowSuggestions(true);
+      setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const target = suggestions[selectedIndex];
+      if (target) {
+        commitSuggestion(target);
+      } else if (searchQuery.trim()) {
+        const q = searchQuery.trim();
+        const url = q.includes("://") ? q : `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+        void lumi.navigation.goTo(url, undefined, true);
+      }
+    }
+  };
+
+  const selectWallpaper = (id: string) => {
+    setWallpaperId(id);
+    try {
+      localStorage.setItem(WALLPAPER_STORAGE_KEY, id);
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const updateWidgetPref = (key: keyof NewTabWidgetPrefs, value: boolean) => {
+    setWidgetPrefs((prev) => {
+      const next = { ...prev, [key]: value };
+      try {
+        localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
   };
 
   const toggleTheme = () => {
-    // If current theme is system, set to explicit light/dark based on current resolved theme
-    // Otherwise toggle between light and dark
-    const newTheme =
+    const nextTheme =
       theme === "system" ? (resolvedTheme === "dark" ? "light" : "dark") : theme === "dark" ? "light" : "dark";
-    console.log(`Switching theme from ${theme} to ${newTheme}`);
-    setTheme(newTheme);
+    setTheme(nextTheme);
   };
 
+  const backgroundStyle = useMemo(
+    () => buildWallpaperStyle(wallpaperId, resolvedTheme, activeSpace ?? undefined),
+    [wallpaperId, resolvedTheme, activeSpace]
+  );
+
+  const formattedTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const formattedDate = now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+
   if (!mounted) {
-    // Return a placeholder or skeleton to avoid hydration mismatch
-    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900"></div>;
+    return <div className="min-h-screen bg-background" />;
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-white p-4 md:p-8 font-sans transition-colors duration-300 select-none">
-      {/* Theme toggle button */}
-      <div className="w-full flex justify-end">
-        <button
-          onClick={toggleTheme}
-          type="button"
-          className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
-        >
-          {resolvedTheme === "dark" ? (
-            <Sun className="h-5 w-5 text-yellow-400" />
-          ) : (
-            <Moon className="h-5 w-5 text-gray-700" />
+    <div
+      className="relative flex min-h-screen flex-col justify-between overflow-x-hidden px-4 py-5 font-sans text-foreground transition-colors duration-300 select-none md:px-8 md:py-7"
+      style={{ backgroundImage: backgroundStyle }}
+    >
+      {/* Top Bar Controls */}
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {activeSpace && (
+            <div className="lumi-glass-pill flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-foreground">
+              <span
+                className="size-2.5 rounded-full shadow-xs"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${activeSpace.bgStartColor}, ${activeSpace.bgEndColor})`
+                }}
+              />
+              <span>{activeSpace.name}</span>
+            </div>
           )}
-        </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger
+              type="button"
+              className="lumi-glass-pill inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium text-foreground transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <SlidersHorizontal className="size-3.5 text-primary" />
+              Customize
+            </PopoverTrigger>
+            <PopoverContent align="end" className="lumi-glass-panel w-72 space-y-4 p-4">
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Palette className="size-3.5 text-primary" />
+                  Studio Backdrop
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {STUDIO_WALLPAPERS.map((wp) => {
+                    const isSelected = wp.id === wallpaperId;
+                    return (
+                      <button
+                        key={wp.id}
+                        type="button"
+                        onClick={() => selectWallpaper(wp.id)}
+                        title={wp.name}
+                        className={cn(
+                          "relative flex h-9 w-full items-center justify-center rounded-xl border transition-all",
+                          isSelected
+                            ? "border-primary ring-2 ring-primary/30"
+                            : "border-black/15 hover:scale-105 dark:border-white/20"
+                        )}
+                        style={{ background: wp.swatch }}
+                      >
+                        {isSelected && <Check className="size-4 text-white drop-shadow" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2.5 border-t border-black/8 pt-3 dark:border-white/10">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Widgets</div>
+                {(
+                  [
+                    { key: "clock", label: "Clock & Greeting" },
+                    { key: "quickLinks", label: "Speed Dial Links" },
+                    { key: "recentlyClosed", label: "Recently Closed" },
+                    { key: "scratchpad", label: "Space Scratchpad" }
+                  ] as const
+                ).map((item) => (
+                  <label key={item.key} className="flex items-center justify-between text-xs font-medium">
+                    <span>{item.label}</span>
+                    <Switch
+                      checked={widgetPrefs[item.key]}
+                      onCheckedChange={(checked) => updateWidgetPref(item.key, checked)}
+                    />
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            onClick={toggleTheme}
+            variant="ghost"
+            size="icon"
+            className="lumi-glass-pill size-8"
+            aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+          >
+            {resolvedTheme === "dark" ? (
+              <Sun className="size-4 text-amber-400" />
+            ) : (
+              <Moon className="size-4 text-zinc-700" />
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* Center section with logo and search */}
-      <div className="flex flex-col items-center justify-start flex-grow pt-5 md:pt-8">
+      {/* Main Centered Hero + Omnibox Search */}
+      <div className="mx-auto my-auto flex w-full max-w-3xl flex-col items-center gap-7 py-6">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8 md:mb-14"
+          transition={{ duration: 0.35 }}
+          className="flex flex-col items-center text-center"
         >
-          <div className="flex items-center justify-center gap-3 mb-2">
+          {widgetPrefs.clock ? (
+            <>
+              <div className="font-semibold tracking-tight text-5xl tabular-nums text-foreground md:text-6xl">
+                {formattedTime}
+              </div>
+              <div className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{getGreeting(now.getHours())}</span>
+                <span>·</span>
+                <span>{formattedDate}</span>
+              </div>
+            </>
+          ) : (
             <img
               src="/assets/logo.svg"
-              alt="Lumi Browser Logo"
-              className="object-contain rounded-2xl size-20 md:size-24 drop-shadow-[0_12px_32px_rgba(99,102,241,0.35)]"
+              alt="Lumi Browser"
+              className="size-20 rounded-2xl object-contain drop-shadow-[0_12px_32px_rgba(37,99,235,0.28)]"
             />
-          </div>
+          )}
         </motion.div>
 
+        {/* Unified Omnibox-New Search Bar */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          ref={containerRef}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="w-[400px] sm:w-[600px] px-3 sm:px-0 relative"
-          ref={searchRef}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          className="relative w-full max-w-2xl"
         >
-          <Command
-            className="bg-transparent !rounded-none"
-            shouldFilter={false}
-            value={commandValue}
-            onValueChange={setCommandValue}
-            loop
-          >
-            <div className="relative">
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 50)}
-                placeholder="Search or enter URL..."
-                className={cn(
-                  "w-full h-10 md:h-12 py-2 md:py-3 px-4 md:px-6 text-base md:text-lg rounded-2xl md:rounded-3xl",
-                  "outline-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white",
-                  showSuggestions && matches.length > 0 && "!rounded-b-none border-b-0"
-                )}
-                autoFocus
-              />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                <Search className="size-5 md:size-6 mr-2" />
-              </div>
-            </div>
-
-            {showSuggestions && matches.length > 0 && (
-              <div
-                className={cn(
-                  "absolute top-full left-0 right-0 bg-white dark:bg-gray-800 !rounded-t-none rounded-b-2xl overflow-hidden z-elevated",
-                  "border border-gray-200 dark:border-gray-700 shadow-2xl"
-                )}
-              >
-                <CommandList className="max-h-[250px] md:max-h-[300px] overflow-y-auto">
-                  <CommandGroup>
-                    {matches.slice(0, MAX_SUGGESTIONS).map((match) => (
-                      <CommandItem
-                        key={match.destinationUrl}
-                        value={match.destinationUrl}
-                        onSelect={() => handleSuggestionSelect(match)}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleSuggestionSelect(match);
-                        }}
-                        className={cn(
-                          "px-4 md:px-6 py-2 md:py-3 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm md:text-base",
-                          "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-700"
-                        )}
-                      >
-                        <SuggestionIcon match={match} />
-                        <span className="text-gray-800 dark:text-white truncate">{match.contents}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </div>
+          <div
+            className={cn(
+              "lumi-glass-panel flex items-center gap-3 px-4 py-3 transition-shadow",
+              showSuggestions && suggestions.length > 0 && "rounded-b-none border-b-0 shadow-xl",
+              "focus-within:ring-2 focus-within:ring-primary/35"
             )}
-          </Command>
+          >
+            <Search className="size-5 shrink-0 text-primary" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onKeyDown={handleInputKeyDown}
+              placeholder="Search the web, open tabs, calculate math, convert units, or run commands..."
+              className="min-w-0 flex-1 bg-transparent text-base font-medium text-foreground placeholder:text-muted-foreground focus:outline-none caret-primary"
+              spellCheck={false}
+              autoComplete="off"
+              autoFocus
+            />
+            {copiedNotice && (
+              <span className="lumi-glass-pill shrink-0 bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                {copiedNotice}
+              </span>
+            )}
+          </div>
+
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="lumi-glass-panel absolute left-0 right-0 top-full z-elevated max-h-[340px] space-y-1 overflow-y-auto rounded-t-none border-t border-black/8 p-2 shadow-2xl dark:border-white/10">
+              {suggestions.map((suggestion, index) => (
+                <OmniboxSuggestionRow
+                  key={suggestionKey(suggestion, index)}
+                  suggestion={suggestion}
+                  index={index}
+                  selected={index === selectedIndex}
+                  onSelect={commitSuggestion}
+                />
+              ))}
+            </div>
+          )}
         </motion.div>
+
+        {widgetPrefs.quickLinks && <QuickLinks />}
+
+        <NewTabWidgetsGrid prefs={widgetPrefs} spaceId={activeSpace?.id} spaceName={activeSpace?.name} />
       </div>
 
-      {/* Quick Links at the bottom */}
-      <QuickLinks />
+      {/* Bottom Hint */}
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-center pt-2 text-[11px] text-muted-foreground">
+        <span>Press </span>
+        <kbd className="lumi-kbd mx-1 text-[10px]">⌘L</kbd>
+        <span> for Command Palette · </span>
+        <kbd className="lumi-kbd mx-1 text-[10px]">⌘⇧Z</kbd>
+        <span> for Focus Mode</span>
+      </div>
     </div>
   );
 }

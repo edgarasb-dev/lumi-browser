@@ -1,6 +1,7 @@
 import { MenuItemConstructorOptions } from "electron";
 import { getFocusedBrowserWindow, getFocusedWindow, getTab, getTabWcFromFocusedWindow } from "../helpers";
 import { toggleSidebar } from "@/ipc/browser/interface";
+import { fireFrontendAction } from "@/ipc/app/actions";
 import { getCurrentShortcut } from "@/modules/shortcuts";
 import { browserWindowsManager } from "@/controllers/windows-controller";
 import { readerModeController } from "@/controllers/reader-mode-controller";
@@ -37,6 +38,42 @@ export const createViewMenu = (): MenuItemConstructorOptions => ({
         const window = getFocusedBrowserWindow();
         if (window) {
           toggleSidebar(window);
+        }
+      }
+    },
+    {
+      label: "Toggle Focus / Zen Mode",
+      accelerator: getCurrentShortcut("browser.toggleZenMode"),
+      click: () => {
+        const window = getFocusedBrowserWindow();
+        if (window) {
+          window.sendMessageToCoreWebContents("actions:on-incoming", "toggle_zen_mode");
+        } else {
+          void fireFrontendAction("toggle_zen_mode");
+        }
+      }
+    },
+    {
+      label: "Toggle Split Side Panel",
+      accelerator: getCurrentShortcut("browser.toggleSidePanel"),
+      click: () => {
+        const window = getFocusedBrowserWindow();
+        if (window) {
+          window.sendMessageToCoreWebContents("actions:on-incoming", "toggle_side_panel");
+        } else {
+          void fireFrontendAction("toggle_side_panel");
+        }
+      }
+    },
+    {
+      label: "Capture Page Screenshot",
+      accelerator: getCurrentShortcut("tab.capturePage"),
+      click: () => {
+        const window = getFocusedBrowserWindow();
+        if (window) {
+          window.sendMessageToCoreWebContents("actions:on-incoming", "capture_region");
+        } else {
+          void fireFrontendAction("capture_region");
         }
       }
     },

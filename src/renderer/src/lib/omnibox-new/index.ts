@@ -15,6 +15,8 @@ function getSuggestionIdentity(suggestion: OmniboxSuggestion): string {
       return `open-tab:${suggestion.spaceId}:${suggestion.tabId}`;
     case "pedal":
       return `pedal:${suggestion.action}`;
+    case "instant-answer":
+      return `instant:${suggestion.kind}:${suggestion.copyValue}`;
   }
 }
 

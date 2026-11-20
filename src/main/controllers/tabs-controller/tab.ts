@@ -5,6 +5,7 @@ import {
 } from "@/saving/history/browsing-history";
 import { cacheFavicon } from "@/modules/favicons";
 import { FLAGS } from "@/modules/flags";
+import { extractOriginFromUrl, getSiteSettings } from "@/saving/site-settings";
 import { TypedEventEmitter } from "@/modules/typed-event-emitter";
 import { NavigationEntry, Session, WebContents, WebContentsView, WebPreferences } from "electron";
 import { Layer } from "@/controllers/windows-controller/layer-manager";
@@ -208,6 +209,8 @@ export class Tab extends TypedEventEmitter<TabEvents> {
   // Cached for nav history diff (avoids JSON.stringify every time)
   private lastNavHistoryLength: number = 0;
   private lastNavHistoryIndex: number = 0;
+  private smartDarkCssKey: string | null = null;
+  public hasMediaPlayback: boolean = false;
 
   // Coalescing flag for updateTabState — defers to microtask so rapid
   // webContents events (did-start-loading, did-navigate, title-updated, …)
@@ -443,6 +446,48 @@ export class Tab extends TypedEventEmitter<TabEvents> {
   private static readonly WHITELISTED_PROTOCOLS = ["lumi-internal:", "lumi:"];
   private static readonly COLOR_TRANSPARENT = "#00000000";
   private static readonly COLOR_BACKGROUND = "#ffffffff";
+  private static readonly SMART_DARK_CSS = `
+    html {
+      filter: invert(0.9) hue-rotate(180deg) !important;
+      background-color: #101116 !important;
+    }
+    img, video, picture, canvas, svg image, [style*="background-image"] {
+      filter: invert(1) hue-rotate(180deg) !important;
+    }
+  `;
+
+  public async setSmartDarkCss(enabled: boolean): Promise<void> {
+    if (!this.webContents || this.webContents.isDestroyed()) {
+      this.smartDarkCssKey = null;
+      return;
+    }
+
+    if (this.smartDarkCssKey) {
+      await this.webContents.removeInsertedCSS(this.smartDarkCssKey).catch(() => {});
+      this.smartDarkCssKey = null;
+    }
+
+    if (enabled) {
+      this.smartDarkCssKey = await this.webContents.insertCSS(Tab.SMART_DARK_CSS).catch(() => null);
+    }
+  }
+
+  public async applySiteSettingsForCurrentUrl(): Promise<void> {
+    if (!this.webContents || this.webContents.isDestroyed()) return;
+
+    const currentUrl = this.webContents.getURL() || this.url;
+    const originInfo = extractOriginFromUrl(currentUrl);
+    if (!originInfo) {
+      this.webContents.setZoomFactor(1);
+      await this.setSmartDarkCss(false);
+      return;
+    }
+
+    const originSettings = await getSiteSettings(this.profileId, originInfo.origin);
+    if (!this.webContents || this.webContents.isDestroyed()) return;
+    this.webContents.setZoomFactor(originSettings.zoomFactor);
+    await this.setSmartDarkCss(originSettings.smartDarkMode);
+  }
 
   /**
    * Applies the correct background color based on the current URL.
@@ -502,15 +547,28 @@ export class Tab extends TypedEventEmitter<TabEvents> {
       });
     });
 
-    // Set zoom level limits when webContents is ready
+    // Set zoom level limits and apply per-origin zoom / Night Shade
     webContents.on("did-finish-load", () => {
       webContents.setVisualZoomLevelLimits(1, 5);
       this.recordBrowsingHistoryFromWebContents(webContents);
+      void this.applySiteSettingsForCurrentUrl();
+    });
+
+    webContents.on("did-start-navigation", (_event, _url, _isInPlace, isMainFrame) => {
+      if (isMainFrame) {
+        this.smartDarkCssKey = null;
+        this.hasMediaPlayback = false;
+      }
+    });
+
+    webContents.on("media-started-playing", () => {
+      this.hasMediaPlayback = true;
     });
 
     webContents.on("did-navigate-in-page", (_event, url, isMainFrame) => {
       if (!isMainFrame) return;
       this.recordBrowsingHistoryFromWebContents(webContents, url);
+      void this.applySiteSettingsForCurrentUrl();
     });
 
     // Note: Fullscreen listeners are set up by TabLifecycleManager

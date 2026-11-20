@@ -1,17 +1,64 @@
 import { BaseWindow } from "@/controllers/windows-controller/types/base";
 import { sessionsController } from "@/controllers/sessions-controller";
-import { BrowserWindow, nativeTheme } from "electron";
+import { getDatastore } from "@/saving/datastore";
+import { BrowserWindow, nativeTheme, screen } from "electron";
+
+interface SettingsWindowBounds {
+  width: number;
+  height: number;
+  x?: number;
+  y?: number;
+}
+
+const DEFAULT_WIDTH = 940;
+const DEFAULT_HEIGHT = 680;
+const MIN_WIDTH = 820;
+const MIN_HEIGHT = 600;
+
+const settingsWindowStore = getDatastore("settings-window");
+let cachedBounds: SettingsWindowBounds | null = null;
+
+function clampBoundsToDisplay(raw: Partial<SettingsWindowBounds>): SettingsWindowBounds {
+  const width = Math.max(MIN_WIDTH, typeof raw.width === "number" ? Math.round(raw.width) : DEFAULT_WIDTH);
+  const height = Math.max(MIN_HEIGHT, typeof raw.height === "number" ? Math.round(raw.height) : DEFAULT_HEIGHT);
+
+  if (typeof raw.x === "number" && typeof raw.y === "number") {
+    const display = screen.getDisplayMatching({ x: raw.x, y: raw.y, width, height });
+    const area = display.workArea;
+    const clampedWidth = Math.min(width, area.width);
+    const clampedHeight = Math.min(height, area.height);
+    const x = Math.min(Math.max(raw.x, area.x), area.x + area.width - clampedWidth);
+    const y = Math.min(Math.max(raw.y, area.y), area.y + area.height - clampedHeight);
+    return { width: clampedWidth, height: clampedHeight, x, y };
+  }
+
+  return { width, height };
+}
+
+void settingsWindowStore
+  .get<SettingsWindowBounds>("bounds")
+  .then((saved) => {
+    if (saved) cachedBounds = saved;
+  })
+  .catch(() => {});
 
 export class SettingsWindow extends BaseWindow {
   constructor() {
+    const initial = cachedBounds
+      ? clampBoundsToDisplay(cachedBounds)
+      : { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+    const hasPos = typeof initial.x === "number" && typeof initial.y === "number";
+
     const browserWindow = new BrowserWindow({
       title: "Lumi Settings",
-      width: 880,
-      minWidth: 800,
-      height: 640,
-      minHeight: 580,
+      width: initial.width,
+      minWidth: MIN_WIDTH,
+      height: initial.height,
+      minHeight: MIN_HEIGHT,
+      x: initial.x,
+      y: initial.y,
 
-      center: true,
+      center: !hasPos,
       show: false,
       frame: false,
       roundedCorners: true,
@@ -49,6 +96,52 @@ export class SettingsWindow extends BaseWindow {
     });
 
     super("settings", browserWindow, { deferShowUntilAfterLoad: true });
+
+    // Apply persisted bounds if cache wasn't ready at constructor invocation.
+    if (!cachedBounds) {
+      void settingsWindowStore
+        .get<SettingsWindowBounds>("bounds")
+        .then((saved) => {
+          if (!saved || this.destroyed || browserWindow.isDestroyed()) return;
+          cachedBounds = saved;
+          const clamped = clampBoundsToDisplay(saved);
+          browserWindow.setBounds(clamped);
+          if (typeof clamped.x !== "number") browserWindow.center();
+        })
+        .catch(() => {});
+    }
+
+    let saveBoundsTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleSaveBounds = () => {
+      if (this.destroyed || browserWindow.isDestroyed() || browserWindow.isMinimized()) return;
+      if (saveBoundsTimer) clearTimeout(saveBoundsTimer);
+      saveBoundsTimer = setTimeout(() => {
+        if (this.destroyed || browserWindow.isDestroyed()) return;
+        const b = browserWindow.getBounds();
+        cachedBounds = b;
+        void settingsWindowStore.set("bounds", b).catch(() => {});
+      }, 250);
+    };
+
+    browserWindow.on("resize", scheduleSaveBounds);
+    browserWindow.on("move", scheduleSaveBounds);
+    browserWindow.on("closed", () => {
+      if (saveBoundsTimer) clearTimeout(saveBoundsTimer);
+    });
+
+    // Support native Cmd/Ctrl+W close inside Settings window.
+    browserWindow.webContents.on("before-input-event", (event, input) => {
+      if (
+        input.type === "keyDown" &&
+        (input.meta || input.control) &&
+        !input.shift &&
+        !input.alt &&
+        input.key.toLowerCase() === "w"
+      ) {
+        event.preventDefault();
+        browserWindow.close();
+      }
+    });
 
     // Wait for default session (and its protocol handlers) to be ready
     // before loading the lumi-internal:// URL, matching the pattern used

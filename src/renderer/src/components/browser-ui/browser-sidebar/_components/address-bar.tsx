@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
-import { SearchIcon } from "lucide-react";
+import { Lock, SearchIcon } from "lucide-react";
 import { memo, useCallback, useRef, type MouseEvent } from "react";
 import { useAddressUrl, useFocusedTabId } from "@/components/providers/tabs-provider";
 import { simplifyUrl } from "@/lib/url";
 import { PinnedBrowserActions } from "./pinned-browser-actions";
 import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
 import { BrowserActionList } from "@/components/browser-ui/browser-sidebar/_components/browser-action-list";
-import { AdblockShield } from "./adblock-shield";
+import { SiteControlsButton } from "./site-controls-popover";
 import { FavouriteButton } from "./favourite-button";
 import { ReaderButton } from "./reader-button";
 import { useSpaces } from "@/components/providers/spaces-provider";
@@ -22,6 +22,7 @@ export const AddressBar = memo(function AddressBar() {
   const isPopupWindow = windowType === "popup";
   const simplifiedUrl = simplifyUrl(addressUrl);
   const isPlaceholder = !simplifiedUrl;
+  const isHttps = addressUrl.startsWith("https://");
 
   const { handleMouseDown, hasDraggedRef } = useWindowDrag({
     shouldIgnoreTarget: (target) => {
@@ -78,21 +79,27 @@ export const AddressBar = memo(function AddressBar() {
       onClick={handleClick}
       className={cn(
         "w-full min-w-0 h-9 rounded-xl select-none",
-        "bg-black/10 dark:bg-white/15",
-        !isPopupWindow && "hover:bg-black/15 dark:hover:bg-white/20",
-        "transition-[background-color] duration-100",
-        "flex items-center p-2 px-3 gap-1 overflow-hidden cursor-default",
-        isPlaceholder ? "text-black/50 dark:text-white/50" : "text-black/80 dark:text-white/80"
+        "bg-white/55 dark:bg-white/[0.11] backdrop-blur-md",
+        "border border-black/[0.08] dark:border-white/[0.14]",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+        !isPopupWindow && "hover:bg-white/75 dark:hover:bg-white/[0.16]",
+        "transition-[background-color,border-color] duration-150",
+        "flex items-center px-2.5 gap-1.5 overflow-hidden cursor-default",
+        isPlaceholder ? "text-black/50 dark:text-white/50" : "text-black/85 dark:text-white/90"
       )}
     >
-      {isPlaceholder && <SearchIcon strokeWidth={2} className="h-3.5 shrink-0" />}
-      <p className={cn("text-sm font-medium min-w-0 flex-1 truncate")}>
+      {isPlaceholder ? (
+        <SearchIcon strokeWidth={2} className="size-3.5 shrink-0 opacity-75" />
+      ) : isHttps ? (
+        <Lock className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+      ) : null}
+      <p className={cn("text-[13px] font-medium min-w-0 flex-1 truncate")}>
         {isPlaceholder ? "Search or Enter URL..." : simplifiedUrl}
       </p>
       <div className="ml-auto flex items-center gap-0.5 shrink-0 remove-app-drag address-bar-actions">
         <ReaderButton />
         <FavouriteButton />
-        <AdblockShield />
+        <SiteControlsButton />
         <PinnedBrowserActions />
         <div>
           <BrowserActionList />

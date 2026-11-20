@@ -23,7 +23,7 @@ class SessionsController {
 
     // Register protocols and callbacks
     registerProtocolsWithSession(profileSession, ["lumi", "lumi-external"]);
-    registerHandlersWithSession(profileSession);
+    registerHandlersWithSession(profileSession, profileId);
 
     // Register Preload Script, Network Intercept Rules, and Download tracking
     registerPreloadScripts(profileSession);

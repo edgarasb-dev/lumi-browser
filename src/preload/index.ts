@@ -52,14 +52,13 @@ import { LumiReaderAPI } from "~/lumi/interfaces/browser/reader";
 import type { ReaderPreferences, ReaderTabState } from "~/types/reader";
 import { LumiDownloadsAPI } from "~/lumi/interfaces/browser/downloads";
 import type { DownloadEvent, DownloadItemData } from "~/types/downloads";
-import { LumiSafariSyncAPI } from "~/lumi/interfaces/settings/safari-sync";
-import type {
-  ICloudSyncConfig,
-  LocalCompanionConfig,
-  SafariImportOptions,
-  SafariLiveSyncConfig,
-  SafariSyncState
-} from "~/types/safari-sync";
+import { LumiSiteControlsAPI } from "~/lumi/interfaces/browser/site-controls";
+import type { SitePermissionDecision, SitePermissionKey } from "~/types/site-controls";
+import { LumiMediaAPI } from "~/lumi/interfaces/browser/media";
+import type { MediaControlAction } from "~/types/media";
+import { LumiSnapshotsAPI } from "~/lumi/interfaces/browser/snapshots";
+import { LumiSidePanelAPI, type CompanionWebState } from "~/lumi/interfaces/browser/side-panel";
+import { LumiCaptureAPI, type CaptureRect } from "~/lumi/interfaces/browser/capture";
 
 // const isIFrame = !process.isMainFrame;
 
@@ -759,8 +758,14 @@ const searchEnginesAPI: LumiSearchEnginesAPI = {
 
 // WINDOWS API //
 const windowsAPI: LumiWindowsAPI = {
-  openSettingsWindow: () => {
-    return ipcRenderer.send("settings:open");
+  openSettingsWindow: (section?: string) => {
+    return ipcRenderer.send("settings:open", section);
+  },
+  consumePendingSettingsSection: () => {
+    return ipcRenderer.invoke("settings:consume-pending-section");
+  },
+  onSettingsSectionNavigate: (callback: (section: string) => void) => {
+    return listenOnIPCChannel("settings:navigate-section", callback);
   },
   closeSettingsWindow: () => {
     return ipcRenderer.send("settings:close");
@@ -838,6 +843,9 @@ const actionsAPI: LumiActionsAPI = {
   },
   onIncomingAction: (callback: (action: string) => void) => {
     return listenOnIPCChannel("actions:on-incoming", callback);
+  },
+  emitAction: (action: string) => {
+    ipcRenderer.send("actions:emit-incoming", action);
   }
 };
 
@@ -873,6 +881,12 @@ const contentBlockerAPI: LumiContentBlockerAPI = {
   },
   toggleDomainWhitelist: async (domain: string, whitelisted?: boolean) => {
     return ipcRenderer.invoke("content-blocker:toggle-domain", domain, whitelisted);
+  },
+  setFocusBlocklist: async (active: boolean, domains?: string[]) => {
+    return ipcRenderer.invoke("content-blocker:set-focus-blocklist", active, domains);
+  },
+  getFocusBlocklist: async () => {
+    return ipcRenderer.invoke("content-blocker:get-focus-blocklist");
   },
   onStatsUpdated: (callback) => {
     return listenOnIPCChannel("content-blocker:stats-updated", callback);
@@ -969,82 +983,92 @@ const downloadsAPI: LumiDownloadsAPI = {
   }
 };
 
-// SAFARI & SYNC API //
-const safariSyncAPI: LumiSafariSyncAPI = {
-  getState: async () => {
-    return ipcRenderer.invoke("safari-sync:get-state");
+// SITE CONTROLS API //
+const siteControlsAPI: LumiSiteControlsAPI = {
+  getForTab: async (tabId: number) => {
+    return ipcRenderer.invoke("site-controls:get-for-tab", tabId);
   },
-  onStateChanged: (callback: (state: SafariSyncState) => void) => {
-    return listenOnIPCChannel("safari-sync:on-state-changed", callback);
+  setZoom: async (tabId: number, zoomFactor: number) => {
+    return ipcRenderer.invoke("site-controls:set-zoom", tabId, zoomFactor);
   },
-  discoverSafari: async (customBookmarksFilePath?: string) => {
-    return ipcRenderer.invoke("safari-sync:discover-safari", customBookmarksFilePath);
+  setSmartDarkMode: async (tabId: number, enabled: boolean) => {
+    return ipcRenderer.invoke("site-controls:set-smart-dark", tabId, enabled);
   },
-  pickBookmarksFile: async () => {
-    return ipcRenderer.invoke("safari-sync:pick-bookmarks-file");
+  setPermission: async (tabId: number, permission: SitePermissionKey, decision: SitePermissionDecision) => {
+    return ipcRenderer.invoke("site-controls:set-permission", tabId, permission, decision);
   },
-  importFromSafari: async (options: SafariImportOptions) => {
-    return ipcRenderer.invoke("safari-sync:import-from-safari", options);
+  clearSiteData: async (tabId: number) => {
+    return ipcRenderer.invoke("site-controls:clear-site-data", tabId);
   },
-  openInSafari: async (url: string) => {
-    return ipcRenderer.invoke("safari-sync:open-in-safari", url);
+  listProfileSiteSettings: async (profileId?: string) => {
+    return ipcRenderer.invoke("site-controls:list-profile", profileId);
   },
-  updateSafariLiveSync: async (updates: Partial<SafariLiveSyncConfig>) => {
-    return ipcRenderer.invoke("safari-sync:update-safari-live-sync", updates);
+  resetOriginSettings: async (profileId: string, origin: string) => {
+    return ipcRenderer.invoke("site-controls:reset-origin", profileId, origin);
+  }
+};
+
+// MEDIA API //
+const mediaAPI: LumiMediaAPI = {
+  getActiveTabs: async () => {
+    return ipcRenderer.invoke("media:get-active-tabs");
   },
-  syncSafariOpenTabsNow: async () => {
-    return ipcRenderer.invoke("safari-sync:sync-safari-tabs-now");
+  control: async (tabId: number, action: MediaControlAction) => {
+    return ipcRenderer.invoke("media:control", tabId, action);
+  }
+};
+
+// SNAPSHOTS API //
+const snapshotsAPI: LumiSnapshotsAPI = {
+  list: async (spaceId?: string) => {
+    return ipcRenderer.invoke("snapshots:list", spaceId);
   },
-  openMacPrivacySettings: async (pane: "automation" | "full-disk-access") => {
-    return ipcRenderer.invoke("safari-sync:open-mac-privacy-settings", pane);
+  save: async (spaceId: string, name?: string) => {
+    return ipcRenderer.invoke("snapshots:save", spaceId, name);
   },
-  revealApp: async () => {
-    return ipcRenderer.invoke("safari-sync:reveal-app");
+  restore: async (snapshotId: string, replaceExisting?: boolean) => {
+    return ipcRenderer.invoke("snapshots:restore", snapshotId, replaceExisting);
   },
-  updateICloudConfig: async (updates: Partial<ICloudSyncConfig>) => {
-    return ipcRenderer.invoke("safari-sync:update-icloud-config", updates);
+  remove: async (snapshotId: string) => {
+    return ipcRenderer.invoke("snapshots:remove", snapshotId);
+  }
+};
+
+// SPLIT SIDE PANEL API //
+const sidePanelAPI: LumiSidePanelAPI = {
+  setState: async (params) => {
+    return ipcRenderer.invoke("side-panel:set-state", params);
   },
-  setICloudPassphrase: async (passphrase: string) => {
-    return ipcRenderer.invoke("safari-sync:set-icloud-passphrase", passphrase);
+  navigate: async (url) => {
+    return ipcRenderer.invoke("side-panel:navigate", url);
   },
-  generateICloudPassphrase: async () => {
-    return ipcRenderer.invoke("safari-sync:generate-icloud-passphrase");
+  goBack: async () => {
+    return ipcRenderer.invoke("side-panel:go-back");
   },
-  revealICloudPassphrase: async () => {
-    return ipcRenderer.invoke("safari-sync:reveal-icloud-passphrase");
+  goForward: async () => {
+    return ipcRenderer.invoke("side-panel:go-forward");
   },
-  pickICloudDirectory: async () => {
-    return ipcRenderer.invoke("safari-sync:pick-icloud-directory");
+  reload: async () => {
+    return ipcRenderer.invoke("side-panel:reload");
   },
-  revealICloudDirectory: async () => {
-    return ipcRenderer.invoke("safari-sync:reveal-icloud-directory");
+  onStateUpdated: (callback: (state: CompanionWebState) => void) => {
+    return listenOnIPCChannel("side-panel:on-state", callback);
+  }
+};
+
+// PAGE CAPTURE API //
+const captureAPI: LumiCaptureAPI = {
+  captureVisible: async (rect?: CaptureRect) => {
+    return ipcRenderer.invoke("capture:visible", rect);
   },
-  syncICloudNow: async () => {
-    return ipcRenderer.invoke("safari-sync:sync-icloud-now");
+  captureFullPage: async () => {
+    return ipcRenderer.invoke("capture:full-page");
   },
-  openRemoteDeviceTab: async (url: string, spaceId?: string) => {
-    return ipcRenderer.invoke("safari-sync:open-remote-device-tab", url, spaceId);
+  copyDataUrl: async (dataUrl: string) => {
+    return ipcRenderer.invoke("capture:copy-data-url", dataUrl);
   },
-  openAllRemoteDeviceTabs: async (deviceId: string, createSpace?: boolean) => {
-    return ipcRenderer.invoke("safari-sync:open-all-remote-device-tabs", deviceId, createSpace);
-  },
-  updateCompanionConfig: async (updates: Partial<LocalCompanionConfig>) => {
-    return ipcRenderer.invoke("safari-sync:update-companion-config", updates);
-  },
-  regenerateCompanionPairing: async () => {
-    return ipcRenderer.invoke("safari-sync:regenerate-companion-pairing");
-  },
-  openInboxLink: async (linkId: string, spaceId?: string) => {
-    return ipcRenderer.invoke("safari-sync:open-inbox-link", linkId, spaceId);
-  },
-  saveInboxLinkToFavourites: async (linkId: string) => {
-    return ipcRenderer.invoke("safari-sync:save-inbox-link-to-favourites", linkId);
-  },
-  dismissInboxLink: async (linkId: string) => {
-    return ipcRenderer.invoke("safari-sync:dismiss-inbox-link", linkId);
-  },
-  clearInbox: async () => {
-    return ipcRenderer.invoke("safari-sync:clear-inbox");
+  savePng: async (dataUrl: string, suggestedFilename?: string) => {
+    return ipcRenderer.invoke("capture:save-png", dataUrl, suggestedFilename);
   }
 };
 
@@ -1083,6 +1107,14 @@ const lumiAPI: typeof lumi = {
   favourites: wrapAPI(favouritesAPI, "browser"),
   reader: wrapAPI(readerAPI, "browser"),
   downloads: wrapAPI(downloadsAPI, "browser"),
+  siteControls: wrapAPI(siteControlsAPI, "browser", {
+    listProfileSiteSettings: "app",
+    resetOriginSettings: "app"
+  }),
+  media: wrapAPI(mediaAPI, "browser"),
+  snapshots: wrapAPI(snapshotsAPI, "browser"),
+  sidePanel: wrapAPI(sidePanelAPI, "browser"),
+  capture: wrapAPI(captureAPI, "browser"),
 
   // Session APIs
   profiles: wrapAPI(profilesAPI, "session", {
@@ -1095,7 +1127,6 @@ const lumiAPI: typeof lumi = {
   // Settings APIs
   settings: wrapAPI(settingsAPI, "settings"),
   searchEngines: wrapAPI(searchEnginesAPI, "settings"),
-  safariSync: wrapAPI(safariSyncAPI, "settings"),
   openExternal: wrapAPI(openExternalAPI, "settings"),
   onboarding: wrapAPI(onboardingAPI, "settings")
 };

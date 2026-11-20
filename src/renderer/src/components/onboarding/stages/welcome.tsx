@@ -1,60 +1,76 @@
 import { OnboardingAdvanceCallback } from "@/components/onboarding/main";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Layers, Shield, Sparkles } from "lucide-react";
+
+const HIGHLIGHTS = [
+  { icon: Layers, label: "Spaces & Split View" },
+  { icon: Shield, label: "Built-in Privacy Shield" },
+  { icon: Sparkles, label: "Liquid Glass Workspace" }
+];
 
 export function OnboardingWelcome({ advance }: { advance: OnboardingAdvanceCallback }) {
   return (
     <>
-      {/* Logo */}
       <motion.div
         className="relative z-elevated mb-6"
-        initial={{ scale: 0.6, opacity: 0 }}
+        initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        exit={{ scale: 0.85, opacity: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        <img
-          src="/assets/logo.svg"
-          alt="Lumi Browser"
-          className="size-28 rounded-2xl drop-shadow-[0_12px_30px_rgba(99,102,241,0.4)] object-contain"
-        />
+        <div className="flex size-28 items-center justify-center rounded-3xl border border-white/15 bg-white/8 p-3 shadow-[0_20px_50px_rgba(37,99,235,0.35)] backdrop-blur-2xl">
+          <img src="/assets/logo.svg" alt="Lumi Browser" className="size-full rounded-2xl object-contain" />
+        </div>
       </motion.div>
 
-      {/* Content */}
       <motion.div
-        className="relative z-elevated text-center max-w-2xl px-4"
-        initial={{ opacity: 0, y: 20 }}
+        className="relative z-elevated max-w-2xl px-4 text-center"
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+        exit={{ opacity: 0, y: 16 }}
+        transition={{ duration: 0.45, delay: 0.1, ease: "easeOut" }}
       >
-        <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+        <h1 className="mb-4 text-5xl font-bold tracking-tight text-white md:text-6xl">
           Welcome to
           <br />
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-sky-300 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
             Lumi Browser
           </span>
         </h1>
-        <p className="text-gray-400 text-lg max-w-md mx-auto">
-          {"Let's get you set up. This will only take a moment."}
+        <p className="mx-auto max-w-md text-base text-slate-300/90 md:text-lg">
+          A calm, native-feeling workspace built for clarity, focus, and speed.
         </p>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {HIGHLIGHTS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <span
+                key={item.label}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/7 px-3 py-1 text-xs font-medium text-slate-200 backdrop-blur-md"
+              >
+                <Icon className="size-3.5 text-sky-400" />
+                {item.label}
+              </span>
+            );
+          })}
+        </div>
       </motion.div>
 
-      {/* Button */}
-      <div className="mt-10">
+      <div className="mt-9">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.45, delay: 0.22, ease: "easeOut" }}
         >
           <Button
             onClick={advance}
-            className="cursor-pointer px-10 py-6 text-lg bg-[#0066FF] hover:bg-[#0055DD] text-white border border-[#0066FF]/50 gap-2"
+            className="cursor-pointer gap-2 rounded-xl border border-blue-400/40 bg-[#2563EB] px-9 py-6 text-base font-medium text-white shadow-[0_12px_32px_rgba(37,99,235,0.45)] transition hover:bg-[#1D4ED8]"
           >
             Get Started
-            <ArrowRight className="h-5 w-5" />
+            <ArrowRight className="size-5" />
           </Button>
         </motion.div>
       </div>

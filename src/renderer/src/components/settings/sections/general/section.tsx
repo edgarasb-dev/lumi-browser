@@ -1,14 +1,20 @@
+import { useSettingsNavigation } from "@/components/settings/settings-layout";
 import { BasicSettingsCards } from "@/components/settings/sections/general/basic-settings-cards";
+import { SettingsSectionHeader } from "@/components/settings/components/setting-row";
+import { SlidersHorizontal } from "lucide-react";
 
 export function GeneralSettings() {
+  const { highlightedRowId } = useSettingsNavigation();
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">General</h2>
-        <p className="text-muted-foreground">{"Manage your browser's general settings"}</p>
-      </div>
+      <SettingsSectionHeader
+        title="General"
+        description="Manage updates, default browser status, background tab performance, and experimental tools."
+        icon={<SlidersHorizontal className="size-4" />}
+      />
 
-      <BasicSettingsCards />
+      <BasicSettingsCards highlightedRowId={highlightedRowId} />
     </div>
   );
 }

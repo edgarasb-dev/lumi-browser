@@ -17,7 +17,6 @@ import {
 } from "@/controllers/tabs-controller/tab-sync";
 import { pinTabToSpace } from "@/controllers/pinned-tabs-controller/actions";
 import { getCurrentShortcut } from "@/modules/shortcuts";
-import { isHttpOrHttpsUrl, isSafariInstalled, openUrlInSafari } from "@/modules/safari-sync/safari-bridge";
 
 // IPC Handlers //
 function getWindowTabsData(window: BrowserWindow) {
@@ -530,17 +529,6 @@ ipcMain.on("tabs:show-context-menu", async (event, tabId: number) => {
         label: "Close Glance",
         click: () => {
           tabsController.dismissGlance(existingGroup.groupId, false);
-        }
-      })
-    );
-  }
-
-  if (process.platform === "darwin" && isSafariInstalled() && isHttpOrHttpsUrl(tab.url)) {
-    contextMenu.append(
-      new MenuItem({
-        label: "Open in Safari",
-        click: () => {
-          void openUrlInSafari(tab.url);
         }
       })
     );

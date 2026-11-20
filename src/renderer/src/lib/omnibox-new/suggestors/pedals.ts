@@ -49,6 +49,41 @@ const PEDALS = [
     triggers: ["clear history", "clear browsing data", "delete history", "clear cache"],
     action: "clear_browsing_data",
     description: "Clear Browsing Data"
+  },
+  {
+    triggers: ["bangs", "search shortcuts", "search bangs"],
+    action: "open_bangs",
+    description: "Explore Search Bangs"
+  },
+  {
+    triggers: ["zen mode", "focus mode", "distraction free", "toggle focus"],
+    action: "toggle_zen_mode",
+    description: "Toggle Focus / Zen Mode"
+  },
+  {
+    triggers: ["side panel", "toggle side panel", "scratchpad panel", "companion web panel"],
+    action: "toggle_side_panel",
+    description: "Toggle Split Side Panel"
+  },
+  {
+    triggers: ["screenshot", "capture region", "capture area", "screen capture"],
+    action: "capture_region",
+    description: "Capture Area Screenshot"
+  },
+  {
+    triggers: ["full page screenshot", "capture full page", "scrolling screenshot"],
+    action: "capture_full_page",
+    description: "Capture Full Page"
+  },
+  {
+    triggers: ["recently closed", "reopen closed tabs", "closed tabs"],
+    action: "recently_closed",
+    description: "Recently Closed Tabs"
+  },
+  {
+    triggers: ["save snapshot", "workspace snapshot", "snapshots"],
+    action: "save_snapshot",
+    description: "Workspace Snapshots"
   }
 ] satisfies Pedal[];
 

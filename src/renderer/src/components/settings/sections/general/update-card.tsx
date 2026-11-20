@@ -21,14 +21,9 @@ import {
   XCircle
 } from "lucide-react";
 import { useAppUpdates } from "@/components/providers/app-updates-provider";
-import { cn } from "@/lib/utils";
+import { SettingsRow } from "@/components/settings/components/setting-row";
 
-interface UpdateState {
-  currentVersion: string;
-  dialogOpen: boolean;
-}
-
-export function UpdateCard() {
+export function UpdateCard({ highlighted = false }: { highlighted?: boolean }) {
   const {
     updateStatus,
     isCheckingForUpdates,
@@ -41,34 +36,25 @@ export function UpdateCard() {
     openDownloadPage
   } = useAppUpdates();
 
-  const [state, setState] = useState<UpdateState>({
-    currentVersion: "-", // Will be fetched
-    dialogOpen: false
-  });
+  const [currentVersion, setCurrentVersion] = useState("-");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    const getAppInfo = async () => {
-      try {
-        const appInfo = await lumi.app.getAppInfo();
-        setState((prev) => ({ ...prev, currentVersion: appInfo.app_version }));
-      } catch (error) {
-        console.error("Failed to get app info:", error);
-        setState((prev) => ({ ...prev, currentVersion: "N/A" }));
-      }
-    };
-    getAppInfo();
+    lumi.app
+      .getAppInfo()
+      .then((info) => setCurrentVersion(info.app_version))
+      .catch(() => setCurrentVersion("N/A"));
   }, []);
 
   useEffect(() => {
     if (!updateStatus && isAutoUpdateSupported) {
-      // Only auto-check if supported
       checkForUpdates();
     }
   }, [checkForUpdates, updateStatus, isAutoUpdateSupported]);
 
   const handleInstallUpdate = async () => {
     const success = await installUpdate();
-    setState((prev) => ({ ...prev, dialogOpen: false }));
+    setDialogOpen(false);
     if (!success) {
       openDownloadPage();
     }
@@ -84,84 +70,71 @@ export function UpdateCard() {
   const hasError = Boolean(updateStatus?.error);
   const isUpToDate = hasChecked && !hasUpdate && !hasError && !isCheckingForUpdates && !isDownloadingUpdate;
 
-  const renderStatusIconAndText = () => {
+  const getStatusMeta = () => {
     if (isCheckingForUpdates) {
-      return (
-        <>
-          <RefreshCw className="h-5 w-5 mr-2 animate-spin text-muted-foreground" />{" "}
-          <span className="text-sm text-muted-foreground">Checking for updates...</span>
-        </>
-      );
+      return {
+        icon: <RefreshCw className="size-4 animate-spin text-primary" />,
+        label: "Checking for Updates...",
+        description: `Installed version: v${currentVersion}`
+      };
     }
     if (downloadFailed) {
-      return (
-        <>
-          <XCircle className="h-5 w-5 mr-2 text-destructive" />{" "}
-          <span className="text-sm text-destructive">Download failed for v{availableVersion}</span>
-        </>
-      );
+      return {
+        icon: <XCircle className="size-4 text-destructive" />,
+        label: `Download failed for v${availableVersion}`,
+        description: `Installed version: v${currentVersion}`
+      };
     }
     if (isDownloadingUpdate) {
-      return (
-        <>
-          <ArrowDownToLine className="h-5 w-5 mr-2 text-primary" />{" "}
-          <span className="text-sm text-primary">Downloading v{availableVersion}...</span>
-        </>
-      );
+      return {
+        icon: <ArrowDownToLine className="size-4 text-primary" />,
+        label: `Downloading Lumi v${availableVersion} (${Math.round(updateProgress)}%)`,
+        description: `Installed version: v${currentVersion}`
+      };
     }
     if (isDownloaded) {
-      return (
-        <>
-          <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />{" "}
-          <span className="text-sm text-green-500">Update v{availableVersion} downloaded</span>
-        </>
-      );
+      return {
+        icon: <CheckCircle2 className="size-4 text-emerald-500" />,
+        label: `Lumi v${availableVersion} Ready to Install`,
+        description: `Currently running v${currentVersion}`
+      };
     }
     if (hasUpdate) {
-      return (
-        <>
-          <InfoIcon className="h-5 w-5 mr-2 text-primary" />{" "}
-          <span className="text-sm text-primary">Update available: v{availableVersion}</span>
-        </>
-      );
+      return {
+        icon: <InfoIcon className="size-4 text-primary" />,
+        label: `Lumi v${availableVersion} Available`,
+        description: `Currently running v${currentVersion}`
+      };
     }
     if (hasError) {
       const isNotFound = updateStatus?.error?.includes("404");
-      return (
-        <>
-          <AlertCircle className="h-5 w-5 mr-2 text-amber-500 shrink-0" />{" "}
-          <div className="flex flex-col">
-            <span className="text-sm text-amber-500 font-medium">Update check failed</span>
-            <span className="text-xs text-muted-foreground line-clamp-1" title={updateStatus?.error || undefined}>
-              {isNotFound
-                ? "Release manifest unavailable (a new build may still be uploading)"
-                : updateStatus?.error || "Network error"}
-            </span>
-          </div>
-        </>
-      );
+      return {
+        icon: <AlertCircle className="size-4 text-amber-500" />,
+        label: `Update Check Failed (v${currentVersion})`,
+        description: isNotFound
+          ? "Release manifest unavailable (a new build may still be uploading)"
+          : updateStatus?.error || "Network error"
+      };
     }
     if (isUpToDate) {
-      return (
-        <>
-          <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />{" "}
-          <span className="text-sm text-green-500">Lumi is up to date</span>
-        </>
-      );
+      return {
+        icon: <CheckCircle2 className="size-4 text-emerald-500" />,
+        label: `Lumi v${currentVersion} is Up to Date`,
+        description: "You have the latest stable release."
+      };
     }
-    return (
-      <>
-        <InfoIcon className="h-5 w-5 mr-2 text-muted-foreground" />{" "}
-        <span className="text-sm text-muted-foreground">Check for browser updates</span>
-      </>
-    );
+    return {
+      icon: <InfoIcon className="size-4 text-muted-foreground" />,
+      label: `Software Update (v${currentVersion})`,
+      description: "Check GitHub Releases for newer builds."
+    };
   };
 
-  const renderActionButton = () => {
+  const renderAction = () => {
     if (isCheckingForUpdates || isDownloadingUpdate || isInstallingUpdate) {
       return (
-        <Button variant="outline" size="sm" disabled className="min-w-[140px]">
-          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+        <Button variant="outline" size="sm" disabled>
+          <RefreshCw className="size-3.5 animate-spin" />
           {isInstallingUpdate ? "Installing..." : isDownloadingUpdate ? "Downloading..." : "Checking..."}
         </Button>
       );
@@ -169,20 +142,20 @@ export function UpdateCard() {
 
     if (downloadFailed) {
       return (
-        <Button variant="default" size="sm" onClick={downloadUpdate} className="min-w-[140px]">
-          <RefreshCw className="h-4 w-4 mr-2" /> Retry Download
+        <Button variant="default" size="sm" onClick={downloadUpdate}>
+          <RefreshCw className="size-3.5" /> Retry
         </Button>
       );
     }
 
     if (hasError) {
       return (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openDownloadPage} className="min-w-[90px]">
-            <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Releases
+        <div className="flex items-center gap-1.5">
+          <Button variant="outline" size="sm" onClick={openDownloadPage}>
+            <ExternalLink className="size-3.5" /> Releases
           </Button>
-          <Button variant="default" size="sm" onClick={checkForUpdates} className="min-w-[110px]">
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Try Again
+          <Button variant="default" size="sm" onClick={checkForUpdates}>
+            <RefreshCw className="size-3.5" /> Retry
           </Button>
         </div>
       );
@@ -190,31 +163,25 @@ export function UpdateCard() {
 
     if (isDownloaded) {
       return (
-        <Dialog open={state.dialogOpen} onOpenChange={(open) => setState((prev) => ({ ...prev, dialogOpen: open }))}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="default" size="sm" className="min-w-[140px]">
-              <ArrowUpCircle className="h-4 w-4" /> Install v{availableVersion}
+            <Button variant="default" size="sm">
+              <ArrowUpCircle className="size-3.5" /> Restart &amp; Install
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Install Update to v{availableVersion}?</DialogTitle>
+              <DialogTitle>Install Lumi v{availableVersion}?</DialogTitle>
               <DialogDescription>
-                The app will close and restart to complete the update. Any unsaved changes may be lost.
+                Lumi will quit cleanly, replace the app bundle, and relaunch v{availableVersion}.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="gap-2 mt-2">
-              <Button variant="outline" onClick={() => setState((prev) => ({ ...prev, dialogOpen: false }))}>
+            <DialogFooter className="mt-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Later
               </Button>
-              <Button onClick={handleInstallUpdate} disabled={isInstallingUpdate} className="flex items-center gap-2">
-                {isInstallingUpdate ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" /> Installing...
-                  </>
-                ) : (
-                  `Install v${availableVersion}`
-                )}
+              <Button onClick={handleInstallUpdate} disabled={isInstallingUpdate}>
+                {isInstallingUpdate ? "Installing..." : `Install v${availableVersion}`}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -224,139 +191,61 @@ export function UpdateCard() {
 
     if (hasUpdate && !isAutoUpdateSupported) {
       return (
-        <Button variant="default" size="sm" onClick={openDownloadPage} className="min-w-[140px]">
-          <ExternalLink className="h-4 w-4 mr-2" /> Download Manually
+        <Button variant="default" size="sm" onClick={openDownloadPage}>
+          <ExternalLink className="size-3.5" /> Download Manually
         </Button>
       );
     }
 
     if (hasUpdate && isAutoUpdateSupported) {
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Button variant="outline" size="sm" onClick={openDownloadPage} title="View Release on GitHub">
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="size-3.5" />
           </Button>
-          <Button variant="default" size="sm" onClick={downloadUpdate} className="min-w-[140px]">
-            <ArrowDownToLine className="h-4 w-4 mr-2" /> Download v{availableVersion}
+          <Button variant="default" size="sm" onClick={downloadUpdate}>
+            <ArrowDownToLine className="size-3.5" /> Download v{availableVersion}
           </Button>
         </div>
       );
     }
 
-    // Default: Up to date or initial state, allow manual check
     return (
-      <Button
-        variant={isUpToDate ? "outline" : "default"}
-        size="sm"
-        onClick={checkForUpdates}
-        className="min-w-[140px]"
-      >
-        <RefreshCw className="h-4 w-4 mr-2" /> {isUpToDate ? "Check Again" : "Check for Updates"}
+      <Button variant="outline" size="sm" onClick={checkForUpdates}>
+        <RefreshCw className="size-3.5" /> {isUpToDate ? "Check Again" : "Check Now"}
       </Button>
     );
   };
 
+  const statusMeta = getStatusMeta();
+
   return (
-    <div className="remove-app-drag rounded-2xl border border-border/50 p-6 bg-card/60 backdrop-blur-md text-card-foreground shadow-xs">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold tracking-tight text-foreground">Updates</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Current Version: {state.currentVersion}</p>
-      </div>
+    <div>
+      <SettingsRow
+        id="internal_updateCheck"
+        highlighted={highlighted}
+        icon={statusMeta.icon}
+        label={statusMeta.label}
+        description={statusMeta.description}
+      >
+        {renderAction()}
+      </SettingsRow>
 
-      <div className="space-y-4">
-        {/* Status and Action Button Row */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 border rounded-md bg-muted/30">
-          <div className="flex items-center flex-grow">{renderStatusIconAndText()}</div>
-          <div className="flex-shrink-0 self-stretch sm:self-center">{renderActionButton()}</div>
+      {isDownloadingUpdate && !downloadFailed && (
+        <div className="px-4 pb-3.5 pt-0.5 space-y-1">
+          <Progress value={updateProgress} className="w-full h-1.5" />
+          <div className="flex justify-end text-[11px] text-muted-foreground">{Math.round(updateProgress)}%</div>
         </div>
+      )}
 
-        {/* Download Progress */}
-        {isDownloadingUpdate && !downloadFailed && (
-          <div className="pt-2 px-1">
-            <Progress value={updateProgress} className="w-full h-2" />
-            <div className="flex justify-end text-xs text-muted-foreground mt-1">
-              <span>{Math.round(updateProgress)}%</span>
-            </div>
-          </div>
-        )}
-
-        {/* Update Available notification */}
-        {hasUpdate && !isDownloadingUpdate && !isDownloaded && (
-          <div className={cn("rounded-md border p-3 mt-4 text-xs", "bg-primary/10 border-primary/30 text-foreground")}>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <InfoIcon className="h-4 w-4 text-primary shrink-0" />
-                <span className="font-medium">A new version (v{availableVersion}) of Lumi is available!</span>
-              </div>
-              <Button
-                variant="link"
-                size="sm"
-                className="p-0 h-auto text-xs text-primary underline hover:no-underline shrink-0"
-                onClick={openDownloadPage}
-              >
-                Release Notes <ExternalLink className="h-3 w-3 ml-1 inline" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Error informative notice */}
-        {hasError && updateStatus?.error?.includes("404") && (
-          <div
-            className={cn(
-              "rounded-md border p-3 mt-4 text-xs",
-              "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
-            )}
-          >
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <div>
-                <span>
-                  The latest release manifest returned 404 Not Found. If a new release just started building, wait a few
-                  minutes for all platform assets to finish uploading and try again.
-                </span>
-                <div className="mt-1">
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 h-auto text-xs text-amber-700 dark:text-amber-400 underline hover:no-underline"
-                    onClick={openDownloadPage}
-                  >
-                    View GitHub Releases <ExternalLink className="h-3 w-3 ml-1 inline" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Platform not supported warning */}
-        {hasChecked && hasUpdate && !isAutoUpdateSupported && (
-          <div
-            className={cn(
-              "rounded-md border p-3 mt-4 text-sm",
-              "bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <div className="font-medium">Automatic updates are not available for this installation.</div>
-            </div>
-            <div className="mt-1.5 pl-7 text-xs">
-              Please download v{availableVersion} manually from GitHub Releases (on macOS, ensure Lumi.app is placed in
-              Applications).
-              <Button
-                variant="link"
-                size="sm"
-                className="p-0 h-auto ml-1 text-xs text-orange-700 dark:text-orange-400 hover:underline"
-                onClick={openDownloadPage}
-              >
-                Go to Downloads <ExternalLink className="h-3 w-3 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+      {hasChecked && hasUpdate && !isAutoUpdateSupported && (
+        <div className="mx-4 mb-3.5 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-2">
+          <span>Move Lumi.app into Applications on macOS to enable one-click auto-updates.</span>
+          <button type="button" onClick={openDownloadPage} className="font-medium underline shrink-0 cursor-pointer">
+            GitHub Releases
+          </button>
+        </div>
+      )}
     </div>
   );
 }

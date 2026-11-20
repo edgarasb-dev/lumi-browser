@@ -21,6 +21,7 @@ function suggestionLabel(suggestion: OmniboxSuggestion): string {
     case "website":
     case "open-tab":
     case "pedal":
+    case "instant-answer":
       return suggestion.title;
   }
 }
@@ -33,6 +34,8 @@ function suggestionValue(suggestion: OmniboxSuggestion): string {
       return suggestion.url;
     case "pedal":
       return suggestion.action;
+    case "instant-answer":
+      return suggestion.copyValue;
   }
 }
 

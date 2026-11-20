@@ -2,14 +2,28 @@
 import { windowsController } from "@/controllers/windows-controller";
 
 const settingsWindowManager = () => windowsController.settings;
+let pendingSection: string | null = null;
 
 export const settings = {
-  show: async () => {
-    const window = settingsWindowManager().getSingletonWindow();
-    await window.show();
+  show: async (section?: string) => {
+    if (section) {
+      pendingSection = section;
+    }
+    const existing = settingsWindowManager().getExistingSingletonWindow();
+    const window = existing ?? settingsWindowManager().getSingletonWindow();
+    if (existing && section) {
+      existing.sendMessage("settings:navigate-section", section);
+    }
+    await window.show(true);
+  },
+  consumePendingSection: () => {
+    const next = pendingSection;
+    pendingSection = null;
+    return next;
   },
   hide: () => {
-    const window = settingsWindowManager().getSingletonWindow();
+    const window = settingsWindowManager().getExistingSingletonWindow();
+    if (!window) return;
     window.destroy();
   },
   isVisible: () => {

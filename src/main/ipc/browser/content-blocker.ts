@@ -21,3 +21,11 @@ ipcMain.handle("content-blocker:is-domain-whitelisted", async (_event, domain: s
 ipcMain.handle("content-blocker:get-total-blocked", async () => {
   return await contentBlocker.getTotalBlocked();
 });
+
+ipcMain.handle("content-blocker:set-focus-blocklist", async (_event, active: boolean, domains?: string[]) => {
+  return contentBlocker.setFocusBlocklist(active, domains);
+});
+
+ipcMain.handle("content-blocker:get-focus-blocklist", async () => {
+  return contentBlocker.getFocusBlocklist();
+});

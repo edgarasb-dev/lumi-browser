@@ -45,6 +45,16 @@ export interface PageLayoutParams {
    * this to the top padding when computing page bounds.  Defaults to 0.
    */
   contentTopOffset: number;
+
+  /**
+   * Pixel width of the persistent right Split Side Panel when open.
+   */
+  rightPanelWidth?: number;
+
+  /**
+   * Whether the persistent right Split Side Panel is currently visible.
+   */
+  rightPanelVisible?: boolean;
 }
 
 export type WindowState = {

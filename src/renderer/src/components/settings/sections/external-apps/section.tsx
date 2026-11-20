@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Search, ShieldAlert, Loader2 } from "lucide-react";
+import { ChevronRight, Search, ShieldAlert, Loader2, BlocksIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { WebsiteFavicon } from "@/components/main/website-favicon";
 import { ExternalAppPermission } from "~/lumi/interfaces/settings/openExternal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SettingsGroup, SettingsSectionHeader } from "@/components/settings/components/setting-row";
 
 function PermissionItem({
   websiteUrl,
@@ -32,32 +33,29 @@ function PermissionItem({
   });
 
   return (
-    <div className="rounded-lg border bg-card text-card-foreground overflow-hidden transition-shadow hover:shadow-md">
+    <div>
       <div
-        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
         onClick={() => setExpanded(!expanded)}
         role="button"
         tabIndex={0}
-        onKeyPress={(e) => (e.key === "Enter" || e.key === " ") && setExpanded(!expanded)}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setExpanded(!expanded)}
       >
         <div className="flex items-center gap-3 min-w-0">
           <ChevronRight
             className={cn(
-              "h-5 w-5",
-              "text-muted-foreground flex-shrink-0 transition-transform duration-200",
+              "size-4 text-muted-foreground shrink-0 transition-transform duration-150",
               expanded && "rotate-90"
             )}
           />
-          <WebsiteFavicon url={websiteUrl} className="w-5 h-5 flex-shrink-0" />
+          <WebsiteFavicon url={websiteUrl} className="size-4 shrink-0" />
           <p className="font-medium text-sm truncate" title={websiteUrl}>
             {websiteUrl}
           </p>
         </div>
-        <div className="flex items-center ml-2 flex-shrink-0">
-          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-            {protocols.length} protocol{protocols.length > 1 ? "s" : ""}
-          </span>
-        </div>
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] text-muted-foreground shrink-0">
+          {protocols.length} protocol{protocols.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       <AnimatePresence initial={false}>
@@ -67,25 +65,22 @@ function PermissionItem({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="overflow-hidden border-t"
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="overflow-hidden border-t border-black/[0.05] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02]"
           >
-            <div className="p-4 space-y-3 bg-muted/20">
-              {protocols.map((protocol, index) => (
-                <motion.div
+            <div className="px-4 py-3 space-y-2">
+              {protocols.map((protocol) => (
+                <div
                   key={protocol}
-                  initial={{ opacity: 0, x: -15 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut", delay: index * 0.05 }}
-                  className="flex items-center justify-between p-3 rounded-md bg-background border shadow-sm"
+                  className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/70 dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08]"
                 >
-                  <span className="text-sm font-mono text-primary break-all" title={protocol}>
+                  <span className="text-xs font-mono text-primary break-all" title={protocol}>
                     {protocol}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
                       setConfirmDialog({ isOpen: true, protocol });
@@ -93,7 +88,7 @@ function PermissionItem({
                   >
                     Revoke
                   </Button>
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.div>
@@ -113,7 +108,7 @@ function PermissionItem({
               links?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setConfirmDialog({ isOpen: false, protocol: "" })}>
               Cancel
             </Button>
@@ -133,7 +128,7 @@ function PermissionItem({
   );
 }
 
-export function ExternalAppsSettings() {
+export function ExternalAppsSettings({ embedded = false }: { embedded?: boolean }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [permissions, setPermissions] = useState<ExternalAppPermission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -157,8 +152,8 @@ export function ExternalAppsSettings() {
       try {
         const success = await lumi.openExternal.unsetAlwaysOpenExternal(url, protocol);
         if (success) {
-          toast.success("Permission revoked!");
-          revalidatePermissions();
+          toast.success("Permission revoked.");
+          void revalidatePermissions();
         } else {
           toast.error("Failed to revoke permission.");
         }
@@ -171,7 +166,7 @@ export function ExternalAppsSettings() {
   );
 
   useEffect(() => {
-    revalidatePermissions();
+    void revalidatePermissions();
   }, [revalidatePermissions]);
 
   const groupedPermissions = permissions.reduce<Record<string, string[]>>((acc, { requestingURL, openingProtocol }) => {
@@ -189,70 +184,60 @@ export function ExternalAppsSettings() {
   );
 
   return (
-    <div className="space-y-6 remove-app-drag">
-      <div>
-        <h2 className="text-2xl font-semibold text-card-foreground">External Applications</h2>
-        <p className="text-muted-foreground">
-          Manage websites and the protocols they are allowed to open automatically.
-        </p>
-      </div>
+    <div className="space-y-5 remove-app-drag">
+      {!embedded && (
+        <SettingsSectionHeader
+          title="External Applications"
+          description="Review websites allowed to open desktop applications automatically."
+          icon={<BlocksIcon className="size-4" />}
+        />
+      )}
 
-      <div className="rounded-lg border bg-card text-card-foreground p-6 space-y-6">
-        <div className="space-y-1">
-          <h3 className="text-xl font-semibold tracking-tight">Protocol Permissions</h3>
-          <p className="text-sm text-muted-foreground">
-            Websites you have allowed to open external applications via specific protocols.
-          </p>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search by website or protocol..."
-            className="pl-9 w-full"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <SettingsGroup
+        title="External App Protocol Permissions"
+        description="Websites granted automatic launch access via custom protocols (e.g. zoommtg:, mailto:)."
+      >
+        <div className="p-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Filter by website or protocol..."
+              className="pl-8 h-8 text-xs"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center text-center py-12">
-            <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
-            <p className="text-muted-foreground">Loading permissions...</p>
+          <div className="flex flex-col items-center justify-center text-center py-10">
+            <Loader2 className="size-5 text-primary animate-spin mb-2" />
+            <p className="text-xs text-muted-foreground">Loading protocol permissions...</p>
           </div>
         ) : filteredWebsites.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center py-12">
-            <ShieldAlert className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="font-medium text-card-foreground">
-              {searchQuery ? "No matching permissions found" : "No permissions configured"}
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4">
+            <ShieldAlert className="size-7 text-muted-foreground/70 mb-2" />
+            <p className="text-sm font-medium text-foreground">
+              {searchQuery ? "No matching permissions found" : "No automatic app permissions saved"}
             </p>
             {!searchQuery && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Websites will ask for permission to open external links.
+              <p className="text-xs text-muted-foreground mt-1">
+                Websites will prompt before opening external desktop apps.
               </p>
             )}
           </div>
         ) : (
-          <div className="space-y-3">
-            {filteredWebsites.map((websiteUrl) => (
-              <PermissionItem
-                key={websiteUrl}
-                websiteUrl={websiteUrl}
-                protocols={groupedPermissions[websiteUrl]}
-                onRevoke={revokePermission}
-              />
-            ))}
-          </div>
+          filteredWebsites.map((websiteUrl) => (
+            <PermissionItem
+              key={websiteUrl}
+              websiteUrl={websiteUrl}
+              protocols={groupedPermissions[websiteUrl]}
+              onRevoke={revokePermission}
+            />
+          ))
         )}
-
-        <div className="border-t pt-4 mt-2">
-          <p className="text-xs text-muted-foreground">
-            Note: When you revoke a permission, the website will need to ask for permission again the next time it tries
-            to open that protocol.
-          </p>
-        </div>
-      </div>
+      </SettingsGroup>
     </div>
   );
 }

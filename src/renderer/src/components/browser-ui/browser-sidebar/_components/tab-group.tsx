@@ -204,11 +204,12 @@ const SidebarTab = memo(
           animate={{ scale: isPressed ? 0.99 : 1 }}
           transition={{ scale: { type: "spring", stiffness: 600, damping: 20 } }}
           className={cn(
-            "group/tab h-9 w-full rounded-lg overflow-hidden min-w-0",
-            "flex items-center gap-2 px-2",
-            "transition-[background-color]",
-            !isFocused && "hover:bg-black/10 dark:hover:bg-white/10",
-            isFocused && "bg-white/90 dark:bg-white/15"
+            "group/tab h-9 w-full rounded-xl overflow-hidden min-w-0",
+            "flex items-center gap-2 px-2.5",
+            "transition-[background-color,box-shadow] duration-150",
+            !isFocused && "hover:bg-black/[0.06] dark:hover:bg-white/[0.09]",
+            isFocused &&
+              "bg-white/92 dark:bg-white/[0.17] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] ring-1 ring-black/[0.06] dark:ring-white/[0.14]"
           )}
         >
           {/* Left side: favicon + audio + title */}

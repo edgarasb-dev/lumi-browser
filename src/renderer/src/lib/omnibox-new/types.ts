@@ -4,6 +4,7 @@ export type OmniboxSuggestionSource =
   | "search-provider"
   | "pedal"
   | "open-tab"
+  | "instant-answer"
   | "zero-suggest-open-tab"
   | "zero-suggest-history";
 
@@ -40,4 +41,21 @@ export interface PedalSuggestion extends OmniboxSuggestionBase {
   title: string;
 }
 
-export type OmniboxSuggestion = SearchSuggestion | WebsiteSuggestion | OpenTabSuggestion | PedalSuggestion;
+export type InstantAnswerKind = "math" | "unit" | "color" | "timezone" | "qr";
+
+export interface InstantAnswerSuggestion extends OmniboxSuggestionBase {
+  type: "instant-answer";
+  kind: InstantAnswerKind;
+  title: string;
+  subtitle: string;
+  copyValue: string;
+  hexPreview?: string;
+  qrValue?: string;
+}
+
+export type OmniboxSuggestion =
+  | SearchSuggestion
+  | WebsiteSuggestion
+  | OpenTabSuggestion
+  | PedalSuggestion
+  | InstantAnswerSuggestion;

@@ -3,9 +3,19 @@ import { IPCListener, WindowState } from "~/lumi/types";
 // API //
 export interface LumiWindowsAPI {
   /**
-   * Opens the settings window
+   * Opens the settings window (optionally focusing a specific section)
    */
-  openSettingsWindow: () => void;
+  openSettingsWindow: (section?: string) => void;
+
+  /**
+   * Consumes any pending section deep-link requested before Settings finished mounting
+   */
+  consumePendingSettingsSection: () => Promise<string | null>;
+
+  /**
+   * Listens for Settings section navigation requests from other windows
+   */
+  onSettingsSectionNavigate: IPCListener<[string]>;
 
   /**
    * Closes the settings window

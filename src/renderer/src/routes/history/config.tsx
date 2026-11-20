@@ -22,7 +22,7 @@ export const RouteConfig: RouteConfigType = {
   Providers: ({ children }: { children: ReactNode }) => {
     return (
       <HistoryQueryProvider>
-        <ThemeProvider forceTheme="dark">
+        <ThemeProvider>
           <NuqsProvider>{children}</NuqsProvider>
         </ThemeProvider>
       </HistoryQueryProvider>

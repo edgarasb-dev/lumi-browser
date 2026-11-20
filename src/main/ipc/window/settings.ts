@@ -4,12 +4,16 @@ import { getSettingValueById, setSettingValueById } from "@/saving/settings";
 import { settings } from "@/controllers/windows-controller/interfaces/settings";
 import { ipcMain } from "electron";
 
-ipcMain.on("settings:open", () => {
-  settings.show();
+ipcMain.on("settings:open", (_event, section?: string) => {
+  settings.show(section);
 });
 
 ipcMain.on("settings:close", () => {
   settings.hide();
+});
+
+ipcMain.handle("settings:consume-pending-section", () => {
+  return settings.consumePendingSection();
 });
 
 ipcMain.handle("settings:get-setting", (_event, settingId: string) => {

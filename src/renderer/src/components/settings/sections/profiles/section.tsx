@@ -1,9 +1,7 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { motion } from "motion/react";
 import type { Profile } from "~/lumi/interfaces/sessions/profiles";
 import type { Space } from "~/lumi/interfaces/sessions/spaces";
-import { Trash2, ArrowLeft, Settings, Globe, Save, Loader2, Plus, Box } from "lucide-react";
+import { Trash2, ArrowLeft, Settings, Globe, Save, Loader2, Plus, Box, UsersIcon, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,105 +12,77 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { SearchEnginesSettings } from "@/components/settings/sections/search/section";
+import { SettingsGroup, SettingsRow, SettingsSectionHeader } from "@/components/settings/components/setting-row";
 
-// ==============================
-// Profile Card Component
-// ==============================
-interface ProfileCardProps {
-  profile: Profile;
-  activateEdit: () => void;
-}
-
-function ProfileCard({ profile, activateEdit }: ProfileCardProps) {
+function ProfileRow({ profile, activateEdit }: { profile: Profile; activateEdit: () => void }) {
   return (
-    <motion.div
-      key={profile.id}
-      whileHover={{ scale: 1.02 }}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      className="flex items-center border rounded-lg p-4 cursor-pointer hover:border-primary/50"
-      onClick={() => activateEdit()}
+    <SettingsRow
+      icon={<UsersIcon className="size-4" />}
+      label={profile.name}
+      description={`ID: ${profile.id}`}
+      onClick={activateEdit}
     >
-      <div className="flex-1 min-w-0">
-        <h3 className="font-medium text-base truncate">{profile.name}</h3>
-        <p className="text-xs text-muted-foreground truncate">ID: {profile.id}</p>
-      </div>
-    </motion.div>
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        Configure
+        <ChevronRight className="size-3.5" />
+      </span>
+    </SettingsRow>
   );
 }
 
-// ==============================
-// Profile Editor Components
-// ==============================
-interface ProfileEditorProps {
-  profile: Profile;
-  onClose: () => void;
-  onDelete: () => void;
-  onProfilesUpdate: () => void;
-  navigateToSpaces?: (profileId: string) => void;
-  navigateToSpace?: (profileId: string, spaceId: string) => void;
-}
-
-// Basic Settings Tab Component
-interface BasicSettingsTabProps {
+function BasicSettingsTab({
+  profile,
+  editedProfile,
+  handleNameChange
+}: {
   profile: Profile;
   editedProfile: Profile;
   handleNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}
-
-function BasicSettingsTab({ profile, editedProfile, handleNameChange }: BasicSettingsTabProps) {
+}) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">Basic Information</CardTitle>
-        <CardDescription>{"Manage your profile's basic settings"}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="profile-name">Profile Name</Label>
-          <Input
-            id="profile-name"
-            value={editedProfile.name}
-            onChange={handleNameChange}
-            placeholder="Enter profile name"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Profile ID</Label>
-          <div className="p-2 bg-muted rounded-md text-sm">{profile.id}</div>
-        </div>
-      </CardContent>
-    </Card>
+    <SettingsGroup title="Profile Details">
+      <SettingsRow label="Profile Name" description="Shown when switching windows or creating spaces.">
+        <Input
+          id="profile-name"
+          value={editedProfile.name}
+          onChange={handleNameChange}
+          placeholder="Enter profile name"
+          className="w-56 h-8 text-xs"
+        />
+      </SettingsRow>
+      <SettingsRow label="Profile ID" description="Directory identifier used for isolated cookies & storage.">
+        <code className="text-[11px] font-mono text-muted-foreground bg-black/[0.04] dark:bg-white/[0.06] px-2 py-1 rounded-md border border-black/[0.05] dark:border-white/[0.08]">
+          {profile.id}
+        </code>
+      </SettingsRow>
+    </SettingsGroup>
   );
 }
 
-// Search Settings Tab Component
-function SearchSettingsTab() {
-  return <SearchEnginesSettings />;
-}
-
-// Spaces Tab Component
-interface SpacesTabProps {
+function SpacesTab({
+  profile,
+  spaces,
+  onRefreshSpaces,
+  navigateToSpace
+}: {
   profile: Profile;
   spaces: Space[];
   onRefreshSpaces: () => void;
   navigateToSpace?: (profileId: string, spaceId: string) => void;
-}
-
-function SpacesTab({ profile, spaces, onRefreshSpaces, navigateToSpace }: SpacesTabProps) {
+}) {
   const [isCreating, setIsCreating] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  // Handle space creation
   const handleCreateSpace = async () => {
     if (!newSpaceName.trim()) return;
 
     setIsCreating(true);
     try {
-      await lumi.spaces.createSpace(profile.id, newSpaceName);
+      await lumi.spaces.createSpace(profile.id, newSpaceName.trim());
       setNewSpaceName("");
       setCreateDialogOpen(false);
       onRefreshSpaces();
@@ -124,119 +94,109 @@ function SpacesTab({ profile, spaces, onRefreshSpaces, navigateToSpace }: Spaces
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div>
-          <CardTitle className="text-xl">Spaces</CardTitle>
-          <CardDescription>Manage spaces in this profile</CardDescription>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setCreateDialogOpen(true)} size="sm" className="gap-1">
-            <Plus className="h-4 w-4" /> New Space
+    <div className="space-y-4">
+      <SettingsGroup
+        title="Spaces in This Profile"
+        actions={
+          <Button onClick={() => setCreateDialogOpen(true)} size="sm" variant="outline" className="h-7 text-xs gap-1">
+            <Plus className="size-3.5" /> New Space
           </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
+        }
+      >
         {spaces.length === 0 ? (
-          <div className="text-center p-6 text-muted-foreground">
-            No spaces found. Create your first space to get started.
-          </div>
+          <div className="p-8 text-center text-xs text-muted-foreground">No spaces found in this profile yet.</div>
         ) : (
-          <div className="grid gap-3">
-            {spaces.map((space) => (
-              <div
-                key={space.id}
-                className="flex items-center justify-between border rounded p-3 hover:border-primary/50 cursor-pointer"
-                onClick={navigateToSpace ? () => navigateToSpace(profile.id, space.id) : undefined}
-              >
-                <div className="flex items-center space-x-3">
-                  <Box className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{space.name}</p>
-                    <p className="text-xs text-muted-foreground">ID: {space.id}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          spaces.map((space) => (
+            <SettingsRow
+              key={space.id}
+              icon={<Box className="size-4" />}
+              label={space.name}
+              description={`ID: ${space.id}`}
+              onClick={navigateToSpace ? () => navigateToSpace(profile.id, space.id) : undefined}
+            >
+              {navigateToSpace && <ChevronRight className="size-3.5 text-muted-foreground" />}
+            </SettingsRow>
+          ))
         )}
+      </SettingsGroup>
 
-        {/* Create Space Dialog */}
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Create New Space</DialogTitle>
-              <DialogDescription>{`Enter a name for the new space in profile "${profile.name}".`}</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="space-name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="space-name"
-                  placeholder="Enter space name"
-                  value={newSpaceName}
-                  onChange={(e) => setNewSpaceName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !isCreating && newSpaceName.trim()) {
-                      handleCreateSpace();
-                    }
-                  }}
-                  className="col-span-3"
-                  autoFocus
-                />
-              </div>
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Space</DialogTitle>
+            <DialogDescription>{`Enter a name for the new space in "${profile.name}".`}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="space-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="space-name"
+                placeholder="Enter space name"
+                value={newSpaceName}
+                onChange={(e) => setNewSpaceName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isCreating && newSpaceName.trim()) {
+                    void handleCreateSpace();
+                  }
+                }}
+                className="col-span-3"
+                autoFocus
+              />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isCreating}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateSpace} disabled={isCreating || !newSpaceName.trim()} className="gap-2">
-                {isCreating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isCreating}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateSpace} disabled={isCreating || !newSpaceName.trim()}>
+              {isCreating ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
-// Delete Confirmation Dialog Component
-interface DeleteConfirmDialogProps {
+function DeleteConfirmDialog({
+  isOpen,
+  onClose,
+  profileName,
+  isDeleting,
+  onConfirm
+}: {
   isOpen: boolean;
   onClose: (open: boolean) => void;
   profileName: string;
   isDeleting: boolean;
   onConfirm: () => Promise<void>;
-}
-
-function DeleteConfirmDialog({ isOpen, onClose, profileName, isDeleting, onConfirm }: DeleteConfirmDialogProps) {
+}) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Delete Profile</DialogTitle>
           <DialogDescription>
-            {`Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`}
+            {`Are you sure you want to delete "${profileName}"? All cookies, extensions, and spaces in this profile will be removed.`}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onClose(false)} disabled={isDeleting}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isDeleting} className="gap-2">
+          <Button variant="destructive" onClick={onConfirm} disabled={isDeleting}>
             {isDeleting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
                 Deleting...
               </>
             ) : (
@@ -249,17 +209,19 @@ function DeleteConfirmDialog({ isOpen, onClose, profileName, isDeleting, onConfi
   );
 }
 
-// Main Profile Editor Component
 function ProfileEditor({
   profile,
   onClose,
   onDelete,
   onProfilesUpdate,
   navigateToSpace
-}: ProfileEditorProps & {
+}: {
+  profile: Profile;
+  onClose: () => void;
+  onDelete: () => void;
+  onProfilesUpdate: () => void;
   navigateToSpace?: (profileId: string, spaceId: string) => void;
 }) {
-  // State management
   const [editedProfile, setEditedProfile] = useState<Profile>({ ...profile });
   const [activeTab, setActiveTab] = useState("basic");
   const [isSaving, setIsSaving] = useState(false);
@@ -269,37 +231,14 @@ function ProfileEditor({
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loadingSpaces, setLoadingSpaces] = useState(true);
 
-  // Check if this is the last remaining profile
   useEffect(() => {
-    const checkProfileCount = async () => {
-      try {
-        const allProfiles = await lumi.profiles.getProfiles();
-        const userProfiles = allProfiles.filter((profile) => !profile.internal);
-        setIsLastProfile(userProfiles.length <= 1);
-      } catch (error) {
-        console.error("Failed to check profile count:", error);
-      }
-    };
-
-    checkProfileCount();
+    void lumi.profiles
+      .getProfiles()
+      .then((allProfiles) => {
+        setIsLastProfile(allProfiles.filter((p) => !p.internal).length <= 1);
+      })
+      .catch(() => {});
   }, []);
-
-  // Load spaces for this profile
-  useEffect(() => {
-    const fetchSpaces = async () => {
-      setLoadingSpaces(true);
-      try {
-        const profileSpaces = await lumi.spaces.getSpacesFromProfile(profile.id);
-        setSpaces(profileSpaces);
-      } catch (error) {
-        console.error("Failed to fetch spaces:", error);
-      } finally {
-        setLoadingSpaces(false);
-      }
-    };
-
-    fetchSpaces();
-  }, [profile.id]);
 
   const refreshSpaces = async () => {
     setLoadingSpaces(true);
@@ -307,26 +246,27 @@ function ProfileEditor({
       const profileSpaces = await lumi.spaces.getSpacesFromProfile(profile.id);
       setSpaces(profileSpaces);
     } catch (error) {
-      console.error("Failed to refresh spaces:", error);
+      console.error("Failed to fetch spaces:", error);
     } finally {
       setLoadingSpaces(false);
     }
   };
 
-  // Handle profile update
+  useEffect(() => {
+    void refreshSpaces();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.id]);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Only send the fields that have changed
       const updatedFields: Partial<Profile> = {};
       if (editedProfile.name !== profile.name) {
         updatedFields.name = editedProfile.name;
       }
-
       if (Object.keys(updatedFields).length > 0) {
-        console.log("Updating profile:", profile.id, updatedFields);
         await lumi.profiles.updateProfile(profile.id, updatedFields);
-        onProfilesUpdate(); // Refetch profiles after successful update
+        onProfilesUpdate();
       }
       onClose();
     } catch (error) {
@@ -336,7 +276,6 @@ function ProfileEditor({
     }
   };
 
-  // Handle profile deletion with confirmation
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
@@ -350,46 +289,45 @@ function ProfileEditor({
     }
   };
 
-  // Handle input field changes
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEditedProfile({
-      ...editedProfile,
-      name: e.target.value
-    });
-  };
-
   return (
-    <div className="z-modal flex flex-col">
-      {/* Header Bar */}
-      <div className="flex items-center border-b p-4">
-        <Button variant="ghost" size="icon" onClick={onClose} className="mr-2">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h2 className="text-lg font-medium">Edit Profile</h2>
-          <p className="text-sm text-muted-foreground">Customize your browsing profile</p>
+    <div className="space-y-5 remove-app-drag">
+      <div className="lumi-glass-panel rounded-2xl p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="ghost" size="icon" onClick={onClose} className="size-8 shrink-0">
+            <ArrowLeft className="size-4" />
+          </Button>
+          <div className="size-9 rounded-xl bg-primary/12 text-primary flex items-center justify-center shrink-0">
+            <UsersIcon className="size-4" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-foreground truncate">{editedProfile.name || profile.name}</h2>
+            <p className="text-xs text-muted-foreground">
+              Manage profile identity, spaces &amp; search engine settings
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex items-center gap-2 shrink-0">
           <Button
-            variant="destructive"
+            variant="outline"
             size="sm"
             onClick={() => setDeleteDialogOpen(true)}
-            className="gap-1"
             disabled={isLastProfile}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
             title={isLastProfile ? "Cannot delete the last remaining profile" : "Delete profile"}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-3.5" />
             Delete
           </Button>
-          <Button variant="default" size="sm" onClick={handleSave} className="gap-1" disabled={isSaving}>
+          <Button variant="default" size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="h-4 w-4" />
+                <Save className="size-3.5" />
                 Save
               </>
             )}
@@ -397,72 +335,49 @@ function ProfileEditor({
         </div>
       </div>
 
-      {/* Content Area with Sidebar and Main Panel */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navigation */}
-        <div className="w-64 border-r p-4">
-          <nav className="space-y-1">
-            <Button
-              variant={activeTab === "basic" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("basic")}
-            >
-              <Settings className="mr-2 h-5 w-5" />
-              Basic Settings
-            </Button>
-            <Button
-              variant={activeTab === "spaces" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("spaces")}
-            >
-              <Box className="mr-2 h-5 w-5" />
-              Spaces
-            </Button>
-            <Button
-              variant={activeTab === "search" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("search")}
-            >
-              <Globe className="mr-2 h-5 w-5" />
-              Search Engines
-            </Button>
-          </nav>
-        </div>
+      {/* Horizontal Segmented Navigation */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="basic" className="text-xs gap-1.5">
+            <Settings className="size-3.5" />
+            Details
+          </TabsTrigger>
+          <TabsTrigger value="spaces" className="text-xs gap-1.5">
+            <Box className="size-3.5" />
+            Spaces ({spaces.length})
+          </TabsTrigger>
+          <TabsTrigger value="search" className="text-xs gap-1.5">
+            <Globe className="size-3.5" />
+            Search
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Tab Content */}
-        <div className="flex-1 p-6 overflow-auto">
-          {activeTab === "basic" && (
-            <div className="space-y-6">
-              <BasicSettingsTab profile={profile} editedProfile={editedProfile} handleNameChange={handleNameChange} />
-            </div>
+        <TabsContent value="basic" className="m-0">
+          <BasicSettingsTab
+            profile={profile}
+            editedProfile={editedProfile}
+            handleNameChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
+          />
+        </TabsContent>
+
+        <TabsContent value="spaces" className="m-0">
+          {loadingSpaces ? (
+            <div className="py-12 text-center text-xs text-muted-foreground animate-pulse">Loading spaces...</div>
+          ) : (
+            <SpacesTab
+              profile={profile}
+              spaces={spaces}
+              onRefreshSpaces={refreshSpaces}
+              navigateToSpace={navigateToSpace}
+            />
           )}
+        </TabsContent>
 
-          {activeTab === "spaces" && (
-            <div className="space-y-6">
-              {loadingSpaces ? (
-                <div className="flex items-center justify-center h-40">
-                  <div className="animate-pulse text-muted-foreground">Loading spaces...</div>
-                </div>
-              ) : (
-                <SpacesTab
-                  profile={profile}
-                  spaces={spaces}
-                  onRefreshSpaces={refreshSpaces}
-                  navigateToSpace={navigateToSpace}
-                />
-              )}
-            </div>
-          )}
+        <TabsContent value="search" className="m-0">
+          <SearchEnginesSettings embedded />
+        </TabsContent>
+      </Tabs>
 
-          {activeTab === "search" && (
-            <div className="space-y-6">
-              <SearchSettingsTab />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         isOpen={deleteDialogOpen && !isLastProfile}
         onClose={setDeleteDialogOpen}
@@ -474,83 +389,12 @@ function ProfileEditor({
   );
 }
 
-// ==============================
-// Create Profile Dialog Component
-// ==============================
-interface CreateProfileDialogProps {
-  isOpen: boolean;
-  onClose: (open: boolean) => void;
-  profileName: string;
-  setProfileName: (name: string) => void;
-  isCreating: boolean;
-  onCreate: () => Promise<void>;
-}
-
-function CreateProfileDialog({
-  isOpen,
-  onClose,
-  profileName,
-  setProfileName,
-  isCreating,
-  onCreate
-}: CreateProfileDialogProps) {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Profile</DialogTitle>
-          <DialogDescription>Enter a name for your new browser profile.</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="profile-name" className="text-right">
-              Name
-            </Label>
-            <Input
-              id="profile-name"
-              placeholder="Enter profile name"
-              value={profileName}
-              onChange={(e) => setProfileName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !isCreating && profileName.trim()) {
-                  onCreate();
-                }
-              }}
-              className="col-span-3"
-              autoFocus
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onClose(false)} disabled={isCreating}>
-            Cancel
-          </Button>
-          <Button onClick={onCreate} disabled={isCreating || !profileName.trim()} className="gap-2">
-            {isCreating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              "Create"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ==============================
-// Main Profiles Settings Component
-// ==============================
 export interface ProfilesSettingsProps {
   navigateToSpaces?: (profileId: string) => void;
   navigateToSpace?: (profileId: string, spaceId: string) => void;
 }
 
-export function ProfilesSettings({ navigateToSpaces, navigateToSpace }: ProfilesSettingsProps) {
-  // State management
+export function ProfilesSettings({ navigateToSpace }: ProfilesSettingsProps) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
@@ -558,8 +402,6 @@ export function ProfilesSettings({ navigateToSpaces, navigateToSpace }: Profiles
   const [newProfileName, setNewProfileName] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  // Fetch profiles from the API, excluding internal profiles
-  // (e.g. incognito profiles) since they are ephemeral and shouldn't be managed.
   const fetchProfiles = async () => {
     setIsLoading(true);
     try {
@@ -572,32 +414,17 @@ export function ProfilesSettings({ navigateToSpaces, navigateToSpace }: Profiles
     }
   };
 
-  // Load profiles on component mount
   useEffect(() => {
-    fetchProfiles();
+    void fetchProfiles();
   }, []);
 
-  // Handle profile deletion (local state update)
-  const handleDeleteProfile = async (deletedProfile: Profile) => {
-    // Remove the profile from the local state
-    setProfiles(profiles.filter((profile) => profile.id !== deletedProfile.id));
-    // The actual deletion is handled in the ProfileEditor component
-  };
-
-  // Handle profile creation
   const handleCreateProfile = async () => {
     if (!newProfileName.trim()) return;
-
     setIsCreating(true);
     try {
-      const result = await lumi.profiles.createProfile(newProfileName);
-      console.log("Profile creation result:", result);
-
-      // Clear the form and close the dialog
+      await lumi.profiles.createProfile(newProfileName.trim());
       setNewProfileName("");
       setCreateDialogOpen(false);
-
-      // Refetch profiles to get the latest data
       await fetchProfiles();
     } catch (error) {
       console.error("Failed to create profile:", error);
@@ -606,70 +433,87 @@ export function ProfilesSettings({ navigateToSpaces, navigateToSpace }: Profiles
     }
   };
 
-  // Render profile editor if a profile is active
   if (activeProfile) {
     return (
-      <div className="h-full flex flex-col">
-        <Card className="flex-1 p-0">
-          <CardContent className="p-0">
-            <ProfileEditor
-              profile={activeProfile}
-              onClose={() => setActiveProfile(null)}
-              onDelete={() => handleDeleteProfile(activeProfile)}
-              onProfilesUpdate={fetchProfiles}
-              navigateToSpaces={navigateToSpaces}
-              navigateToSpace={navigateToSpace}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <ProfileEditor
+        profile={activeProfile}
+        onClose={() => setActiveProfile(null)}
+        onDelete={() => setProfiles((prev) => prev.filter((p) => p.id !== activeProfile.id))}
+        onProfilesUpdate={fetchProfiles}
+        navigateToSpace={navigateToSpace}
+      />
     );
   }
 
-  // Render profiles list
   return (
-    <div className="h-full flex flex-col">
-      <Card className="flex-1">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Browser Profiles</CardTitle>
-            <CardDescription className="text-sm">Manage your browser profiles and their settings</CardDescription>
-          </div>
-          <Button onClick={() => setCreateDialogOpen(true)} size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Profile
+    <div className="space-y-6 remove-app-drag">
+      <SettingsSectionHeader
+        title="Profiles"
+        description="Separate work, personal, and sandbox browsing sessions with isolated storage."
+        icon={<UsersIcon className="size-4" />}
+        actions={
+          <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+            <Plus className="size-3.5" />
+            New Profile
           </Button>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-40">
-              <div className="animate-pulse text-muted-foreground">Loading profiles...</div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {profiles.length === 0 ? (
-                <div className="text-center p-6 text-muted-foreground">
-                  No profiles found. Create your first profile to get started.
-                </div>
-              ) : (
-                profiles.map((profile) => (
-                  <ProfileCard key={profile.id} profile={profile} activateEdit={() => setActiveProfile(profile)} />
-                ))
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Create Profile Dialog */}
-      <CreateProfileDialog
-        isOpen={createDialogOpen}
-        onClose={setCreateDialogOpen}
-        profileName={newProfileName}
-        setProfileName={setNewProfileName}
-        isCreating={isCreating}
-        onCreate={handleCreateProfile}
+        }
       />
+
+      <SettingsGroup title="Browser Profiles">
+        {isLoading ? (
+          <div className="py-12 text-center text-xs text-muted-foreground animate-pulse">Loading profiles...</div>
+        ) : profiles.length === 0 ? (
+          <div className="py-12 text-center text-xs text-muted-foreground">No user profiles configured.</div>
+        ) : (
+          profiles.map((profile) => (
+            <ProfileRow key={profile.id} profile={profile} activateEdit={() => setActiveProfile(profile)} />
+          ))
+        )}
+      </SettingsGroup>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Profile</DialogTitle>
+            <DialogDescription>Enter a name for your new browser profile.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="profile-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="profile-name"
+                placeholder="Enter profile name"
+                value={newProfileName}
+                onChange={(e) => setNewProfileName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isCreating && newProfileName.trim()) {
+                    void handleCreateProfile();
+                  }
+                }}
+                className="col-span-3"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isCreating}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateProfile} disabled={isCreating || !newProfileName.trim()}>
+              {isCreating ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

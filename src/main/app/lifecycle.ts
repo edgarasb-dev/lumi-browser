@@ -1,6 +1,7 @@
-import { app, BrowserWindow } from "electron";
+import { app } from "electron";
 import { handleOpenUrl } from "@/app/urls";
 import { hasCompletedOnboarding } from "@/saving/onboarding";
+import { windowsController } from "@/controllers/windows-controller";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 
 export function setupAppLifecycle() {
@@ -19,18 +20,11 @@ export function setupAppLifecycle() {
 
   app.whenReady().then(() => {
     app.on("activate", async () => {
-      const windows = BrowserWindow.getAllWindows();
-      if (windows.length === 0) {
+      const activated = windowsController.activateWindows();
+      if (!activated) {
         const completed = await hasCompletedOnboarding();
         if (completed) {
           browserWindowsController.create();
-        }
-      } else {
-        for (const win of windows) {
-          if (!win.isDestroyed()) {
-            win.show();
-            win.focus();
-          }
         }
       }
     });

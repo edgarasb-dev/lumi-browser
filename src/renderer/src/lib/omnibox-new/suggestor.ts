@@ -2,6 +2,7 @@ import { flushSearchSuggestions } from "./suggestors/search-suggestions";
 import { type OmniboxFlush } from "./helpers";
 import { getZeroSuggestSuggestions } from "./zero-suggest";
 import {
+  getInstantAnswerSuggestions,
   getOpenTabSuggestions,
   getPedalSuggestions,
   getQuickHistorySuggestions,
@@ -21,12 +22,19 @@ export function getOmniboxSuggestions(input: string, flush: OmniboxFlush, signal
     return getZeroSuggestSuggestions(flush);
   }
 
-  // Initial suggestions (verbatim, quick history, open tabs, and pedal)
+  // Initial synchronous suggestions (instant answers, verbatim, quick history, open tabs, pedals)
+  const instantAnswers = getInstantAnswerSuggestions(trimmedInput);
   const verbatimSuggestions = getVerbatimSuggestions(trimmedInput);
   const quickHistorySuggestions = getQuickHistorySuggestions(trimmedInput);
   const openTabSuggestions = getOpenTabSuggestions(trimmedInput);
   const pedalSuggestions = getPedalSuggestions(trimmedInput);
-  flush([...verbatimSuggestions, ...quickHistorySuggestions, ...openTabSuggestions, ...pedalSuggestions]);
+  flush([
+    ...instantAnswers,
+    ...verbatimSuggestions,
+    ...quickHistorySuggestions,
+    ...openTabSuggestions,
+    ...pedalSuggestions
+  ]);
 
   // Asynchronous suggestions (search)
   flushSearchSuggestions(trimmedInput, flush, signal);

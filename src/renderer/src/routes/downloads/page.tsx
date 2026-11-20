@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { InternalPageShell } from "@/components/main/internal-page-shell";
 import { formatDownloadBytes } from "@/components/browser-ui/browser-sidebar/_components/downloads-button";
 import { cn } from "@/lib/utils";
 import type { DownloadItemData } from "~/types/downloads";
@@ -106,36 +107,35 @@ function DownloadsPage() {
   const hasClearable = downloads.some((d) => d.state !== "progressing" && d.state !== "paused");
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Sticky Top Header */}
-      <div className="sticky top-0 z-elevated bg-background/90 backdrop-blur-sm border-b border-border/50">
-        <div className="max-w-3xl mx-auto px-6 py-3 flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-foreground tracking-tight shrink-0">Downloads</h1>
-
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <input
-              ref={searchRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search downloads"
-              aria-label="Search downloads"
-              className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-muted/40 text-sm text-foreground placeholder:text-muted-foreground transition-[border-color,box-shadow] outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 focus:bg-background"
-            />
-          </div>
-
+    <InternalPageShell
+      title="Downloads"
+      icon={<Download className="size-4" />}
+      searchSlot={
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            ref={searchRef}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search downloads..."
+            aria-label="Search downloads"
+            className="h-9 w-full rounded-xl border border-black/10 bg-black/4 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary/45 focus:bg-background focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/6"
+          />
+        </div>
+      }
+      headerActions={
+        <>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => void lumi.downloads.openDownloadsFolder()}
-            className="gap-1.5 border text-muted-foreground hover:text-foreground shrink-0"
+            className="h-8 gap-1.5 text-xs"
           >
-            <FolderOpen className="size-4" />
+            <FolderOpen className="size-3.5" />
             Open folder
           </Button>
-
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             disabled={!hasClearable}
             onClick={() => {
@@ -143,15 +143,15 @@ function DownloadsPage() {
                 if (count > 0) toast.success(`Cleared ${count} download${count === 1 ? "" : "s"}`);
               });
             }}
-            className="gap-1.5 border text-muted-foreground hover:text-foreground shrink-0"
+            className="h-8 gap-1.5 text-xs"
           >
-            <Trash2 className="size-4" />
+            <Trash2 className="size-3.5" />
             Clear finished
           </Button>
-        </div>
-
-        {/* Filter Pills */}
-        <div className="max-w-3xl mx-auto px-6 pb-2.5 flex items-center gap-1.5">
+        </>
+      }
+      subheaderSlot={
+        <div className="flex items-center gap-1.5">
           {(
             [
               { id: "all", label: "All" },
@@ -165,31 +165,30 @@ function DownloadsPage() {
               type="button"
               onClick={() => setFilter(tab.id)}
               className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer",
+                "cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
                 filter === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-black/5 text-muted-foreground hover:bg-black/10 hover:text-foreground dark:bg-white/8 dark:hover:bg-white/14"
               )}
             >
               {tab.label}
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Main List */}
+      }
+    >
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="max-w-3xl mx-auto w-full px-6 py-6 flex flex-col gap-3"
+        className="flex flex-col gap-3"
       >
         {loading ? (
-          <div className="py-20 text-center text-muted-foreground text-sm">Loading…</div>
+          <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>
         ) : filteredDownloads.length === 0 ? (
-          <div className="py-20 text-center space-y-2">
-            <Download className="size-9 mx-auto text-muted-foreground/40" />
-            <p className="text-foreground font-medium">{search ? "No matching downloads" : "No downloads yet"}</p>
+          <div className="lumi-glass-panel space-y-2 py-16 text-center">
+            <Download className="mx-auto size-9 text-muted-foreground/40" />
+            <p className="font-medium text-foreground">{search ? "No matching downloads" : "No downloads yet"}</p>
             <p className="text-sm text-muted-foreground">
               {search ? "Try another search query." : "Files you download from websites will show up here."}
             </p>
@@ -201,8 +200,8 @@ function DownloadsPage() {
               item.totalBytes > 0 ? Math.min(100, Math.round((item.receivedBytes / item.totalBytes) * 100)) : null;
 
             return (
-              <Card key={item.id} className="overflow-hidden border-border/60">
-                <CardContent className="p-4 flex flex-col gap-2.5">
+              <Card key={item.id} className="lumi-glass-panel overflow-hidden py-0">
+                <CardContent className="flex flex-col gap-2.5 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center gap-2 min-w-0">
@@ -344,7 +343,7 @@ function DownloadsPage() {
           })
         )}
       </motion.div>
-    </div>
+    </InternalPageShell>
   );
 }
 

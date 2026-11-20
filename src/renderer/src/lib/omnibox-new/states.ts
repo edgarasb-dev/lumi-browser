@@ -18,6 +18,15 @@ export function getOmniboxCurrentSpaceId(): string | undefined {
   return currentSpaceId;
 }
 
+// Stores the current active page url for instant tools (e.g. QR sharing).
+let activePageUrl: string | undefined = undefined;
+export function setOmniboxActivePageUrl(url: string | undefined) {
+  activePageUrl = url;
+}
+export function getOmniboxActivePageUrl(): string | undefined {
+  return activePageUrl;
+}
+
 // URL Title Cache
 const urlTitleCache = new Map<string, string>();
 export function cacheUrlTitle(url: string, title: string) {

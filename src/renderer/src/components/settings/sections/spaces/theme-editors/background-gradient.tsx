@@ -1,6 +1,5 @@
 import { ColorPicker } from "../color-picker";
-import { motion } from "motion/react";
-import { GalleryVerticalEnd, Shuffle } from "lucide-react";
+import { Palette, Shuffle } from "lucide-react";
 import { Space } from "~/lumi/interfaces/sessions/spaces";
 import { useReducer, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,48 +13,16 @@ type BackgroundGradientEditor = {
 export function BackgroundGradientEditor({ editedSpace, updateEditedSpace }: BackgroundGradientEditor) {
   const [randomiseCount, randomised] = useReducer((count: number) => count + 1, 0);
 
-  // Track changes locally instead of relying on editedSpace to trigger re-renders
   const [localPreview, setLocalPreview] = useState({
-    bgStartColor: editedSpace.bgStartColor || "#ffffff",
-    bgEndColor: editedSpace.bgEndColor || "#ffffff"
+    bgStartColor: editedSpace.bgStartColor || "#2563eb",
+    bgEndColor: editedSpace.bgEndColor || "#6366f1"
   });
 
-  // Update both local preview and parent state
   const handleColorChange = (colorKey: "bgStartColor" | "bgEndColor", newColor: string) => {
     setLocalPreview((prev) => ({ ...prev, [colorKey]: newColor }));
     updateEditedSpace({ [colorKey]: newColor });
   };
 
-  // Generate aesthetically pleasing random colors for gradient
-  const generateRandomColors = () => {
-    // Generate colors in HSL for better control over aesthetics
-    const hue = Math.floor(Math.random() * 360); // Random base hue
-    const saturationStart = 65 + Math.floor(Math.random() * 25); // 65-90%
-    const saturationEnd = 65 + Math.floor(Math.random() * 25); // 65-90%
-    const lightnessStart = 50 + Math.floor(Math.random() * 20); // 50-70%
-    const lightnessEnd = 55 + Math.floor(Math.random() * 15); // 55-70%
-
-    // Create harmonious gradient by using related hues (adjacent or complementary)
-    const hueVariation =
-      Math.random() > 0.5
-        ? 30 + Math.floor(Math.random() * 60) // Adjacent (30-90 degrees apart)
-        : 180; // Complementary
-
-    const hueEnd = (hue + hueVariation) % 360;
-
-    // Convert HSL to hex
-    const startColor = hslToHex(hue, saturationStart, lightnessStart);
-    const endColor = hslToHex(hueEnd, saturationEnd, lightnessEnd);
-
-    // Update both local preview and parent state
-    setLocalPreview({ bgStartColor: startColor, bgEndColor: endColor });
-    updateEditedSpace({ bgStartColor: startColor, bgEndColor: endColor });
-
-    // Force a re-render of the color pickers
-    randomised();
-  };
-
-  // Helper to convert HSL to Hex
   const hslToHex = (h: number, s: number, l: number): string => {
     l /= 100;
     const a = (s * Math.min(l, 1 - l)) / 100;
@@ -69,72 +36,99 @@ export function BackgroundGradientEditor({ editedSpace, updateEditedSpace }: Bac
     return `#${f(0)}${f(8)}${f(4)}`;
   };
 
+  const generateRandomColors = () => {
+    const hue = Math.floor(Math.random() * 360);
+    const saturationStart = 65 + Math.floor(Math.random() * 25);
+    const saturationEnd = 65 + Math.floor(Math.random() * 25);
+    const lightnessStart = 48 + Math.floor(Math.random() * 18);
+    const lightnessEnd = 52 + Math.floor(Math.random() * 16);
+    const hueVariation = Math.random() > 0.5 ? 30 + Math.floor(Math.random() * 55) : 145;
+    const hueEnd = (hue + hueVariation) % 360;
+
+    const startColor = hslToHex(hue, saturationStart, lightnessStart);
+    const endColor = hslToHex(hueEnd, saturationEnd, lightnessEnd);
+
+    setLocalPreview({ bgStartColor: startColor, bgEndColor: endColor });
+    updateEditedSpace({ bgStartColor: startColor, bgEndColor: endColor });
+    randomised();
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-medium">Background Gradient</h3>
-          <GalleryVerticalEnd className="h-4 w-4 text-muted-foreground" />
+          <Palette className="size-4 text-primary" />
+          <h4 className="text-sm font-semibold text-foreground">Live Window Gradient Preview</h4>
         </div>
-        <Button variant="outline" size="sm" onClick={generateRandomColors} className="flex items-center gap-1">
-          <Shuffle className="h-3.5 w-3.5" />
-          Random
+        <Button variant="outline" size="sm" onClick={generateRandomColors} className="h-7 px-2.5 text-xs gap-1.5">
+          <Shuffle className="size-3" />
+          Randomize
         </Button>
       </div>
 
-      <motion.div
-        className="rounded-xl overflow-hidden shadow-md mb-6 border border-muted/60"
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
+      {/* Live Mini-Lumi Browser Window Preview */}
+      <div
+        className="rounded-2xl overflow-hidden border border-black/15 dark:border-white/15 shadow-lg p-2.5 flex gap-2.5 h-44"
         style={{
-          background: `linear-gradient(to right, ${localPreview.bgStartColor}, ${localPreview.bgEndColor})`
+          background: `linear-gradient(135deg, ${localPreview.bgStartColor}, ${localPreview.bgEndColor})`
         }}
       >
-        <div className="h-32 w-full grid place-items-center backdrop-blur-[1px] bg-white/5">
-          {editedSpace.icon && (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-              className="flex flex-col items-center gap-2"
-            >
-              <div className="size-16 rounded-full bg-background/20 backdrop-blur-sm grid place-items-center shadow-lg">
-                <SpaceIcon id={editedSpace.icon} className="size-6 text-white" />
+        {/* Simulated Sidebar */}
+        <div className="w-36 rounded-xl bg-black/20 backdrop-blur-md border border-white/15 p-2.5 flex flex-col justify-between text-white shrink-0">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-red-400/90" />
+              <span className="size-2 rounded-full bg-amber-400/90" />
+              <span className="size-2 rounded-full bg-emerald-400/90" />
+            </div>
+            <div className="h-6 rounded-lg bg-white/18 px-2 flex items-center text-[10px] text-white/85 truncate">
+              lumi.browser
+            </div>
+            <div className="space-y-1">
+              <div className="h-6 rounded-lg bg-white/25 px-2 flex items-center text-[10px] font-medium truncate">
+                Workspace Overview
               </div>
-              <div className="text-white/90 text-xs font-medium px-3 py-1 rounded-full bg-black/20 backdrop-blur-md">
-                {editedSpace.name}
+              <div className="h-6 rounded-lg bg-white/10 px-2 flex items-center text-[10px] text-white/75 truncate">
+                Research &amp; Notes
               </div>
-            </motion.div>
-          )}
-        </div>
-      </motion.div>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <motion.div
-          initial={{ opacity: 0, x: -5 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
-        >
-          <ColorPicker
-            key={`start-${randomiseCount}`}
-            defaultColor={localPreview.bgStartColor}
-            label="Start Color"
-            onChange={(color) => handleColorChange("bgStartColor", color)}
-          />
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 5 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.5 }}
-        >
-          <ColorPicker
-            key={`end-${randomiseCount}`}
-            defaultColor={localPreview.bgEndColor}
-            label="End Color"
-            onChange={(color) => handleColorChange("bgEndColor", color)}
-          />
-        </motion.div>
+          <div className="flex items-center gap-2 pt-1.5 border-t border-white/15">
+            <div className="size-5 rounded-md bg-white/20 flex items-center justify-center shrink-0">
+              <SpaceIcon id={editedSpace.icon} className="size-3.5 text-white" />
+            </div>
+            <span className="text-[11px] font-semibold truncate">{editedSpace.name || "Untitled Space"}</span>
+          </div>
+        </div>
+
+        {/* Simulated Floating Content Card */}
+        <div className="flex-1 rounded-xl bg-white/90 dark:bg-zinc-950/88 border border-white/40 dark:border-white/10 shadow-md p-3 flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="h-2.5 w-28 rounded-full bg-black/10 dark:bg-white/15" />
+            <div className="h-2 w-44 rounded-full bg-black/[0.06] dark:bg-white/10" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="h-12 rounded-lg bg-black/[0.04] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.07]" />
+            <div className="h-12 rounded-lg bg-black/[0.04] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.07]" />
+            <div className="h-12 rounded-lg bg-black/[0.04] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.07]" />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <ColorPicker
+          key={`start-${randomiseCount}`}
+          defaultColor={localPreview.bgStartColor}
+          label="Start Color"
+          onChange={(color) => handleColorChange("bgStartColor", color)}
+        />
+        <ColorPicker
+          key={`end-${randomiseCount}`}
+          defaultColor={localPreview.bgEndColor}
+          label="End Color"
+          onChange={(color) => handleColorChange("bgEndColor", color)}
+        />
       </div>
     </div>
   );

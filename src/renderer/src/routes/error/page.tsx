@@ -82,70 +82,62 @@ function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-zinc-900 text-gray-800 dark:text-zinc-200 flex flex-col items-center pt-24 px-4 transition-colors duration-300">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 text-foreground transition-colors duration-300">
+      <div
+        className="pointer-events-none fixed inset-x-0 top-0 h-80 bg-radial from-primary/10 via-transparent to-transparent"
+        aria-hidden
+      />
       <title>{displayUrl || "Error"}</title>
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md flex flex-col items-center"
+        transition={{ duration: 0.35 }}
+        className="lumi-glass-panel relative flex w-full max-w-md flex-col items-center p-8 text-center shadow-lg"
       >
-        {/* Sad face icon */}
-        <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ duration: 0.5 }}>
-          <FrownIcon className="w-16 h-16 mb-4 text-gray-700 dark:text-zinc-300" />
-        </motion.div>
+        <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
+          <FrownIcon className="size-8" />
+        </div>
 
-        {/* Error title */}
-        <h1 className="text-2xl font-medium mb-4 text-center">{errorInfo.title}</h1>
+        <h1 className="mb-2 text-2xl font-semibold tracking-tight">{errorInfo.title}</h1>
 
-        {/* Error description */}
         <div
-          className="text-gray-600 dark:text-zinc-400 mb-6 text-center"
+          className="mb-4 text-sm text-muted-foreground"
           dangerouslySetInnerHTML={{ __html: errorInfo.description }}
         />
 
-        {/* Error code */}
-        <div className="text-gray-500 dark:text-zinc-500 text-sm mb-8">{errorInfo.code}</div>
+        <div className="lumi-glass-pill mb-7 px-3 py-1 font-mono text-xs text-muted-foreground">{errorInfo.code}</div>
 
-        {/* Buttons */}
-        <div className="flex gap-3">
-          {/* Go back button */}
+        <div className="flex flex-wrap justify-center gap-2.5">
           {canGoBack && (
-            <motion.button
+            <button
+              type="button"
               onClick={handleGoBack}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-gray-800 dark:text-zinc-200 px-6 py-2 rounded-full text-sm font-medium transition-colors duration-200 shadow-md"
+              className="flex items-center gap-2 rounded-xl border border-black/10 bg-black/5 px-5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-black/10 dark:border-white/12 dark:bg-white/8 dark:hover:bg-white/14"
             >
-              <ArrowLeftIcon className="w-4 h-4" />
+              <ArrowLeftIcon className="size-4" />
               Go Back
-            </motion.button>
+            </button>
           )}
 
-          {/* Reload button */}
-          <motion.button
+          <button
+            type="button"
             onClick={handleReload}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-2 rounded-full text-sm font-medium transition-colors duration-200 shadow-md"
+            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-xs transition-opacity hover:opacity-90"
           >
-            <RefreshCwIcon className="w-4 h-4" />
+            <RefreshCwIcon className="size-4" />
             Reload
-          </motion.button>
+          </button>
         </div>
 
-        {/* Games section */}
-        <div className="mt-8 flex flex-col items-center">
-          <p className="text-gray-600 dark:text-zinc-400 mb-3">Want to play some games?</p>
-          <motion.button
+        <div className="mt-7 border-t border-black/8 pt-5 dark:border-white/10">
+          <button
+            type="button"
             onClick={() => window.open("lumi://games", "_blank")}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 dark:bg-purple-600 dark:hover:bg-purple-700 text-white px-6 py-2 rounded-full text-sm font-medium transition-colors duration-200 shadow-md"
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/8"
           >
-            <Gamepad2Icon className="w-4 h-4" />
-            Game Library
-          </motion.button>
+            <Gamepad2Icon className="size-4 text-primary" />
+            Take a break in Game Library
+          </button>
         </div>
       </motion.div>
     </div>

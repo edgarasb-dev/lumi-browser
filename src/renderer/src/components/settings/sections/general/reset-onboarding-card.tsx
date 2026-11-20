@@ -9,8 +9,10 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog";
+import { SettingsRow } from "@/components/settings/components/setting-row";
+import { RotateCcw } from "lucide-react";
 
-export function ResetOnboardingCard() {
+export function ResetOnboardingCard({ highlighted = false }: { highlighted?: boolean }) {
   const [isResetting, setIsResetting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -27,36 +29,36 @@ export function ResetOnboardingCard() {
   };
 
   return (
-    <div className="remove-app-drag rounded-2xl border border-border/50 p-6 bg-card/60 backdrop-blur-md shadow-xs">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold tracking-tight text-foreground">Onboarding</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Reset the onboarding walkthrough</p>
-      </div>
-      <div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="secondary" className="w-full" disabled={isResetting}>
-              Reset Onboarding
+    <SettingsRow
+      id="internal_resetOnboarding"
+      highlighted={highlighted}
+      icon={<RotateCcw className="size-4" />}
+      label="Onboarding Setup Wizard"
+      description="Reset and re-launch Lumi's initial setup flow on next restart."
+    >
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" disabled={isResetting}>
+            Reset Onboarding
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Onboarding?</DialogTitle>
+            <DialogDescription>
+              {`This will close active windows and re-run the welcome walkthrough. Your spaces, history, and bookmarks remain intact.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reset Onboarding?</DialogTitle>
-              <DialogDescription>
-                {`Are you sure? This will close the app. Your data won't be reset, but any unsaved website data may be lost.`}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleReset} disabled={isResetting}>
-                {isResetting ? "Resetting..." : "Reset"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
+            <Button variant="destructive" onClick={handleReset} disabled={isResetting}>
+              {isResetting ? "Resetting..." : "Reset"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </SettingsRow>
   );
 }

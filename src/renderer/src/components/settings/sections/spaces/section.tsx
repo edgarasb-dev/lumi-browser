@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, GripVertical } from "lucide-react";
+import { Plus, GripVertical, OrbitIcon } from "lucide-react";
 import { SpaceCard } from "./space-card";
 import { UILayer } from "~/layers";
 import { SpaceEditor } from "./space-editor";
@@ -10,17 +9,14 @@ import type { Space } from "~/lumi/interfaces/sessions/spaces";
 import type { Profile } from "~/lumi/interfaces/sessions/profiles";
 import { Reorder, useDragControls } from "motion/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SettingsGroup, SettingsSectionHeader } from "@/components/settings/components/setting-row";
 
-// ==============================
-// Main Spaces Settings Component
-// ==============================
 export interface SpacesSettingsProps {
   initialSelectedProfile?: string | null;
   initialSelectedSpace?: string | null;
 }
 
 export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }: SpacesSettingsProps) {
-  // State management
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,14 +26,12 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(initialSelectedProfile || null);
 
-  // Use the initialSelectedProfile when it changes
   useEffect(() => {
     if (initialSelectedProfile) {
       setSelectedProfile(initialSelectedProfile);
     }
   }, [initialSelectedProfile]);
 
-  // Fetch spaces and profiles from the API
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -48,10 +42,10 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
       const internalProfileIds = new Set(
         fetchedProfiles.filter((profile) => profile.internal).map((profile) => profile.id)
       );
-      setProfiles(fetchedProfiles.filter((profile) => !profile.internal));
+      const nonInternal = fetchedProfiles.filter((profile) => !profile.internal);
+      setProfiles(nonInternal);
       setSpaces(fetchedSpaces.filter((space) => !internalProfileIds.has(space.profileId)));
 
-      // Set active space if initialSelectedSpace is provided
       if (initialSelectedSpace) {
         const selectedSpace = fetchedSpaces.find((space) => space.id === initialSelectedSpace);
         if (selectedSpace) {
@@ -65,12 +59,10 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
     }
   }, [initialSelectedSpace]);
 
-  // Load data on component mount
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
-  // Set active space when initialSelectedSpace changes
   useEffect(() => {
     if (initialSelectedSpace && spaces.length > 0) {
       const selectedSpace = spaces.find((space) => space.id === initialSelectedSpace);
@@ -80,35 +72,19 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
     }
   }, [initialSelectedSpace, spaces]);
 
-  // Handle space deletion (local state update)
   const handleDeleteSpace = async (deletedSpace: Space) => {
-    // Remove the space from the local state
-    setSpaces(spaces.filter((space) => space.id !== deletedSpace.id));
-    // The actual deletion is handled in the SpaceEditor component
+    setSpaces((prev) => prev.filter((space) => space.id !== deletedSpace.id));
   };
 
-  // Handle space creation
   const handleCreateSpace = async () => {
-    if (!newSpaceName.trim() || !selectedProfile) return;
+    const targetProfile = selectedProfile || profiles[0]?.id;
+    if (!newSpaceName.trim() || !targetProfile) return;
 
     setIsCreating(true);
     try {
-      // Create space with default theme settings
-      const spaceData = {
-        name: newSpaceName,
-        bgStartColor: "#4285F4",
-        bgEndColor: "#34A853",
-        icon: "Globe"
-      };
-
-      const result = await lumi.spaces.createSpace(selectedProfile, spaceData.name);
-      console.log("Space creation result:", result);
-
-      // Clear the form and close the dialog
+      await lumi.spaces.createSpace(targetProfile, newSpaceName.trim());
       setNewSpaceName("");
       setCreateDialogOpen(false);
-
-      // Refetch spaces to get the latest data
       await fetchData();
     } catch (error) {
       console.error("Failed to create space:", error);
@@ -117,71 +93,50 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
     }
   };
 
-  // Handle space reordering
   const handleReorder = async (reorderedSpaces: Space[]) => {
     setSpaces(reorderedSpaces);
-
-    // Prepare order map for the API
     const orderMap = reorderedSpaces.map((space, index) => ({
       profileId: space.profileId,
       spaceId: space.id,
       order: index
     }));
-
     try {
-      // Call the API to persist the new order
       await lumi.spaces.reorderSpaces(orderMap);
     } catch (error) {
       console.error("Failed to reorder spaces:", error);
     }
   };
 
-  // Filter spaces based on selected profile
   const filteredSpaces = selectedProfile ? spaces.filter((space) => space.profileId === selectedProfile) : spaces;
-
-  // Get selected profile name for display
   const selectedProfileName = selectedProfile
     ? profiles.find((p) => p.id === selectedProfile)?.name || "Selected Profile"
     : "All Profiles";
 
-  // Render space editor if a space is active
   if (activeSpace) {
     return (
-      <div className="h-full flex flex-col">
-        <Card className="flex-1 p-0">
-          <CardContent className="p-0">
-            <SpaceEditor
-              space={activeSpace}
-              onClose={() => setActiveSpace(null)}
-              onDelete={() => handleDeleteSpace(activeSpace)}
-              onSpacesUpdate={fetchData}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <SpaceEditor
+        space={activeSpace}
+        onClose={() => setActiveSpace(null)}
+        onDelete={() => handleDeleteSpace(activeSpace)}
+        onSpacesUpdate={fetchData}
+      />
     );
   }
 
-  // Render spaces list
   return (
-    <div className="h-full flex flex-col">
-      <Card className="flex-1">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <CardTitle className="text-lg">
-                {selectedProfile ? `Spaces for ${selectedProfileName}` : "All Browser Spaces"}
-              </CardTitle>
-              <CardDescription className="text-sm">Manage your browsing spaces and their settings</CardDescription>
-            </div>
-          </div>
+    <div className="space-y-6 remove-app-drag">
+      <SettingsSectionHeader
+        title="Spaces"
+        description={`Organize contexts, gradients, and tab groups (${selectedProfileName}).`}
+        icon={<OrbitIcon className="size-4" />}
+        actions={
           <div className="flex items-center gap-2">
             <Select
               value={selectedProfile || "all"}
               onValueChange={(value) => setSelectedProfile(value === "all" ? null : value)}
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select profile" />
+              <SelectTrigger className="w-40 h-8 text-xs">
+                <SelectValue placeholder="Filter profile" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Profiles</SelectItem>
@@ -192,48 +147,46 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={() => setCreateDialogOpen(true)} size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Space
+            <Button
+              onClick={() => {
+                if (!selectedProfile && profiles[0]) {
+                  setSelectedProfile(profiles[0].id);
+                }
+                setCreateDialogOpen(true);
+              }}
+              size="sm"
+            >
+              <Plus className="size-3.5" />
+              New Space
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-40">
-              <div className="animate-pulse text-muted-foreground">Loading spaces...</div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {filteredSpaces.length === 0 ? (
-                <div className="text-center p-6 text-muted-foreground">
-                  No spaces found. Create your first space to get started.
-                </div>
-              ) : (
-                <Reorder.Group
-                  axis="y"
-                  values={filteredSpaces}
-                  onReorder={handleReorder}
-                  className="flex flex-col gap-4"
-                  layoutScroll
-                  layout
-                  transition={{
-                    type: "spring",
-                    bounce: 0.1,
-                    duration: 0.3
-                  }}
-                >
-                  {filteredSpaces.map((space) => (
-                    <DraggableSpaceCard key={space.id} space={space} activateEdit={() => setActiveSpace(space)} />
-                  ))}
-                </Reorder.Group>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        }
+      />
 
-      {/* Create Space Dialog */}
+      <SettingsGroup title="Configured Spaces" description="Drag the grip handle to reorder spaces in the switcher.">
+        {isLoading ? (
+          <div className="py-12 text-center text-xs text-muted-foreground animate-pulse">Loading spaces...</div>
+        ) : filteredSpaces.length === 0 ? (
+          <div className="py-12 text-center text-xs text-muted-foreground">
+            No spaces found. Click New Space to create one.
+          </div>
+        ) : (
+          <Reorder.Group
+            axis="y"
+            values={filteredSpaces}
+            onReorder={handleReorder}
+            className="divide-y divide-black/[0.06] dark:divide-white/[0.07]"
+            layoutScroll
+            layout
+            transition={{ type: "spring", bounce: 0.1, duration: 0.25 }}
+          >
+            {filteredSpaces.map((space) => (
+              <DraggableSpaceRow key={space.id} space={space} activateEdit={() => setActiveSpace(space)} />
+            ))}
+          </Reorder.Group>
+        )}
+      </SettingsGroup>
+
       <CreateSpaceDialog
         isOpen={createDialogOpen}
         onClose={setCreateDialogOpen}
@@ -249,47 +202,31 @@ export function SpacesSettings({ initialSelectedProfile, initialSelectedSpace }:
   );
 }
 
-// DraggableSpaceCard component for reordering
-interface DraggableSpaceCardProps {
-  space: Space;
-  activateEdit: () => void;
-}
-
-function DraggableSpaceCard({ space, activateEdit }: DraggableSpaceCardProps) {
+function DraggableSpaceRow({ space, activateEdit }: { space: Space; activateEdit: () => void }) {
   const dragControls = useDragControls();
   const [isDragging, setIsDragging] = useState(false);
-
-  const handleDragStart = (event: React.PointerEvent<HTMLDivElement>) => {
-    setIsDragging(true);
-    dragControls.start(event);
-  };
 
   return (
     <Reorder.Item
       value={space}
       dragControls={dragControls}
       className="list-none"
-      whileDrag={{
-        scale: 1.02,
-        zIndex: UILayer.ELEVATED
-      }}
+      whileDrag={{ scale: 1.01, zIndex: UILayer.ELEVATED }}
       dragListener={false}
       onDragEnd={() => setIsDragging(false)}
-      transition={{
-        type: "spring",
-        stiffness: 700,
-        damping: 30,
-        mass: 0.8
-      }}
+      transition={{ type: "spring", stiffness: 650, damping: 32 }}
     >
-      <div className={`flex items-center ${isDragging ? "opacity-95" : "opacity-100"}`}>
+      <div className={`flex items-center pl-2 ${isDragging ? "opacity-90 bg-primary/5" : ""}`}>
         <div
-          className={`p-2 ${isDragging ? "cursor-grabbing" : "cursor-grab"} touch-none`}
-          onPointerDown={handleDragStart}
+          className={`p-2 text-muted-foreground hover:text-foreground ${isDragging ? "cursor-grabbing" : "cursor-grab"} touch-none`}
+          onPointerDown={(event) => {
+            setIsDragging(true);
+            dragControls.start(event);
+          }}
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          <GripVertical className="size-4" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <SpaceCard space={space} activateEdit={activateEdit} />
         </div>
       </div>

@@ -75,15 +75,15 @@ function PopoverContent({
             "data-starting-style:scale-90 data-starting-style:opacity-0",
             "dark:-outline-offset-1",
             // Rounded corners
-            variant === "default" && "rounded-lg",
+            variant === "default" && "rounded-xl",
             variant === "translucent" && "rounded-2xl",
             // Background
-            variant === "default" && "bg-popover",
-            variant === "translucent" && "bg-popover/65 backdrop-blur-sm",
+            variant === "default" && "bg-white/95 dark:bg-zinc-900/94 backdrop-blur-2xl",
+            variant === "translucent" && "bg-white/90 dark:bg-zinc-900/90 backdrop-blur-2xl saturate-150",
             // Outline
-            "outline-1 outline-border dark:outline-gray-500",
+            "outline-1 outline-black/[0.08] dark:outline-white/[0.14]",
             // Shadow
-            "shadow-lg shadow-black/25",
+            "shadow-[0_18px_42px_-12px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.28)]",
             // Others
             variant === "translucent" && "p-2.5",
             className

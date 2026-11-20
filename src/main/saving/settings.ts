@@ -1,8 +1,21 @@
+import { app, nativeTheme } from "electron";
 import { getDatastore } from "./datastore";
 import { fireOnSettingsChanged } from "@/ipc/window/settings";
 import { BasicSettings } from "@/modules/basic-settings";
 import { TypedEventEmitter } from "@/modules/typed-event-emitter";
 import { BasicSetting, SettingType } from "~/types/settings";
+
+function applyInterfaceTheme(theme: unknown) {
+  if (theme !== "system" && theme !== "light" && theme !== "dark") return;
+  const apply = () => {
+    nativeTheme.themeSource = theme;
+  };
+  if (app.isReady()) {
+    apply();
+  } else {
+    void app.whenReady().then(apply);
+  }
+}
 
 export const SettingsDataStore = getDatastore("settings");
 
@@ -41,6 +54,7 @@ const settingsCachedPromise = new Promise<void>((resolve) => {
   }
 
   Promise.all(promises).then(() => {
+    applyInterfaceTheme(basicSettingsCurrentValues["interfaceTheme"]);
     resolve();
   });
 });
@@ -61,6 +75,9 @@ async function setSettingValue<T extends BasicSetting>(setting: T, value: unknow
 
     if (saveSuccess) {
       basicSettingsCurrentValues[setting.id] = value as T["defaultValue"];
+      if (setting.id === "interfaceTheme") {
+        applyInterfaceTheme(value);
+      }
       fireOnSettingsChanged();
       settingsEmitter.emit("settings-changed");
       return true;
