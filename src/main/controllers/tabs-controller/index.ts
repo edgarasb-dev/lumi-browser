@@ -1469,8 +1469,22 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       tabPersistenceManager.removeTabGroup(groupId);
     }
 
+    const survivingTabs = tabGroup
+      .getRawTabIds()
+      .map((id) => this.getTabById(id))
+      .filter((t): t is Tab => Boolean(t && !t.isDestroyed));
+
+    for (const surviving of survivingTabs) {
+      this.getTabManagers(surviving.id)?.layout.updateLayout();
+    }
+
     if (wasActive) {
-      this.removeActiveTab(tabGroup.windowId, tabGroup.spaceId, groupPosition);
+      const nextActive = survivingTabs[0];
+      if (nextActive) {
+        this.activateTab(nextActive);
+      } else {
+        this.removeActiveTab(tabGroup.windowId, tabGroup.spaceId, groupPosition);
+      }
     }
   }
 

@@ -716,10 +716,19 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       const group = await tabsController.openUrlInSplit(tab, urlCheck.url, dir);
       if (!group) return textResult("Failed to create Split View.", true);
 
+      const newPane = group.tabs.find((t) => t.id !== tab.id);
+      if (newPane?.webContents && args.waitForLoad !== false) {
+        await waitForTabLoad(newPane.webContents, 6000);
+      }
+
       return jsonResult({
         groupId: group.groupId,
         direction: dir,
-        tabs: group.tabs.map((t) => ({ tabId: t.id, url: t.url, title: t.title }))
+        tabs: group.tabs.map((t) => ({
+          tabId: t.id,
+          url: t.url || (t.id === newPane?.id ? urlCheck.url : ""),
+          title: t.title
+        }))
       });
     }
   },

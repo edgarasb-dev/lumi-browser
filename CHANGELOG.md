@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.3] — 2026-11-21
+
+### Codename: Prism
+
+### Fixed
+
+- **Split View & Glance Tab Teardown Crash**: Fixed `BaseTabGroup.removeTab()` emitting `"changed"` after `SplitTabGroup` or `GlanceTabGroup` destroyed itself inside `"tab-removed"` (which raised `EventEmitter already destroyed!` during `Tab.destroy()` and left closed tabs' views orphaned), and ensured `internalDestroyTabGroup()` updates surviving tab layouts and activates the remaining tab when a group collapses.
+- **MCP Split View & Activity Log Details**: Fixed `lumi_open_split_view` waiting for initial pane navigation so both split tabs return populated URLs, and updated the MCP Live Agent Activity feed to display specific error summaries instead of generic `"Returned error"`.
+
+---
+
 ## [0.3.2] — 2026-11-21
 
 ### Codename: Prism

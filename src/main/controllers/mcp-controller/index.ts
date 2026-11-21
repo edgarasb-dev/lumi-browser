@@ -658,10 +658,15 @@ class McpController extends TypedEventEmitter<McpControllerEvents> {
 
       try {
         const result = await tool.handler(toolArgs, { config: { ...this.config } });
+        const firstText = result.content.find((c) => c.type === "text");
+        const errorSummary =
+          result.isError && firstText?.type === "text"
+            ? firstText.text.split("\n")[0].trim().slice(0, 90) || "Returned error"
+            : "Executed";
         this.recordActivity({
           method,
           toolName,
-          summary: result.isError ? "Returned error" : "Executed",
+          summary: errorSummary,
           status: result.isError ? "error" : "ok",
           durationMs: Date.now() - start
         });

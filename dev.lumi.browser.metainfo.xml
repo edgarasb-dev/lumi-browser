@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.3.3" date="2026-11-21">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.3</url>
+      <description>
+        <p>Fix Split View and Glance tab close teardown crash (EventEmitter already destroyed) and surviving pane layout restore, wait for split pane navigation in lumi_open_split_view, and improve MCP Live Agent Activity error summaries.</p>
+      </description>
+    </release>
     <release version="0.3.2" date="2026-11-21">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.2</url>
       <description>

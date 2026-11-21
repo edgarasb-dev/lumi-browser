@@ -199,8 +199,17 @@ export class BaseTabGroup extends TypedEventEmitter<TabGroupEvents> {
 
     this.tabIds = this.tabIds.filter((id) => id !== tabId);
     this.emit("tab-removed", tabId);
-    this.emit("changed");
+    if (!this.isDestroyed && !this.isEmitterDestroyed()) {
+      this.emit("changed");
+    }
     return true;
+  }
+
+  /**
+   * Returns raw member tab IDs without asserting active group state (safe during destroy cleanup).
+   */
+  public getRawTabIds(): number[] {
+    return [...this.tabIds];
   }
 
   public get tabs(): Tab[] {
@@ -233,7 +242,7 @@ export class BaseTabGroup extends TypedEventEmitter<TabGroupEvents> {
   }
 
   public destroy() {
-    this.errorIfDestroyed();
+    if (this.isDestroyed) return;
 
     // Clear groupId for all tabs in the group before destroying
     for (const tab of this.tabs) {
@@ -243,7 +252,9 @@ export class BaseTabGroup extends TypedEventEmitter<TabGroupEvents> {
     }
 
     this.isDestroyed = true;
-    this.emit("destroyed");
-    this.destroyEmitter();
+    if (!this.isEmitterDestroyed()) {
+      this.emit("destroyed");
+      this.destroyEmitter();
+    }
   }
 }
