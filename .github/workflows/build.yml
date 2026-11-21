@@ -218,6 +218,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-2022]
 
@@ -372,10 +373,6 @@ jobs:
           if [ -f node_modules/esbuild/install.js ]; then node node_modules/esbuild/install.js; fi
           if [ "$RUNNER_OS" = "Windows" ] && [ -d node_modules/electron-winstaller ]; then
             (cd node_modules/electron-winstaller && node ./script/select-7z-arch.js)
-          fi
-          if [ "$RUNNER_OS" = "macOS" ] && [ -d node_modules/objc-js ]; then
-            BIN="$(pwd)/node_modules/.bin/node-gyp-build"
-            (cd node_modules/objc-js && "$BIN")
           fi
           bun run postinstall
         env:
