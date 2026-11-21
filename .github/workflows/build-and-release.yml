@@ -77,20 +77,53 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm, macos-latest, windows-2022]
 
     steps:
+      - name: Optimize Windows Runner (Defender Exclusions & Same-Drive Caches)
+        if: matrix.os == 'windows-2022'
+        shell: pwsh
+        run: |
+          "BUN_INSTALL_CACHE_DIR=D:\.ci-cache\bun" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "electron_config_cache=D:\.ci-cache\electron" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ELECTRON_BUILDER_CACHE=D:\.ci-cache\electron-builder" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "PIP_CACHE_DIR=D:\.ci-cache\pip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          try {
+            $paths = @(
+              'D:\',
+              "$env:USERPROFILE",
+              "$env:TEMP",
+              "$env:LOCALAPPDATA\electron",
+              "$env:LOCALAPPDATA\electron-builder"
+            )
+            $procs = @('bun.exe', 'node.exe', 'tar.exe', 'zstd.exe', '7z.exe', '7za.exe', 'makensis.exe', 'git.exe', 'python3.exe', 'python.exe', 'pwsh.exe', 'cl.exe', 'link.exe')
+            Add-MpPreference -ExclusionPath $paths -ExclusionProcess $procs
+          } catch {
+            Write-Host "::warning::Windows Defender exclusion skipped: $_"
+          }
+
       - name: Check out Git repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Exclude build paths from Windows Defender
-        if: matrix.os == 'windows-2022'
-        continue-on-error: true
-        shell: pwsh
+      - name: Use preinstalled Node.js 22+
+        id: node
+        shell: bash
         run: |
-          Add-MpPreference -ExclusionPath "${{ github.workspace }}"
-          Add-MpPreference -ExclusionPath "$env:USERPROFILE\.bun"
-          Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\electron"
-          Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\electron-builder"
+          shopt -s nullglob
+          tc="${RUNNER_TOOL_CACHE//\\//}"
+          best=""
+          for dir in "$tc"/node/22.*/x64/bin "$tc"/node/22.*/arm64/bin "$tc"/node/22.*/x64; do
+            if [ -x "$dir/node" ] || [ -x "$dir/node.exe" ]; then
+              best="$dir"
+            fi
+          done
+          if [ -n "$best" ]; then
+            native=$(cygpath -w "$best" 2>/dev/null || printf '%s' "$best")
+            echo "$native" >> "$GITHUB_PATH"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Install Node.js, NPM and Yarn
+      - name: Install Node.js (Fallback)
+        if: steps.node.outputs.found != 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -100,71 +133,122 @@ jobs:
         with:
           bun-version: 1.3.10
 
-      - name: Cache Bun & Electron downloads (Linux)
-        if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.bun/install/cache
-            ~/.cache/electron
-            ~/.cache/electron-builder
-            ~/.local/share/gem
-          key: lumi-release-${{ matrix.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            lumi-release-${{ matrix.os }}-
-
-      - name: Cache Bun & Electron downloads (macOS)
-        if: matrix.os == 'macos-latest'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.bun/install/cache
-            ~/Library/Caches/electron
-            ~/Library/Caches/electron-builder
-            ~/Library/Caches/pip
-          key: lumi-release-${{ matrix.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            lumi-release-${{ matrix.os }}-
-
-      - name: Cache Bun & Electron downloads (Windows)
-        if: matrix.os == 'windows-2022'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.bun/install/cache
-            ~/AppData/Local/electron/Cache
-            ~/AppData/Local/electron-builder/Cache
-            ~/AppData/Local/pip/Cache
-          key: lumi-release-${{ matrix.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            lumi-release-${{ matrix.os }}-
-
       - name: Use Stock Electron (Ubuntu ARM only)
         if: matrix.os == 'ubuntu-24.04-arm'
         run: bun run script:use-stock-electron
 
+      - name: Cache Electron & Builder tools (Linux)
+        if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/.local/share/gem
+          key: lumi-ci-v2-linux-tools-${{ matrix.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            lumi-ci-v2-linux-tools-${{ matrix.os }}-
+
+      - name: Cache node_modules (macOS)
+        id: mac-nm-cache
+        if: matrix.os == 'macos-latest'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules
+          key: lumi-ci-v2-mac-nm-${{ hashFiles('bun.lock', 'package.json', 'patches/**') }}
+
+      - name: Cache Builder & EVS tools (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/Library/Caches/electron-builder
+            ~/Library/Caches/pip
+          key: lumi-ci-v2-mac-tools-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            lumi-ci-v2-mac-tools-
+
+      - name: Cache packed node_modules (Windows)
+        id: win-nm-cache
+        if: matrix.os == 'windows-2022'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: D:\.ci-cache\nm
+          key: lumi-ci-v2-win-nm-${{ hashFiles('bun.lock', 'package.json', 'patches/**') }}
+
+      - name: Cache Builder & EVS tools (Windows)
+        if: matrix.os == 'windows-2022'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            D:\.ci-cache\electron-builder
+            D:\.ci-cache\pip
+          key: lumi-ci-v2-win-tools-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            lumi-ci-v2-win-tools-
+
       - name: Install Build Dependencies (Ubuntu only)
         if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends elfutils dpkg fakeroot
+          REQUIRED="elfutils dpkg fakeroot"
+          if [ "${{ matrix.os }}" = "ubuntu-24.04-arm" ]; then
+            REQUIRED="$REQUIRED ruby"
+          fi
+          MISSING=""
+          for pkg in $REQUIRED; do
+            dpkg -s "$pkg" >/dev/null 2>&1 || MISSING="$MISSING $pkg"
+          done
+          if [ -n "$MISSING" ]; then
+            sudo apt-get update -o Acquire::Languages=none
+            sudo apt-get install -y --no-install-recommends $MISSING
+          fi
 
       - name: Install Additional Build Dependencies (Ubuntu ARM only)
         if: matrix.os == 'ubuntu-24.04-arm'
         run: |
-          sudo apt-get install -y --no-install-recommends ruby
           GEM_USER_BIN="$(ruby -e 'puts Gem.user_dir')/bin"
           if [ ! -x "$GEM_USER_BIN/fpm" ]; then
+            sudo apt-get update -o Acquire::Languages=none
             sudo apt-get install -y --no-install-recommends ruby-dev
             gem install --user-install --no-document fpm -v 1.17.0
           fi
           echo "$GEM_USER_BIN" >> "$GITHUB_PATH"
 
+      - name: Extract Cached node_modules (Windows)
+        if: matrix.os == 'windows-2022' && steps.win-nm-cache.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: |
+          7z x D:\.ci-cache\nm\node_modules.7z -aoa -mmt=on -bso0 -bsp0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Install Dependencies
-        run: bun install --development
+        if: |
+          matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' ||
+          (matrix.os == 'macos-latest' && steps.mac-nm-cache.outputs.cache-hit != 'true') ||
+          (matrix.os == 'windows-2022' && steps.win-nm-cache.outputs.cache-hit != 'true')
+        shell: bash
+        run: |
+          bun install --development --ignore-scripts --backend=hardlink --no-summary
+          if [ -f node_modules/esbuild/install.js ]; then node node_modules/esbuild/install.js; fi
+          if [ "$RUNNER_OS" = "Windows" ] && [ -d node_modules/electron-winstaller ]; then
+            (cd node_modules/electron-winstaller && node ./script/select-7z-arch.js)
+          fi
+          if [ "$RUNNER_OS" = "macOS" ] && [ -d node_modules/objc-js ]; then
+            BIN="$(pwd)/node_modules/.bin/node-gyp-build"
+            (cd node_modules/objc-js && "$BIN")
+          fi
+          bun run postinstall
         env:
           SHARP_IGNORE_GLOBAL_LIBVIPS: 1
           GYP_MSVS_VERSION: 2022
+
+      - name: Pack node_modules Cache (Windows)
+        if: matrix.os == 'windows-2022' && steps.win-nm-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path D:\.ci-cache\nm | Out-Null
+          7z a -t7z -mx=1 -mmt=on -bso0 -bsp0 D:\.ci-cache\nm\node_modules.7z node_modules
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install & Login Castlabs EVS (macOS & Windows)
         if: matrix.os == 'macos-latest' || matrix.os == 'windows-2022'
@@ -195,6 +279,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: bun run build:mac:ci -p always
         env:
+          ELECTRON_BUILDER_COMPRESSION_LEVEL: "3"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}
@@ -209,6 +294,7 @@ jobs:
         if: matrix.os == 'windows-2022'
         run: bun run build:win:ci -p always
         env:
+          ELECTRON_BUILDER_COMPRESSION_LEVEL: "3"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}

@@ -28,7 +28,19 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Node.js
+      - name: Use preinstalled Node.js 22+
+        id: node
+        run: |
+          NODE_BIN=$(ls -d "$RUNNER_TOOL_CACHE"/node/22.*/x64/bin 2>/dev/null | sort -V | tail -n1 || true)
+          if [ -n "$NODE_BIN" ] && [ -x "$NODE_BIN/node" ]; then
+            echo "$NODE_BIN" >> "$GITHUB_PATH"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Node.js (Fallback)
+        if: steps.node.outputs.found != 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -38,28 +50,40 @@ jobs:
         with:
           bun-version: 1.3.10
 
-      - name: Cache Bun downloads, ESLint & TypeScript caches
+      - name: Cache ESLint, Prettier & TypeScript incrementals
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            ~/.bun/install/cache
             .eslintcache
+            .prettiercache
             .tsbuildinfo.*
-          key: lumi-checks-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
+          key: lumi-checks-meta-${{ runner.os }}-${{ hashFiles('bun.lock', 'eslint.config.mjs', 'tsconfig*.json', '.prettierrc') }}-${{ github.run_id }}
           restore-keys: |
-            lumi-checks-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
-            lumi-checks-${{ runner.os }}-
+            lumi-checks-meta-${{ runner.os }}-${{ hashFiles('bun.lock', 'eslint.config.mjs', 'tsconfig*.json', '.prettierrc') }}-
+            lumi-checks-meta-${{ runner.os }}-
 
       - name: Install Dependencies
-        run: bun install --development --ignore-scripts
+        run: bun install --development --ignore-scripts --no-summary
 
-      - name: Run Type Check
+      - name: Run Type Check, Lint & Formatting in Parallel
         run: |
-          ./node_modules/.bin/tsc --noEmit -p tsconfig.node.json --composite false --incremental --tsBuildInfoFile .tsbuildinfo.node
-          ./node_modules/.bin/tsc --noEmit -p tsconfig.web.json --composite false --incremental --tsBuildInfoFile .tsbuildinfo.web
+          set +e
+          ./node_modules/.bin/tsc --noEmit -p tsconfig.node.json --composite false --incremental --tsBuildInfoFile .tsbuildinfo.node > /tmp/tsc-node.log 2>&1 &
+          p1=$!
+          ./node_modules/.bin/tsc --noEmit -p tsconfig.web.json --composite false --incremental --tsBuildInfoFile .tsbuildinfo.web > /tmp/tsc-web.log 2>&1 &
+          p2=$!
+          ./node_modules/.bin/eslint --cache . > /tmp/eslint.log 2>&1 &
+          p3=$!
+          ./node_modules/.bin/prettier --check --cache --cache-location .prettiercache . > /tmp/prettier.log 2>&1 &
+          p4=$!
 
-      - name: Run Lint
-        run: bun run lint
+          rc=0
+          wait $p1 || { echo "::group::TypeScript (node) FAILED"; cat /tmp/tsc-node.log; echo "::endgroup::"; rc=1; }
+          wait $p2 || { echo "::group::TypeScript (web) FAILED"; cat /tmp/tsc-web.log; echo "::endgroup::"; rc=1; }
+          wait $p3 || { echo "::group::ESLint FAILED"; cat /tmp/eslint.log; echo "::endgroup::"; rc=1; }
+          wait $p4 || { echo "::group::Prettier FAILED"; cat /tmp/prettier.log; echo "::endgroup::"; rc=1; }
 
-      - name: Check Formatting
-        run: bunx prettier --check .
+          if [ "$rc" -eq 0 ]; then
+            cat /tmp/tsc-node.log /tmp/tsc-web.log /tmp/eslint.log /tmp/prettier.log
+          fi
+          exit $rc

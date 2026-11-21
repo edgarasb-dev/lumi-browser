@@ -145,6 +145,9 @@ const electronBuilderConfig: Configuration = {
     executableArgs: ["--ozone-platform-hint=auto"],
     icon: "icon.png"
   },
+  deb: {
+    compression: "gz"
+  },
   appImage: {
     artifactName: "Lumi-v${version}-${arch}.${ext}"
   },
