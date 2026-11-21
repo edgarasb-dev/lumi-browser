@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ConditionalPasskeyRequest } from "~/types/passkey";
 
 interface PasskeysRequestContextValue {
@@ -37,5 +37,7 @@ export function PasskeysRequestProvider({ children }: PasskeysRequestProviderPro
     return () => unsub();
   }, [fetchConditionalRequests]);
 
-  return <PasskeysRequestContext.Provider value={{ conditionalRequests }}>{children}</PasskeysRequestContext.Provider>;
+  const value = useMemo(() => ({ conditionalRequests }), [conditionalRequests]);
+
+  return <PasskeysRequestContext.Provider value={value}>{children}</PasskeysRequestContext.Provider>;
 }

@@ -645,11 +645,12 @@ class UnifiedWebRequest {
   }
 }
 
-const unifiedWebRequestsMap = new Map<WebRequest, UnifiedWebRequest>();
+const unifiedWebRequestsMap = new WeakMap<WebRequest, UnifiedWebRequest>();
 
 export function getUnifiedWebRequest(webRequest: WebRequest): UnifiedWebRequest {
-  if (unifiedWebRequestsMap.has(webRequest)) {
-    return unifiedWebRequestsMap.get(webRequest)!;
+  const existing = unifiedWebRequestsMap.get(webRequest);
+  if (existing) {
+    return existing;
   }
 
   const unifiedWebRequest = new UnifiedWebRequest(webRequest);
@@ -658,28 +659,21 @@ export function getUnifiedWebRequest(webRequest: WebRequest): UnifiedWebRequest 
   return unifiedWebRequest;
 }
 
-// Use WeakMaps to generate unique identifiers for objects
-const objectIds = new WeakMap<object, string>();
-let nextObjectId = 0;
-
-function getObjectId(obj: object): string {
-  if (!objectIds.has(obj)) {
-    objectIds.set(obj, (nextObjectId++).toString());
-  }
-  return objectIds.get(obj)!;
-}
-
-// Cache for betterWebRequest instances
-const betterWebRequestCache = new Map<string, WebRequest>();
+// Cache betterWebRequest instances weakly by WebRequest object so GC reclaims closed sessions
+const betterWebRequestCache = new WeakMap<WebRequest, Map<string, WebRequest>>();
 
 export function createBetterWebRequest(webRequest: WebRequest, id?: string): WebRequest {
   const actualId = id ?? crypto.randomUUID();
-  const webRequestId = getObjectId(webRequest);
-  const cacheKey = `${webRequestId}_${actualId}`;
+  let perWebRequest = betterWebRequestCache.get(webRequest);
+  if (!perWebRequest) {
+    perWebRequest = new Map();
+    betterWebRequestCache.set(webRequest, perWebRequest);
+  }
 
   // Check if we already have a cached instance
-  if (betterWebRequestCache.has(cacheKey)) {
-    return betterWebRequestCache.get(cacheKey)!;
+  const cached = perWebRequest.get(actualId);
+  if (cached) {
+    return cached;
   }
 
   const unifiedWebRequest = getUnifiedWebRequest(webRequest);
@@ -774,22 +768,26 @@ export function createBetterWebRequest(webRequest: WebRequest, id?: string): Web
   };
 
   // Store in cache
-  betterWebRequestCache.set(cacheKey, betterWebRequest);
+  perWebRequest.set(actualId, betterWebRequest);
 
   return betterWebRequest;
 }
 
-// Cache for betterSession instances
-const betterSessionCache = new Map<string, Session>();
+// Cache betterSession instances weakly by Session object so GC reclaims deleted/ephemeral sessions
+const betterSessionCache = new WeakMap<Session, Map<string, Session>>();
 
 export function createBetterSession(session: Session, id?: string): Session {
   const actualId = id ?? crypto.randomUUID();
-  const sessionId = getObjectId(session);
-  const cacheKey = `${sessionId}_${actualId}`;
+  let perSession = betterSessionCache.get(session);
+  if (!perSession) {
+    perSession = new Map();
+    betterSessionCache.set(session, perSession);
+  }
 
   // Check if we already have a cached instance
-  if (betterSessionCache.has(cacheKey)) {
-    return betterSessionCache.get(cacheKey)!;
+  const cached = perSession.get(actualId);
+  if (cached) {
+    return cached;
   }
 
   const webRequest = session.webRequest;
@@ -817,7 +815,7 @@ export function createBetterSession(session: Session, id?: string): Session {
   });
 
   // Store in cache
-  betterSessionCache.set(cacheKey, betterSession);
+  perSession.set(actualId, betterSession);
 
   return betterSession;
 }

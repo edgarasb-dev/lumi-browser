@@ -43,6 +43,7 @@ const TabsFocusedContext = createContext<Pick<TabsContextValue, "focusedTab" | "
 const TabsFocusedIdContext = createContext<number | null | undefined>(undefined);
 const TabsFocusedLoadingContext = createContext<boolean | undefined>(undefined);
 const TabsFocusedFullscreenContext = createContext<boolean | undefined>(undefined);
+const TabsIdsContext = createContext<Set<number> | null>(null);
 
 export const useTabs = () => {
   const context = useContext(TabsContext);
@@ -100,6 +101,16 @@ export const useFocusedTabFullscreen = () => {
   return context;
 };
 
+export const useTabIds = () => {
+  const context = useContext(TabsIdsContext);
+  if (!context) {
+    throw new Error("useTabIds must be used within a TabsProvider");
+  }
+  return context;
+};
+
+const EMPTY_TAB_IDS_SET = new Set<number>();
+
 interface TabsProviderProps {
   children: React.ReactNode;
 }
@@ -119,6 +130,7 @@ export const TabsProvider = ({ children }: TabsProviderProps) => {
   const { currentSpace } = useSpaces();
   const [tabsData, setTabsData] = useState<WindowTabsData | null>(null);
   const tabGroupCacheRef = useRef<Map<string, TabGroupCacheEntry>>(EMPTY_TAB_GROUP_CACHE);
+  const tabIdsRef = useRef<Set<number>>(EMPTY_TAB_IDS_SET);
 
   const fetchTabs = useCallback(async () => {
     if (!lumi) return;
@@ -409,6 +421,24 @@ export const TabsProvider = ({ children }: TabsProviderProps) => {
     [groupsContextValue, focusedContextValue, tabsData, getActiveTabId, getFocusedTabId]
   );
 
+  const tabIds = useMemo(() => {
+    if (!tabsData) return EMPTY_TAB_IDS_SET;
+    const prev = tabIdsRef.current;
+    if (prev.size === tabsData.tabs.length) {
+      let unchanged = true;
+      for (const tab of tabsData.tabs) {
+        if (!prev.has(tab.id)) {
+          unchanged = false;
+          break;
+        }
+      }
+      if (unchanged) return prev;
+    }
+    const next = new Set(tabsData.tabs.map((t) => t.id));
+    tabIdsRef.current = next;
+    return next;
+  }, [tabsData]);
+
   return (
     <TabsContext.Provider value={contextValue}>
       <TabsGroupsContext.Provider value={groupsContextValue}>
@@ -416,7 +446,7 @@ export const TabsProvider = ({ children }: TabsProviderProps) => {
           <TabsFocusedIdContext.Provider value={focusedTabId}>
             <TabsFocusedLoadingContext.Provider value={isFocusedTabLoading}>
               <TabsFocusedFullscreenContext.Provider value={isFocusedTabFullscreen}>
-                {children}
+                <TabsIdsContext.Provider value={tabIds}>{children}</TabsIdsContext.Provider>
               </TabsFocusedFullscreenContext.Provider>
             </TabsFocusedLoadingContext.Provider>
           </TabsFocusedIdContext.Provider>

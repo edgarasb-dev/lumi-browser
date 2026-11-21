@@ -1,6 +1,6 @@
 import { Space } from "~/lumi/interfaces/sessions/spaces";
 import { SpaceIconPicker } from "../icon-picker";
-import { motion } from "motion/react";
+import { Shapes } from "lucide-react";
 
 type SpaceIconEditorProps = {
   editedSpace: Space;
@@ -9,17 +9,18 @@ type SpaceIconEditorProps = {
 
 export function SpaceIconEditor({ editedSpace, updateEditedSpace }: SpaceIconEditorProps) {
   return (
-    <motion.div
-      className="space-y-5 pt-2"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: 0.6 }}
-    >
-      <h3 className="text-lg font-medium flex items-center gap-2">Space Icon</h3>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Shapes className="size-4 text-primary" />
+          <h4 className="text-sm font-semibold text-foreground">Space Icon</h4>
+        </div>
+        <span className="text-[11px] font-mono text-muted-foreground">{editedSpace.icon || "Globe"}</span>
+      </div>
       <SpaceIconPicker
         selectedIcon={editedSpace.icon || "Globe"}
         onSelectIcon={(iconId) => updateEditedSpace({ icon: iconId })}
       />
-    </motion.div>
+    </div>
   );
 }

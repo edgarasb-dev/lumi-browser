@@ -319,16 +319,21 @@ export function pruneBrowsingHistory(): void {
   const db = getDb();
   const cutoff = Date.now() - RETENTION_MS;
   db.transaction((tx) => {
+    const affectedUrlRows = tx
+      .selectDistinct({ urlId: historyVisits.urlId })
+      .from(historyVisits)
+      .where(lt(historyVisits.visitTime, cutoff))
+      .all();
+
+    if (affectedUrlRows.length === 0) {
+      return;
+    }
+
     tx.delete(historyVisits).where(lt(historyVisits.visitTime, cutoff)).run();
-    tx.delete(historyUrls)
-      .where(sql`id NOT IN (SELECT DISTINCT url_id FROM history_visits)`)
-      .run();
-    tx.run(
-      sql`UPDATE history_urls SET
-        visit_count = (SELECT COUNT(*) FROM history_visits WHERE history_visits.url_id = history_urls.id),
-        typed_count = COALESCE((SELECT SUM(typed) FROM history_visits WHERE history_visits.url_id = history_urls.id), 0),
-        last_visit_time = COALESCE((SELECT MAX(visit_time) FROM history_visits WHERE history_visits.url_id = history_urls.id), last_visit_time)`
-    );
+
+    for (const { urlId } of affectedUrlRows) {
+      reconcileUrlAggregatesAfterVisitChangeInDb(tx, urlId);
+    }
   });
 }
 

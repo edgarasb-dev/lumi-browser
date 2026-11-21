@@ -6,6 +6,7 @@ import { useSpaces } from "@/components/providers/spaces-provider";
 import { useDownloads } from "@/components/providers/downloads-provider";
 import { cn } from "@/lib/utils";
 import type { DownloadItemData } from "~/types/downloads";
+import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./bottom/dock-button-sizes";
 
 export function formatDownloadBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -162,7 +163,7 @@ function DownloadPopoverRow({ item }: { item: DownloadItemData }) {
   );
 }
 
-export function DownloadsButton() {
+export function DownloadsButton({ size = "default" }: { size?: DockButtonSize } = {}) {
   const [open, setOpen] = useState(false);
   const { downloads, hasActiveDownloads, overallProgress } = useDownloads();
   const { isCurrentSpaceLight } = useSpaces();
@@ -174,22 +175,24 @@ export function DownloadsButton() {
   }, []);
 
   const recentDownloads = downloads.slice(0, 8);
+  const sizeClasses = DOCK_BUTTON_CLASSES[size];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Button
         size="icon"
-        className="relative size-8 bg-transparent hover:bg-black/10 dark:hover:bg-white/10"
+        className={cn("relative bg-transparent hover:bg-black/10 dark:hover:bg-white/10", sizeClasses.button)}
         title={hasActiveDownloads ? "Downloads (in progress)" : "Downloads"}
         asChild
       >
         <PopoverTrigger nativeButton={true}>
-          <div className="relative flex items-center justify-center size-7">
+          <div className={cn("relative flex items-center justify-center", size === "default" ? "size-7" : "size-full")}>
             {hasActiveDownloads && <ProgressRing progress={overallProgress} />}
             <DownloadIcon
               strokeWidth={2}
               className={cn(
-                "w-4 h-4 transition-colors",
+                sizeClasses.icon,
+                "transition-colors",
                 hasActiveDownloads ? "text-sky-500" : "text-black/80 dark:text-white/80"
               )}
             />

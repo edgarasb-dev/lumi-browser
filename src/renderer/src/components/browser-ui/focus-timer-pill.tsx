@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pause, Play, RotateCcw, Shield, ShieldOff, X } from "lucide-react";
 import { PortalComponent } from "@/components/portal/portal";
-import { useFocusMode } from "@/components/providers/focus-mode-provider";
+import { useFocusMode, useFocusTimer } from "@/components/providers/focus-mode-provider";
 import { cn } from "@/lib/utils";
 
 function formatClock(totalSeconds: number): string {
@@ -13,28 +13,52 @@ function formatClock(totalSeconds: number): string {
 }
 
 export function FocusTimerPill() {
-  const {
-    isZenMode,
-    setZenMode,
-    phase,
-    timerRunning,
-    remainingSeconds,
-    toggleTimer,
-    resetTimer,
-    blockDistractions,
-    setBlockDistractions
-  } = useFocusMode();
+  const { isZenMode, setZenMode, timerRunning, toggleTimer, resetTimer, blockDistractions, setBlockDistractions } =
+    useFocusMode();
+  const visible = isZenMode || timerRunning;
+  if (!visible) return null;
+
+  return (
+    <ActiveFocusTimerPill
+      isZenMode={isZenMode}
+      setZenMode={setZenMode}
+      timerRunning={timerRunning}
+      toggleTimer={toggleTimer}
+      resetTimer={resetTimer}
+      blockDistractions={blockDistractions}
+      setBlockDistractions={setBlockDistractions}
+    />
+  );
+}
+
+function ActiveFocusTimerPill({
+  isZenMode,
+  setZenMode,
+  timerRunning,
+  toggleTimer,
+  resetTimer,
+  blockDistractions,
+  setBlockDistractions
+}: Pick<
+  ReturnType<typeof useFocusMode>,
+  | "isZenMode"
+  | "setZenMode"
+  | "timerRunning"
+  | "toggleTimer"
+  | "resetTimer"
+  | "blockDistractions"
+  | "setBlockDistractions"
+>) {
+  const { phase, remainingSeconds } = useFocusTimer();
   const [expanded, setExpanded] = useState(false);
 
   const defaultSeconds = phase === "break" ? 5 * 60 : 25 * 60;
-  const visible = isZenMode || timerRunning;
   const showReset = expanded || timerRunning || remainingSeconds !== defaultSeconds;
-
   const pillWidth = (isZenMode ? 248 : 168) + (showReset ? 30 : 0);
 
   return (
     <PortalComponent
-      visible={visible}
+      visible={true}
       layerType="focusTimerPill"
       className="fixed bottom-4 right-4"
       style={{ width: pillWidth, height: 38 }}

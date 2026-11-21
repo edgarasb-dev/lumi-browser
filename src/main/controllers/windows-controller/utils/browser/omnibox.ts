@@ -91,6 +91,8 @@ export class Omnibox {
 
   private disabled: boolean = false;
   private isDestroyed: boolean = false;
+  private preloadFallbackTimer: NodeJS.Timeout | null = null;
+  private onParentLoaded: (() => void) | null = null;
 
   constructor(parentWindow: LumiBrowserWindow, windowType: BrowserWindowType) {
     debugPrint("OMNIBOX", `Creating new omnibox for window ${parentWindow.id}`);
@@ -130,12 +132,6 @@ export class Omnibox {
       this.updateBounds();
     });
 
-    setTimeout(() => {
-      this.loadInterface();
-      this.updateBounds();
-      this.hide();
-    }, 0);
-
     omniboxes.set(electronWindow, this);
 
     this.view = onmiboxView;
@@ -150,6 +146,30 @@ export class Omnibox {
       createModalTo("omnibox")
     );
     parentWindow.layerManager.push(this.layer);
+
+    this.updateBounds();
+    this.hide();
+
+    if (!this.disabled) {
+      const preloadOmnibox = () => {
+        if (this.preloadFallbackTimer) {
+          clearTimeout(this.preloadFallbackTimer);
+          this.preloadFallbackTimer = null;
+        }
+        if (this.onParentLoaded) {
+          this.browserWindow.off("loaded", this.onParentLoaded);
+          this.onParentLoaded = null;
+        }
+        if (!this.isDestroyed) {
+          this.loadInterface();
+        }
+      };
+
+      this.onParentLoaded = preloadOmnibox;
+      parentWindow.once("loaded", preloadOmnibox);
+      // Fallback in case BaseWindow's ready-to-show times out without emitting "loaded"
+      this.preloadFallbackTimer = setTimeout(preloadOmnibox, 2000);
+    }
   }
 
   private assertNotDestroyed() {
@@ -369,6 +389,16 @@ export class Omnibox {
     if (this.blurIgnoreTimeout) {
       clearTimeout(this.blurIgnoreTimeout);
       this.blurIgnoreTimeout = null;
+    }
+
+    if (this.preloadFallbackTimer) {
+      clearTimeout(this.preloadFallbackTimer);
+      this.preloadFallbackTimer = null;
+    }
+
+    if (this.onParentLoaded) {
+      this.browserWindow.off("loaded", this.onParentLoaded);
+      this.onParentLoaded = null;
     }
 
     this.isDestroyed = true;

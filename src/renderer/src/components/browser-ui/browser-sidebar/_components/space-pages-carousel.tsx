@@ -308,9 +308,15 @@ export function SpacePagesCarousel() {
       )}
       style={{ scrollbarWidth: "none" }}
     >
-      {spaces.map((space) => (
-        <SpaceContentPage key={space.id} space={space} moveTab={moveTab} slotMachineEnabled={slotMachineEnabled} />
-      ))}
+      {spaces.map((space, index) => {
+        const shouldMount = Math.abs(index - currentIndex) <= 1;
+        if (!shouldMount) {
+          return <div key={space.id} className="w-full min-w-full shrink-0 snap-start snap-always mx-1 h-full" />;
+        }
+        return (
+          <SpaceContentPage key={space.id} space={space} moveTab={moveTab} slotMachineEnabled={slotMachineEnabled} />
+        );
+      })}
     </div>
   );
 }

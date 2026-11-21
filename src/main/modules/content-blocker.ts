@@ -1,9 +1,13 @@
 import { debugPrint } from "@/modules/output";
+import { LUMI_DATA_DIR } from "@/modules/paths";
 import { getSettingValueById, onSettingsCached, settingsEmitter } from "@/saving/settings";
 import { getDatastore } from "@/saving/datastore";
 import { ElectronBlocker } from "@ghostery/adblocker-electron";
 import { Session, webContents } from "electron";
+import fs from "fs/promises";
+import path from "path";
 import { loadedProfilesController } from "@/controllers/loaded-profiles-controller";
+import { profilesController } from "@/controllers/profiles-controller";
 import { unifiedWebRequests } from "@/controllers/sessions-controller";
 import { tabsController } from "@/controllers/tabs-controller";
 import type { Tab } from "@/controllers/tabs-controller/tab";
@@ -15,6 +19,9 @@ type BlockerInstanceType = "all" | "adsAndTrackers" | "adsOnly";
 const SESSION_KEY = "content-blocker";
 const FOCUS_SESSION_KEY = "lumi-focus-blocklist";
 const ContentBlockerDataStore = getDatastore("content-blocker");
+const ADBLOCKER_CACHE_DIR = path.join(LUMI_DATA_DIR, "adblocker-cache");
+const STATS_SAVE_DEBOUNCE_MS = 30_000;
+const MAX_WHITELIST_URL_CACHE = 256;
 
 const DEFAULT_FOCUS_DOMAINS = ["youtube.com", "x.com", "twitter.com", "reddit.com", "instagram.com", "tiktok.com"];
 
@@ -32,10 +39,12 @@ interface TabStatsData {
 class ContentBlocker {
   private blockerInstancePromise: Promise<ElectronBlocker> | undefined = undefined;
   private blockerInstanceType: BlockerInstanceType | undefined = undefined;
-  private blockedSessions: Session[] = [];
+  private blockedSessions: Map<string, Session> = new Map();
 
   private whitelistedDomainsSet: Set<string> = new Set();
+  private urlWhitelistDecisionCache: Map<string, boolean> = new Map();
   private totalBlockedCount: number = 0;
+  private totalBlockedDirty: boolean = false;
   private tabStatsMap: Map<number, TabStatsData> = new Map();
   private saveTimeout: NodeJS.Timeout | null = null;
   private isDataLoaded: boolean = false;
@@ -101,6 +110,7 @@ class ContentBlocker {
     }
 
     await ContentBlockerDataStore.set("whitelistedDomains", [...this.whitelistedDomainsSet]);
+    this.urlWhitelistDecisionCache.clear();
     sendMessageToListeners("content-blocker:whitelist-changed", [...this.whitelistedDomainsSet]);
     return targetState;
   }
@@ -174,6 +184,7 @@ class ContentBlocker {
     }
 
     this.totalBlockedCount++;
+    this.totalBlockedDirty = true;
     this.scheduleSaveTotalBlocked();
 
     if (tab) {
@@ -250,14 +261,50 @@ class ContentBlocker {
    */
   private scheduleSaveTotalBlocked(): void {
     if (this.saveTimeout) return;
-    this.saveTimeout = setTimeout(async () => {
+    this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null;
-      try {
-        await ContentBlockerDataStore.set("totalBlocked", this.totalBlockedCount);
-      } catch (err) {
-        debugPrint("CONTENT_BLOCKER", "Failed to persist total blocked count:", err);
+      void this.flushPendingStats();
+    }, STATS_SAVE_DEBOUNCE_MS);
+  }
+
+  public async flushPendingStats(): Promise<void> {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    if (!this.totalBlockedDirty) return;
+    this.totalBlockedDirty = false;
+    try {
+      await ContentBlockerDataStore.set("totalBlocked", this.totalBlockedCount);
+    } catch (err) {
+      this.totalBlockedDirty = true;
+      debugPrint("CONTENT_BLOCKER", "Failed to persist total blocked count:", err);
+    }
+  }
+
+  private isPageUrlWhitelisted(pageUrl: string): boolean {
+    if (!pageUrl || this.whitelistedDomainsSet.size === 0) return false;
+    const cached = this.urlWhitelistDecisionCache.get(pageUrl);
+    if (cached !== undefined) return cached;
+
+    let result = false;
+    try {
+      const host = new URL(pageUrl).hostname;
+      if (host) {
+        result = this.isDomainWhitelisted(host);
       }
-    }, 2000);
+    } catch {
+      result = false;
+    }
+
+    if (this.urlWhitelistDecisionCache.size >= MAX_WHITELIST_URL_CACHE) {
+      const oldestKey = this.urlWhitelistDecisionCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.urlWhitelistDecisionCache.delete(oldestKey);
+      }
+    }
+    this.urlWhitelistDecisionCache.set(pageUrl, result);
+    return result;
   }
 
   /**
@@ -273,15 +320,32 @@ class ContentBlocker {
     }
 
     debugPrint("CONTENT_BLOCKER", "Creating blocker instance:", type);
+    const cacheFilePath = path.join(ADBLOCKER_CACHE_DIR, `${type}.bin`);
+    const caching = {
+      path: cacheFilePath,
+      read: async (filePath: string) => new Uint8Array(await fs.readFile(filePath)),
+      write: async (filePath: string, buffer: Uint8Array) => {
+        await fs.mkdir(ADBLOCKER_CACHE_DIR, { recursive: true });
+        const tempPath = `${filePath}.${process.pid}.tmp`;
+        try {
+          await fs.writeFile(tempPath, buffer);
+          await fs.rename(tempPath, filePath);
+        } catch (err) {
+          await fs.rm(tempPath, { force: true }).catch(() => {});
+          throw err;
+        }
+      }
+    };
+
     switch (type) {
       case "all":
-        this.blockerInstancePromise = ElectronBlocker.fromPrebuiltFull();
+        this.blockerInstancePromise = ElectronBlocker.fromPrebuiltFull(fetch, caching);
         break;
       case "adsAndTrackers":
-        this.blockerInstancePromise = ElectronBlocker.fromPrebuiltAdsAndTracking();
+        this.blockerInstancePromise = ElectronBlocker.fromPrebuiltAdsAndTracking(fetch, caching);
         break;
       case "adsOnly":
-        this.blockerInstancePromise = ElectronBlocker.fromPrebuiltAdsOnly();
+        this.blockerInstancePromise = ElectronBlocker.fromPrebuiltAdsOnly(fetch, caching);
         break;
     }
 
@@ -289,32 +353,27 @@ class ContentBlocker {
       // Wrap onBeforeRequest to bypass blocking for whitelisted domains
       const originalOnBeforeRequest = blocker.onBeforeRequest.bind(blocker);
       blocker.onBeforeRequest = (details, callback) => {
-        let pageHost = "";
-        if (details.webContentsId) {
-          try {
-            const wc = webContents.fromId(details.webContentsId);
-            if (wc && !wc.isDestroyed()) {
-              const url = wc.getURL();
-              if (url) {
-                pageHost = new URL(url).hostname;
+        if (this.whitelistedDomainsSet.size > 0) {
+          let pageUrl = "";
+          if (details.webContentsId) {
+            try {
+              const wc = webContents.fromId(details.webContentsId);
+              if (wc && !wc.isDestroyed()) {
+                pageUrl = wc.getURL();
               }
+            } catch {
+              // ignore
             }
-          } catch {
-            // ignore
           }
-        }
-        if (!pageHost && details.referrer) {
-          try {
-            pageHost = new URL(details.referrer).hostname;
-          } catch {
-            // ignore
+          if (!pageUrl && details.referrer) {
+            pageUrl = details.referrer;
           }
-        }
 
-        if (pageHost && this.isDomainWhitelisted(pageHost)) {
-          // Whitelisted domain: bypass blocking
-          callback({});
-          return;
+          if (pageUrl && this.isPageUrlWhitelisted(pageUrl)) {
+            // Whitelisted domain: bypass blocking
+            callback({});
+            return;
+          }
         }
 
         originalOnBeforeRequest(details, callback);
@@ -323,13 +382,8 @@ class ContentBlocker {
       // Wrap onInjectCosmeticFilters to bypass cosmetic filters for whitelisted domains
       const originalOnInjectCosmeticFilters = blocker.onInjectCosmeticFilters.bind(blocker);
       blocker.onInjectCosmeticFilters = async (event, url, msg) => {
-        try {
-          const host = new URL(url).hostname;
-          if (host && this.isDomainWhitelisted(host)) {
-            return;
-          }
-        } catch {
-          // ignore
+        if (this.whitelistedDomainsSet.size > 0 && this.isPageUrlWhitelisted(url)) {
+          return;
         }
         return originalOnInjectCosmeticFilters(event, url, msg);
       };
@@ -356,26 +410,42 @@ class ContentBlocker {
     if (!this.blockerInstancePromise) return;
 
     const blocker = await this.blockerInstancePromise;
-    for (const session of this.blockedSessions) {
+    for (const session of this.blockedSessions.values()) {
       blocker.disableBlockingInSession(unifiedWebRequests.createSession(session, SESSION_KEY));
     }
 
-    this.blockedSessions = [];
+    this.blockedSessions.clear();
     this.blockerInstancePromise = undefined;
     this.blockerInstanceType = undefined;
   }
 
   /**
-   * Enables content blocking for a specific session
+   * Enables content blocking for a specific profile session
    */
-  private async enableBlockerForSession(blockerType: BlockerInstanceType, session: Session): Promise<void> {
+  private async enableBlockerForProfile(
+    blockerType: BlockerInstanceType,
+    profileId: string,
+    session: Session
+  ): Promise<void> {
     const blocker = await this.createBlockerInstance(blockerType);
     if (!blocker) return;
 
-    if (this.blockedSessions.includes(session)) return;
+    if (this.blockedSessions.get(profileId) === session) return;
 
-    this.blockedSessions.push(session);
+    this.blockedSessions.set(profileId, session);
     blocker.enableBlockingInSession(unifiedWebRequests.createSession(session, SESSION_KEY));
+  }
+
+  private removeProfileSession(profileId: string): void {
+    const session = this.blockedSessions.get(profileId);
+    if (!session) return;
+
+    this.blockedSessions.delete(profileId);
+    if (this.blockerInstancePromise) {
+      void this.blockerInstancePromise.then((blocker) => {
+        blocker.disableBlockingInSession(unifiedWebRequests.createSession(session, SESSION_KEY));
+      });
+    }
   }
 
   private isUrlFocusBlocked(rawUrl: string): boolean {
@@ -437,7 +507,11 @@ class ContentBlocker {
       case "adsAndTrackers":
       case "adsOnly":
         for (const profile of profiles) {
-          this.enableBlockerForSession(contentBlockerSetting as BlockerInstanceType, profile.session);
+          this.enableBlockerForProfile(
+            contentBlockerSetting as BlockerInstanceType,
+            profile.profileId,
+            profile.session
+          );
         }
         break;
       default:
@@ -460,6 +534,14 @@ class ContentBlocker {
 
     loadedProfilesController.on("profile-loaded", () => {
       this.updateConfig();
+    });
+
+    loadedProfilesController.on("profile-unloaded", (profileId) => {
+      this.removeProfileSession(profileId);
+    });
+
+    profilesController.on("profile-deleted", (profileId) => {
+      this.removeProfileSession(profileId);
     });
 
     const setupTabListeners = (tab: Tab) => {

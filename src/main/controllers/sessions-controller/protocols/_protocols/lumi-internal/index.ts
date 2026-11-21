@@ -3,6 +3,7 @@ import { Hono } from "hono/tiny";
 import { registerStaticDomainsRoutes } from "../../static-domains";
 import { transformPathForRequest } from "../../utils";
 import { registerActiveFaviconRoutes } from "./active-favicon";
+import { registerPhosphorRoutes } from "./phosphor";
 import { registerTabSnapshotRoutes } from "./tab-snapshot";
 
 // Create Hono App
@@ -13,6 +14,7 @@ export type HonoApp = typeof app;
 
 // Register Routes
 registerActiveFaviconRoutes(app);
+registerPhosphorRoutes(app);
 registerTabSnapshotRoutes(app);
 
 // Catch-all Routes

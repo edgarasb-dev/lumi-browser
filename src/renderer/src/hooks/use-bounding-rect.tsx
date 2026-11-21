@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, RefObject, useCallback, useRef } from "react";
+import { useState, useLayoutEffect, RefObject, useRef } from "react";
 import { usePortalContext } from "@/components/portal/portal";
 
 /** Number of consecutive stable frames before the rAF loop auto-stops. */
@@ -22,132 +22,183 @@ export interface UseBoundingRectOptions {
   epsilon?: number;
 }
 
-/**
- * Tracks an element's `getBoundingClientRect()` over time, adjusted by the
- * portal offset (if rendered inside a `PortalComponent`).
- *
- * Measurement strategy:
- * - A `ResizeObserver` on the target, plus global `scroll` (capture) and
- *   `resize` events, detect layout changes and kick-start a short rAF burst.
- * - The burst runs for a few frames after the last detected change
- *   (`SETTLE_FRAMES`) then auto-stops, keeping CPU usage near-zero when
- *   the element is static.
- * - When `observingWithLoop` is `true` the loop never auto-stops, giving
- *   frame-accurate tracking during CSS animations / transitions.
- * - All scheduling uses `requestAnimationFrame` exclusively (no timers),
- *   so measurements are always paint-synced.
- */
-export function useBoundingRect<T extends HTMLElement>(
-  ref: RefObject<T | null>,
-  options: UseBoundingRectOptions = {}
-): DOMRect | null {
-  const { epsilon = DEFAULT_EPSILON } = options;
+interface ElementListener {
+  epsilon: number;
+  observingWithLoop: boolean;
+  lastRect: DOMRect | null;
+  onRect: (rect: DOMRect) => void;
+}
 
-  const { x: portalX, y: portalY } = usePortalContext();
-  const [rect, setRect] = useState<DOMRect | null>(null);
+interface ElementTracker {
+  element: HTMLElement;
+  listeners: Set<ElementListener>;
+  ro: ResizeObserver;
+  start: () => void;
+  cleanup: () => void;
+  rafId: number | null;
+  running: boolean;
+  lastRawRect: DOMRect | null;
+  stableFrames: number;
+}
 
-  // ---- mutable refs (no re-renders) ----
-  const rafIdRef = useRef<number | null>(null);
-  const runningRef = useRef(false);
-  const lastRectRef = useRef<DOMRect | null>(null);
-  const stableFramesRef = useRef(0);
+const elementTrackers = new WeakMap<HTMLElement, ElementTracker>();
 
-  // Keep a live ref so the rAF loop reads the latest value without needing
-  // to restart (which would reset stableFrames).
-  const loopRef = useRef(false);
-  loopRef.current = options.observingWithLoop ?? false;
+function getOrCreateTracker(el: HTMLElement): ElementTracker {
+  const existing = elementTrackers.get(el);
+  if (existing) return existing;
 
-  const epsilonRef = useRef(epsilon);
-  epsilonRef.current = epsilon;
+  const listeners = new Set<ElementListener>();
 
-  // ---- core measurement tick ----
-  const tick = useCallback(() => {
-    const el = ref.current;
-    if (!el) {
-      runningRef.current = false;
-      rafIdRef.current = null;
+  const tracker: ElementTracker = {
+    element: el,
+    listeners,
+    rafId: null,
+    running: false,
+    lastRawRect: null,
+    stableFrames: 0,
+    ro: null as unknown as ResizeObserver,
+    start: () => {},
+    cleanup: () => {}
+  };
+
+  const anyLooping = () => {
+    for (const listener of listeners) {
+      if (listener.observingWithLoop) return true;
+    }
+    return false;
+  };
+
+  const minEpsilon = () => {
+    let min = DEFAULT_EPSILON;
+    for (const listener of listeners) {
+      if (listener.epsilon < min) min = listener.epsilon;
+    }
+    return min;
+  };
+
+  const tick = () => {
+    if (listeners.size === 0 || !el.isConnected) {
+      tracker.running = false;
+      tracker.rafId = null;
       return;
     }
 
     const next = el.getBoundingClientRect();
 
-    if (rectChanged(lastRectRef.current, next, epsilonRef.current)) {
-      lastRectRef.current = next;
-      stableFramesRef.current = 0;
-      setRect(next);
+    if (rectChanged(tracker.lastRawRect, next, minEpsilon())) {
+      tracker.lastRawRect = next;
+      tracker.stableFrames = 0;
+      for (const listener of listeners) {
+        if (rectChanged(listener.lastRect, next, listener.epsilon)) {
+          listener.lastRect = next;
+          listener.onRect(next);
+        }
+      }
     } else {
-      stableFramesRef.current += 1;
+      tracker.stableFrames += 1;
     }
 
-    // Keep looping if explicitly requested, or if the rect hasn't settled yet.
-    const keepGoing = loopRef.current || stableFramesRef.current < SETTLE_FRAMES;
-
+    const keepGoing = anyLooping() || tracker.stableFrames < SETTLE_FRAMES;
     if (keepGoing) {
-      rafIdRef.current = requestAnimationFrame(tick);
+      tracker.rafId = requestAnimationFrame(tick);
     } else {
-      runningRef.current = false;
-      rafIdRef.current = null;
+      tracker.running = false;
+      tracker.rafId = null;
     }
-  }, [ref]);
+  };
 
-  // ---- start the rAF burst (idempotent) ----
-  const start = useCallback(() => {
-    if (runningRef.current) {
-      // Already running — just reset settle counter so it doesn't stop early.
-      stableFramesRef.current = 0;
+  const start = () => {
+    if (tracker.running) {
+      tracker.stableFrames = 0;
       return;
     }
-    runningRef.current = true;
-    stableFramesRef.current = 0;
-    rafIdRef.current = requestAnimationFrame(tick);
-  }, [tick]);
+    tracker.running = true;
+    tracker.stableFrames = 0;
+    tracker.rafId = requestAnimationFrame(tick);
+  };
 
-  // When `observingWithLoop` flips to true, make sure the loop is running.
-  // When it flips to false the next tick will check `loopRef` and auto-stop
-  // after SETTLE_FRAMES.
-  useLayoutEffect(() => {
-    if (options.observingWithLoop) {
-      start();
+  const ro = new ResizeObserver(start);
+  ro.observe(el);
+  window.addEventListener("scroll", start, { capture: true, passive: true });
+  window.addEventListener("resize", start, { passive: true });
+
+  tracker.ro = ro;
+  tracker.start = start;
+  tracker.cleanup = () => {
+    ro.disconnect();
+    window.removeEventListener("scroll", start, { capture: true } as EventListenerOptions);
+    window.removeEventListener("resize", start);
+    if (tracker.rafId != null) {
+      cancelAnimationFrame(tracker.rafId);
+      tracker.rafId = null;
     }
-  }, [options.observingWithLoop, start]);
+    tracker.running = false;
+    elementTrackers.delete(el);
+  };
 
-  // ---- observers & event listeners ----
+  elementTrackers.set(el, tracker);
+  return tracker;
+}
+
+/**
+ * Tracks an element's `getBoundingClientRect()` over time, adjusted by the
+ * portal offset (if rendered inside a `PortalComponent`).
+ *
+ * Multiple consumers observing the same target element share a single
+ * `ResizeObserver`, scroll/resize listener, and `requestAnimationFrame` burst.
+ */
+export function useBoundingRect<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  options: UseBoundingRectOptions = {}
+): DOMRect | null {
+  const { epsilon = DEFAULT_EPSILON, observingWithLoop = false } = options;
+
+  const { x: portalX, y: portalY } = usePortalContext();
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const listenerRef = useRef<ElementListener | null>(null);
+  const trackerRef = useRef<ElementTracker | null>(null);
+
+  useLayoutEffect(() => {
+    if (listenerRef.current) {
+      listenerRef.current.epsilon = epsilon;
+      listenerRef.current.observingWithLoop = observingWithLoop;
+    }
+    if (observingWithLoop && trackerRef.current) {
+      trackerRef.current.start();
+    }
+  }, [epsilon, observingWithLoop]);
+
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    // Take an initial measurement synchronously (before paint).
+    const tracker = getOrCreateTracker(el);
+    trackerRef.current = tracker;
+
     const initial = el.getBoundingClientRect();
-    lastRectRef.current = initial;
+    tracker.lastRawRect = initial;
     setRect(initial);
 
-    // ResizeObserver on the target element only — ancestor observation was
-    // expensive and noisy, and `getBoundingClientRect()` already returns the
-    // element's position relative to the viewport (so ancestor resize is
-    // captured implicitly via the rAF burst + scroll/resize listeners).
-    const ro = new ResizeObserver(start);
-    ro.observe(el);
-
-    // Window scroll (capture phase to catch nested scrollables) and resize
-    // cover the remaining layout-shift scenarios.
-    window.addEventListener("scroll", start, { capture: true, passive: true });
-    window.addEventListener("resize", start, { passive: true });
-
-    // Kick off a short burst to settle the initial position.
-    start();
+    const listener: ElementListener = {
+      epsilon,
+      observingWithLoop,
+      lastRect: initial,
+      onRect: setRect
+    };
+    listenerRef.current = listener;
+    tracker.listeners.add(listener);
+    tracker.start();
 
     return () => {
-      ro.disconnect();
-      window.removeEventListener("scroll", start, { capture: true } as EventListenerOptions);
-      window.removeEventListener("resize", start);
-
-      if (rafIdRef.current != null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
+      tracker.listeners.delete(listener);
+      listenerRef.current = null;
+      trackerRef.current = null;
+      if (tracker.listeners.size === 0) {
+        tracker.cleanup();
       }
-      runningRef.current = false;
     };
-  }, [ref, start]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref]);
 
   // ---- portal offset adjustment ----
   // Recompute the final rect only when `rect`, `portalX`, or `portalY` change.
@@ -158,7 +209,7 @@ export function useBoundingRect<T extends HTMLElement>(
   // Avoid creating a new DOMRect object every render when values haven't
   // actually changed.
   const finalRectRef = useRef<DOMRect | null>(null);
-  if (!rectChanged(finalRectRef.current, finalRect, epsilonRef.current)) {
+  if (!rectChanged(finalRectRef.current, finalRect, epsilon)) {
     return finalRectRef.current;
   }
   finalRectRef.current = finalRect;

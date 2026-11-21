@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Favourite } from "~/lumi/interfaces/browser/favourites";
+import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./dock-button-sizes";
 
 function BottomExtrasMenuItem({
   id,
@@ -40,7 +41,7 @@ function BottomExtrasMenuItem({
   );
 }
 
-export function BottomExtrasMenu() {
+export function BottomExtrasMenu({ size = "default" }: { size?: DockButtonSize } = {}) {
   const [open, setOpen] = useState(false);
   const [favourites, setFavourites] = useState<Favourite[]>([]);
   const commandRef = useRef<HTMLDivElement>(null);
@@ -53,7 +54,7 @@ export function BottomExtrasMenu() {
 
   const onItemSelected = useCallback((url: string) => {
     if (url === "internal://settings") {
-      lumi.windows.openSettingsWindow();
+      lumi.windows.openSettings();
     } else if (url.startsWith("action:")) {
       const action = url.slice("action:".length);
       window.dispatchEvent(new CustomEvent("lumi:workspace-action", { detail: action }));
@@ -65,11 +66,17 @@ export function BottomExtrasMenu() {
 
   const { isCurrentSpaceLight } = useSpaces();
   const spaceInjectedClasses = cn(isCurrentSpaceLight ? "" : "dark");
+  const sizeClasses = DOCK_BUTTON_CLASSES[size];
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Button size="icon" className="size-8 bg-transparent hover:bg-black/10 dark:hover:bg-white/10" asChild>
+      <Button
+        size="icon"
+        className={cn(sizeClasses.button, "bg-transparent hover:bg-black/10 dark:hover:bg-white/10")}
+        asChild
+      >
         <PopoverTrigger nativeButton={true}>
-          <ArchiveIcon strokeWidth={2} className="w-4 h-4 text-black/80 dark:text-white/80" />
+          <ArchiveIcon strokeWidth={2} className={cn(sizeClasses.icon, "text-black/80 dark:text-white/80")} />
         </PopoverTrigger>
       </Button>
       <PopoverContent className={cn("w-56 p-2 select-none")} positionerClassName={spaceInjectedClasses}>

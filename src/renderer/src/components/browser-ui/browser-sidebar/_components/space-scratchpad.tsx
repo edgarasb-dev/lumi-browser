@@ -4,8 +4,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/pop
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NotebookPen, Copy, Check, Trash2 } from "lucide-react";
+import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./bottom/dock-button-sizes";
 
-export const SpaceScratchpad = memo(function SpaceScratchpad() {
+export const SpaceScratchpad = memo(function SpaceScratchpad({
+  size = "default"
+}: {
+  size?: DockButtonSize;
+} = {}) {
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
   const currentSpaceId = currentSpace?.id;
   const [open, setOpen] = useState(false);
@@ -72,22 +77,29 @@ export const SpaceScratchpad = memo(function SpaceScratchpad() {
   }, [content]);
 
   const charCount = content.length;
+  const sizeClasses = DOCK_BUTTON_CLASSES[size];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Button
         size="icon"
         className={cn(
-          "size-8 bg-transparent hover:bg-black/10 dark:hover:bg-white/10 relative transition-colors",
+          "bg-transparent hover:bg-black/10 dark:hover:bg-white/10 relative transition-colors",
+          sizeClasses.button,
           hasNotes && "text-primary"
         )}
         asChild
         title={`Scratchpad for ${currentSpace?.name || "Space"}`}
       >
         <PopoverTrigger nativeButton={true}>
-          <NotebookPen strokeWidth={2} className="w-4 h-4 text-black/80 dark:text-white/80" />
+          <NotebookPen strokeWidth={2} className={cn(sizeClasses.icon, "text-black/80 dark:text-white/80")} />
           {hasNotes && (
-            <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-blue-500 ring-2 ring-background" />
+            <span
+              className={cn(
+                "absolute size-1.5 rounded-full bg-blue-500 ring-2 ring-background",
+                size === "xs" ? "top-1 right-1" : "top-1.5 right-1.5"
+              )}
+            />
           )}
         </PopoverTrigger>
       </Button>

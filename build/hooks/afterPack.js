@@ -13,15 +13,6 @@ export async function handler(context) {
   console.log("\n---------");
   console.log("Executing afterPack hook");
 
-  // Clear macOS extended attributes to prevent codesign failure
-  if (process.platform === "darwin") {
-    try {
-      childProcess.execSync(`xattr -cr "${context.appOutDir}"`);
-    } catch {
-      // Ignore xattr errors
-    }
-  }
-
   // macOS needs to add the Assets.car containing the Liquid Glass icon
   if (process.platform === "darwin") {
     await copyAssetsCar(context.appOutDir)
@@ -30,23 +21,23 @@ export async function handler(context) {
   }
 
   // macOS needs to VMP-sign the app before signing it with Apple
-  if (vmpSignPlatforms.includes(process.platform)) {
+  if (vmpSignPlatforms.includes(process.platform) && process.env.SKIP_VMP !== "true") {
     await signAppWithVMP(context.appOutDir)
       .then(() => true)
       .catch(() => false);
   }
 
   // macOS needs to notarize the app with a path to APPLE_API_KEY
-  if (process.platform === "darwin") {
+  if (process.platform === "darwin" && process.env.APPLE_API_KEY_DATA) {
     await createNotarizationApiKeyFile()
       .then(() => true)
       .catch(() => false);
   }
 
-  // Strip extended attributes (FinderInfo, resource forks) to satisfy codesign
+  // Strip extended attributes (FinderInfo, resource forks) once after all bundle modifications
   if (process.platform === "darwin") {
     try {
-      childProcess.execSync(`xattr -cr "${context.appOutDir}"`);
+      childProcess.execFileSync("xattr", ["-cr", context.appOutDir]);
     } catch {
       // Ignored if xattr is unavailable or fails on non-essential metadata
     }
@@ -61,7 +52,15 @@ export async function handler(context) {
           const appPath = path.join(context.appOutDir, appName);
           const entitlementsPath = path.join(process.cwd(), "build", "entitlements.mac.plist");
           console.log(`Ad-hoc signing ${appName} with entitlements...`);
-          childProcess.execSync(`codesign --force --deep --sign - --entitlements "${entitlementsPath}" "${appPath}"`);
+          childProcess.execFileSync("codesign", [
+            "--force",
+            "--deep",
+            "--sign",
+            "-",
+            "--entitlements",
+            entitlementsPath,
+            appPath
+          ]);
           console.log(`Successfully ad-hoc signed ${appName}`);
         }
       } catch (err) {

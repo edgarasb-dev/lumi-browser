@@ -1,6 +1,7 @@
 import { LUMI_DATA_DIR } from "@/modules/paths";
 import { Queue } from "@/modules/queue";
 import { debugPrint, debugError } from "@/modules/output";
+import { app } from "electron";
 import fs from "fs/promises";
 import path from "path";
 
@@ -36,6 +37,7 @@ class DataStore {
   public directoryPath: string;
   private accessQueue: Queue;
   private cache: Data | null = null;
+  private dirEnsured: boolean = false;
 
   /**
    * Creates a new DataStore instance
@@ -78,9 +80,12 @@ class DataStore {
         throw new DataStoreError("Invalid namespace provided");
       }
 
-      // Create the datastore directory if it doesn't exist
-      await fs.mkdir(this.directoryPath, { recursive: true });
-      debugPrint("DATASTORE", `Ensuring datastore directory exists: ${this.directoryPath}`);
+      // Create the datastore directory once per instance
+      if (!this.dirEnsured) {
+        await fs.mkdir(this.directoryPath, { recursive: true });
+        this.dirEnsured = true;
+        debugPrint("DATASTORE", `Ensuring datastore directory exists: ${this.directoryPath}`);
+      }
 
       // Get file path
       const dataFilePath = path.join(this.directoryPath, `${namespace}.json`);
@@ -123,15 +128,19 @@ class DataStore {
         throw new DataStoreError("Error in datastore callback execution", error as Error);
       }
 
-      // Write data to file
+      // Write data to file atomically (compact JSON in packaged builds)
       if (newData !== null) {
+        const serialized = app.isPackaged ? JSON.stringify(newData) : JSON.stringify(newData, null, 2);
+        const tempFilePath = `${dataFilePath}.${process.pid}.${Date.now()}.tmp`;
         try {
-          await fs.writeFile(dataFilePath, JSON.stringify(newData, null, 2));
+          await fs.writeFile(tempFilePath, serialized);
+          await fs.rename(tempFilePath, dataFilePath);
           debugPrint("DATASTORE", `Successfully wrote data to ${namespace}.json`);
 
           // Update cache after writing to disk
           this.cache = newData;
         } catch (error) {
+          await fs.rm(tempFilePath, { force: true }).catch(() => {});
           debugError("DATASTORE", `Failed to write to ${namespace}.json:`, error);
           throw new DataStoreError(`Failed to write to datastore file: ${namespace}.json`, error as Error);
         }

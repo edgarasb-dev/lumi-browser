@@ -73,13 +73,18 @@ export function AdaptiveTopbarProvider({ children }: AdaptiveTopbarProviderProps
     setContentTopOffsetRaw((prev) => (prev === offset ? prev : offset));
   }, []);
 
-  return (
-    <AdaptiveTopbarContext.Provider
-      value={{ topbarHeight, topbarVisible: currentlyVisible, isFullscreen, contentTopOffset, setContentTopOffset }}
-    >
-      {children}
-    </AdaptiveTopbarContext.Provider>
+  const contextValue = useMemo<AdaptiveTopbarContextValue>(
+    () => ({
+      topbarHeight,
+      topbarVisible: currentlyVisible,
+      isFullscreen,
+      contentTopOffset,
+      setContentTopOffset
+    }),
+    [topbarHeight, currentlyVisible, isFullscreen, contentTopOffset, setContentTopOffset]
   );
+
+  return <AdaptiveTopbarContext.Provider value={contextValue}>{children}</AdaptiveTopbarContext.Provider>;
 }
 
 // Component //

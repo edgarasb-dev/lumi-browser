@@ -115,53 +115,55 @@ export function PrivacySettings() {
         </div>
       </SettingsGroup>
 
-      <div
-        data-setting-id="externalAppProtocols"
-        className={cn(highlightedRowId === "externalAppProtocols" && "rounded-2xl lumi-highlight-pulse")}
-      >
-        <ExternalAppsSettings embedded />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <div
+          data-setting-id="externalAppProtocols"
+          className={cn(highlightedRowId === "externalAppProtocols" && "rounded-2xl lumi-highlight-pulse")}
+        >
+          <ExternalAppsSettings embedded />
+        </div>
 
-      <SettingsGroup
-        title="Website Overrides (Zoom, Dark Mode & Permissions)"
-        description="Per-origin customizations configured from the Address Bar Site Control Center."
-      >
-        {siteEntries.length === 0 ? (
-          <SettingsRow
-            label="No per-site overrides saved yet"
-            description="Adjust zoom, Night Shade, camera/mic, notifications, or location from any site's address bar shield."
-          />
-        ) : (
-          siteEntries.map((entry) => {
-            const permSummary = Object.entries(entry.settings.permissions)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(" • ");
-            const parts = [
-              entry.settings.zoomFactor !== 1 ? `Zoom ${Math.round(entry.settings.zoomFactor * 100)}%` : null,
-              entry.settings.smartDarkMode ? "Night Shade On" : null,
-              permSummary || null
-            ].filter(Boolean);
-            return (
-              <SettingsRow
-                key={entry.origin}
-                icon={<Globe className="size-4" />}
-                label={entry.origin.replace(/^https?:\/\//, "")}
-                description={parts.join(" • ") || "Customized site rules"}
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => void handleResetOrigin(entry.origin)}
+        <SettingsGroup
+          title="Website Overrides (Zoom, Dark Mode & Permissions)"
+          description="Per-origin customizations configured from the Address Bar Site Control Center."
+        >
+          {siteEntries.length === 0 ? (
+            <SettingsRow
+              label="No per-site overrides saved yet"
+              description="Adjust zoom, Night Shade, camera/mic, notifications, or location from any site's address bar shield."
+            />
+          ) : (
+            siteEntries.map((entry) => {
+              const permSummary = Object.entries(entry.settings.permissions)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(" • ");
+              const parts = [
+                entry.settings.zoomFactor !== 1 ? `Zoom ${Math.round(entry.settings.zoomFactor * 100)}%` : null,
+                entry.settings.smartDarkMode ? "Night Shade On" : null,
+                permSummary || null
+              ].filter(Boolean);
+              return (
+                <SettingsRow
+                  key={entry.origin}
+                  icon={<Globe className="size-4" />}
+                  label={entry.origin.replace(/^https?:\/\//, "")}
+                  description={parts.join(" • ") || "Customized site rules"}
                 >
-                  <RotateCcw className="size-3" />
-                  Reset
-                </Button>
-              </SettingsRow>
-            );
-          })
-        )}
-      </SettingsGroup>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => void handleResetOrigin(entry.origin)}
+                  >
+                    <RotateCcw className="size-3" />
+                    Reset
+                  </Button>
+                </SettingsRow>
+              );
+            })
+          )}
+        </SettingsGroup>
+      </div>
     </div>
   );
 }

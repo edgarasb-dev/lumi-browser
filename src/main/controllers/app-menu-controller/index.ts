@@ -1,4 +1,4 @@
-import { Menu } from "electron";
+import { app, Menu, MenuItem, MenuItemConstructorOptions } from "electron";
 import { createAppMenu } from "./menu/items/app";
 import { createArchiveMenu } from "./menu/items/archive";
 import { createEditMenu } from "./menu/items/edit";
@@ -7,7 +7,6 @@ import { createSpacesMenu } from "./menu/items/spaces";
 import { createTabsMenu } from "./menu/items/tabs";
 import { createViewMenu } from "./menu/items/view";
 import { createWindowMenu } from "./menu/items/window";
-import { MenuItem, MenuItemConstructorOptions } from "electron";
 import { shortcutsEmitter } from "@/saving/shortcuts";
 import { recentlyClosedManager } from "@/controllers/tabs-controller/recently-closed-manager";
 import { spacesController } from "@/controllers/spaces-controller";
@@ -20,7 +19,10 @@ class AppMenuController {
     this.render = this.render.bind(this);
     this.scheduleRender = this.scheduleRender.bind(this);
 
-    this.scheduleRender();
+    // Defer initial menu build until app is ready + initial window starts loading
+    void app.whenReady().then(() => {
+      setTimeout(this.scheduleRender, 150);
+    });
 
     spacesController.on("space-created", this.scheduleRender);
     spacesController.on("space-updated", this.scheduleRender);

@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.3.0" date="2026-11-21">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.0</url>
+      <description>
+        <p>Lumi Prism: Unified in-tab Settings (lumi://settings) with redesigned responsive wide workspace and side-by-side Space Editor, 5-phase performance &amp; memory overhaul (lazy icon/bang bundles, faster cold start, SQLite history indexes, 30m default tab sleep &amp; portal pool trimming, Adblocker binary cache, zero-polling push IPC), responsive sidebar dock, and faster CI packaging.</p>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-11-20">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.2.1</url>
       <description>

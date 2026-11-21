@@ -246,79 +246,85 @@ export function SearchEnginesSettings({ embedded = false }: { embedded?: boolean
             No search engines matching &quot;{filterQuery}&quot;.
           </div>
         ) : (
-          filteredEngines.map((engine) => {
-            const isDefault = engine.isDefault;
-            return (
-              <div
-                key={engine.id}
-                className={cn(
-                  "flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 gap-3 transition-colors",
-                  isDefault ? "bg-primary/[0.04]" : "hover:bg-black/[0.025] dark:hover:bg-white/[0.035]"
-                )}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-8 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center shrink-0">
-                    <Globe className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-medium text-sm text-foreground">{engine.name}</span>
-                      <span className="lumi-kbd text-[10px] h-4 px-1.5 min-w-0">@{engine.shortcut}</span>
-                      {isDefault && (
-                        <Badge variant="default" className="text-[10px] h-4 px-1.5 py-0">
-                          Default
-                        </Badge>
-                      )}
-                      {!engine.isBuiltIn && (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 text-muted-foreground">
-                          Custom
-                        </Badge>
-                      )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 p-3">
+            {filteredEngines.map((engine) => {
+              const isDefault = engine.isDefault;
+              return (
+                <div
+                  key={engine.id}
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 transition-colors",
+                    isDefault
+                      ? "border-primary/35 bg-primary/[0.06]"
+                      : "border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.025] hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-8 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center shrink-0">
+                      <Globe className="size-4 text-muted-foreground" />
                     </div>
-                    <p className="text-[11px] text-muted-foreground truncate max-w-md font-mono">{engine.searchUrl}</p>
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-sm text-foreground">{engine.name}</span>
+                        <span className="lumi-kbd text-[10px] h-4 px-1.5 min-w-0">@{engine.shortcut}</span>
+                        {isDefault && (
+                          <Badge variant="default" className="text-[10px] h-4 px-1.5 py-0">
+                            Default
+                          </Badge>
+                        )}
+                        {!engine.isBuiltIn && (
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 py-0 text-muted-foreground">
+                            Custom
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground truncate max-w-xs font-mono">
+                        {engine.searchUrl}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!isDefault && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs px-2.5"
+                        onClick={() => void handleSetDefault(engine.id, engine.name)}
+                      >
+                        <Star className="size-3" />
+                        Set Default
+                      </Button>
+                    )}
+
+                    {!engine.isBuiltIn && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-7">
+                            <MoreVertical className="size-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="remove-app-drag z-popover">
+                          <DropdownMenuItem onClick={() => openEditDialog(engine)}>
+                            <Edit2 className="size-3.5 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => void handleDelete(engine.id, engine.name)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-3.5 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-                  {!isDefault && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs px-2.5"
-                      onClick={() => void handleSetDefault(engine.id, engine.name)}
-                    >
-                      <Star className="size-3" />
-                      Set Default
-                    </Button>
-                  )}
-
-                  {!engine.isBuiltIn && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-7">
-                          <MoreVertical className="size-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="remove-app-drag z-popover">
-                        <DropdownMenuItem onClick={() => openEditDialog(engine)}>
-                          <Edit2 className="size-3.5 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => void handleDelete(engine.id, engine.name)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="size-3.5 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </SettingsGroup>
 

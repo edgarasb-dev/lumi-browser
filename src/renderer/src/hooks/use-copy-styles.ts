@@ -3,15 +3,61 @@ import { useLayoutEffect } from "react";
 function syncPortalDocumentState(targetDoc: Document) {
   const targetRoot = targetDoc.documentElement;
   const mainRoot = document.documentElement;
-  if (targetRoot && mainRoot) {
+  if (targetRoot && mainRoot && targetRoot.className !== mainRoot.className) {
     targetRoot.className = mainRoot.className;
   }
 
   const targetBody = targetDoc.body;
   const mainBody = document.body;
-  if (targetBody && mainBody) {
+  if (targetBody && mainBody && targetBody.className !== mainBody.className) {
     targetBody.className = mainBody.className;
   }
+}
+
+function isStyleRelatedNode(node: Node | null): boolean {
+  if (!node) return false;
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.parentElement?.tagName.toLowerCase() === "style";
+  }
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const tag = (node as Element).tagName.toLowerCase();
+    return tag === "style" || tag === "link";
+  }
+  return false;
+}
+
+function hasRelevantStyleMutation(mutations: MutationRecord[]): boolean {
+  for (const m of mutations) {
+    if (m.type === "attributes") {
+      if (m.target === document.documentElement || m.target === document.body) {
+        return true;
+      }
+      if (isStyleRelatedNode(m.target)) {
+        return true;
+      }
+      continue;
+    }
+
+    if (m.type === "characterData") {
+      if (isStyleRelatedNode(m.target)) {
+        return true;
+      }
+      continue;
+    }
+
+    if (m.type === "childList") {
+      if (isStyleRelatedNode(m.target)) {
+        return true;
+      }
+      for (const added of m.addedNodes) {
+        if (isStyleRelatedNode(added)) return true;
+      }
+      for (const removed of m.removedNodes) {
+        if (isStyleRelatedNode(removed)) return true;
+      }
+    }
+  }
+  return false;
 }
 
 /**
@@ -132,10 +178,21 @@ export function useCopyStyles(containerWin: Window | null) {
     // Initial style copy
     copyStylesToDocument(containerDoc);
 
+    let syncRafId: number | null = null;
+    const scheduleSync = () => {
+      if (syncRafId !== null) return;
+      syncRafId = requestAnimationFrame(() => {
+        syncRafId = null;
+        if (containerWin && !containerWin.closed) {
+          copyStylesToDocument(containerDoc);
+        }
+      });
+    };
+
     // Set up a MutationObserver to watch for style changes in the main document
-    const styleObserver = new MutationObserver(() => {
-      if (containerWin && !containerWin.closed) {
-        copyStylesToDocument(containerDoc);
+    const styleObserver = new MutationObserver((mutations) => {
+      if (hasRelevantStyleMutation(mutations)) {
+        scheduleSync();
       }
     });
 
@@ -163,6 +220,10 @@ export function useCopyStyles(containerWin: Window | null) {
     // Clean up observer when component unmounts
     return () => {
       styleObserver.disconnect();
+      if (syncRafId !== null) {
+        cancelAnimationFrame(syncRafId);
+        syncRafId = null;
+      }
     };
   }, [containerWin]);
 }

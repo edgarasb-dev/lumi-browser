@@ -3,7 +3,7 @@ import { getSettingValueById } from "@/saving/settings";
 import { ArchiveTabValueMap, SleepTabValueMap } from "@/modules/basic-settings";
 import { getCurrentTimestamp } from "@/modules/utils";
 import { PersistedTabData, PersistedTabGroupData, PersistedWindowState } from "~/types/tabs";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { TabRow, TabGroupRow, WindowStateRow, TabInsert, TabGroupInsert, WindowStateInsert } from "@/saving/db/schema";
 
 // Flush interval in milliseconds
@@ -188,6 +188,27 @@ export class TabPersistenceManager {
 
     const db = getDb();
     db.delete(schema.tabs).where(eq(schema.tabs.uniqueId, uniqueId)).run();
+  }
+
+  /**
+   * Remove multiple tabs from storage in a single batched transaction.
+   */
+  async removeTabsBatch(uniqueIds: string[]): Promise<void> {
+    if (uniqueIds.length === 0) return;
+
+    for (const uniqueId of uniqueIds) {
+      this.dirtyTabs.delete(uniqueId);
+      this.removedTabs.delete(uniqueId);
+    }
+
+    const db = getDb();
+    const CHUNK_SIZE = 500;
+    db.transaction((tx) => {
+      for (let i = 0; i < uniqueIds.length; i += CHUNK_SIZE) {
+        const chunk = uniqueIds.slice(i, i + CHUNK_SIZE);
+        tx.delete(schema.tabs).where(inArray(schema.tabs.uniqueId, chunk)).run();
+      }
+    });
   }
 
   /**

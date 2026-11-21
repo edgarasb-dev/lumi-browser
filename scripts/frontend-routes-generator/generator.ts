@@ -5,6 +5,15 @@ import { FRONTEND_PATH, ROUTES_PATH, getDirectories } from "./common";
 
 // Code //
 
+const ANALYTICS_ROUTES = new Set(["main-ui", "onboarding"]);
+
+async function writeFileIfChanged(filePath: string, content: string): Promise<void> {
+  const existing = await fs.readFile(filePath, "utf8").catch(() => null);
+  if (existing !== content) {
+    await fs.writeFile(filePath, content);
+  }
+}
+
 export async function generateRoutes() {
   // Grab all the routes
   const routes = await getDirectories(ROUTES_PATH);
@@ -27,16 +36,16 @@ export async function generateRoutes() {
 </html>
 `.trim();
 
-    await fs.writeFile(htmlPath, content);
+    await writeFileIfChanged(htmlPath, content);
   }
 
   // Create main.tsx files for each route
   for (const route of routes) {
     const entrypointPath = path.join(ROUTES_PATH, route, "main.tsx");
+    const includeAnalytics = ANALYTICS_ROUTES.has(route);
     const content = `
 import { PlatformProvider } from "@/components/main/platform";
-import { UmamiScriptLoader } from "@/components/analytics/umami";
-import { Fragment, StrictMode as ReactStrictMode } from "react";
+${includeAnalytics ? 'import { UmamiScriptLoader } from "@/components/analytics/umami";\n' : ""}import { Fragment, StrictMode as ReactStrictMode } from "react";
 import { Toaster } from "sonner";
 import { createRoot } from "react-dom/client";
 import { RouteConfig } from "./config";
@@ -51,15 +60,14 @@ createRoot(document.getElementById("root")!).render(
     <PlatformProvider>
       <RouteConfig.Providers>
         <PageComponent />
-        <Toaster richColors />
-        <UmamiScriptLoader />
+        <Toaster richColors />${includeAnalytics ? "\n        <UmamiScriptLoader />" : ""}
       </RouteConfig.Providers>
     </PlatformProvider>
   </StrictMode>
 );
 `.trim();
 
-    await fs.writeFile(entrypointPath, content);
+    await writeFileIfChanged(entrypointPath, content);
   }
 
   // Return the routes as input for vite config

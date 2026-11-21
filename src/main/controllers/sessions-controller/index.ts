@@ -13,6 +13,9 @@ class SessionsController {
 
   constructor() {
     this.sessions = new Map();
+    profilesController.on("profile-deleted", (profileId) => {
+      this.sessions.delete(profileId);
+    });
   }
 
   // Profile Sessions //

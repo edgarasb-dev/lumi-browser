@@ -1,5 +1,5 @@
 import { app, nativeTheme } from "electron";
-import { getDatastore } from "./datastore";
+import { DataStoreData, getDatastore } from "./datastore";
 import { fireOnSettingsChanged } from "@/ipc/window/settings";
 import { BasicSettings } from "@/modules/basic-settings";
 import { TypedEventEmitter } from "@/modules/typed-event-emitter";
@@ -37,33 +37,30 @@ function validateSettingValue<T extends SettingType>(setting: T, value: unknown)
   return false;
 }
 
-async function cacheSetting(setting: BasicSetting) {
-  const value = await SettingsDataStore.get<SettingType["defaultValue"]>(setting.id).catch(() => undefined);
-  if (value !== undefined && validateSettingValue(setting, value)) {
-    basicSettingsCurrentValues[setting.id] = value;
-  } else {
-    basicSettingsCurrentValues[setting.id] = setting.defaultValue;
-  }
-}
-
 // Cache Settings //
-const settingsCachedPromise = new Promise<void>((resolve) => {
-  const promises: Promise<void>[] = [];
-  for (const setting of BasicSettings) {
-    promises.push(cacheSetting(setting));
-  }
-
-  Promise.all(promises).then(() => {
+const settingsCachedPromise = SettingsDataStore.getFullData()
+  .catch(() => ({}) as DataStoreData)
+  .then((allData) => {
+    for (const setting of BasicSettings) {
+      const value = allData[setting.id];
+      if (value !== undefined && validateSettingValue(setting, value)) {
+        basicSettingsCurrentValues[setting.id] = value;
+      } else {
+        basicSettingsCurrentValues[setting.id] = setting.defaultValue;
+      }
+    }
     applyInterfaceTheme(basicSettingsCurrentValues["interfaceTheme"]);
-    resolve();
   });
-});
 
 export const onSettingsCached = () => settingsCachedPromise;
 
 // Export: Get Setting //
 export function getSettingValueById(settingId: string): SettingType["defaultValue"] {
   return basicSettingsCurrentValues[settingId];
+}
+
+export function getAllSettingValues(): Record<string, SettingType["defaultValue"]> {
+  return { ...basicSettingsCurrentValues };
 }
 
 // Export: Set Setting //

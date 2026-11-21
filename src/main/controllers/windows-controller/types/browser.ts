@@ -56,8 +56,9 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
   public browserWindowType: BrowserWindowType;
   public layerManager: LayerManager;
   public coreWebContents: WebContents[];
-  public omnibox: Omnibox;
+  public omnibox: Omnibox | null;
   public sidePanel: SidePanelController;
+  private destroyPortalComponentWindows: (() => void) | null = null;
 
   constructor(type: BrowserWindowType, options: BrowserWindowCreationOptions = {}) {
     // const hasSizeOptions = "width" in options || "height" in options;
@@ -129,7 +130,7 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
       }
     });
 
-    super("browser", browserWindow, { showAfterLoad: true, showDelay: 50 });
+    super("browser", browserWindow, { showAfterLoad: true });
 
     this.browserWindowType = type;
 
@@ -200,20 +201,22 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
     this.coreWebContents = [browserWindow.webContents];
 
     // Omnibox //
-    this.omnibox = new Omnibox(this, type);
-    this.coreWebContents.push(this.omnibox.webContents);
+    this.omnibox = type === "normal" ? new Omnibox(this, type) : null;
+    if (this.omnibox) {
+      this.coreWebContents.push(this.omnibox.webContents);
+    }
 
     // Persistent Split Side Panel //
     this.sidePanel = new SidePanelController(this);
     browserWindow.on("focus", () => {
-      if (!this.omnibox.isVisible()) {
+      if (!this.omnibox?.isVisible()) {
         return;
       }
 
       this.omnibox.refocus();
       setTimeout(() => {
         if (!this.destroyed && !this.browserWindow.isDestroyed()) {
-          this.omnibox.refocus();
+          this.omnibox?.refocus();
         }
       }, 50);
     });
@@ -247,7 +250,7 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
     this.on("current-space-changed", onSpaceChanged);
 
     // Portal Components //
-    initializePortalComponentWindows(this);
+    this.destroyPortalComponentWindows = initializePortalComponentWindows(this);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -448,8 +451,10 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
         }
       }
 
+      this.destroyPortalComponentWindows?.();
+      this.destroyPortalComponentWindows = null;
       this.sidePanel.destroy();
-      this.omnibox.destroy();
+      this.omnibox?.destroy();
       this.layerManager.destroy();
     }
     return result;

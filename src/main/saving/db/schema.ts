@@ -90,7 +90,10 @@ export const historyUrls = sqliteTable(
     typedCount: integer("typed_count").notNull().default(0),
     lastVisitTime: integer("last_visit_time").notNull()
   },
-  (table) => [uniqueIndex("idx_history_urls_profile_url").on(table.profileId, table.url)]
+  (table) => [
+    uniqueIndex("idx_history_urls_profile_url").on(table.profileId, table.url),
+    index("idx_history_urls_profile_last_visit").on(table.profileId, table.lastVisitTime)
+  ]
 );
 
 export const historyVisits = sqliteTable(
@@ -105,7 +108,9 @@ export const historyVisits = sqliteTable(
   },
   (table) => [
     index("idx_history_visits_url_id").on(table.urlId),
-    index("idx_history_visits_visit_time").on(table.visitTime)
+    index("idx_history_visits_visit_time").on(table.visitTime),
+    index("idx_history_visits_url_visit_time").on(table.urlId, table.visitTime),
+    index("idx_history_visits_visit_time_id").on(table.visitTime, table.id)
   ]
 );
 

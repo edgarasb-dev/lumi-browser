@@ -56,6 +56,31 @@ function suggestionKey(s: OmniboxSuggestion, index: number): string {
   }
 }
 
+function NewTabClock() {
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formattedTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const formattedDate = now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+
+  return (
+    <>
+      <div className="font-semibold tracking-tight text-5xl tabular-nums text-foreground md:text-6xl">
+        {formattedTime}
+      </div>
+      <div className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
+        <span>{getGreeting(now.getHours())}</span>
+        <span>·</span>
+        <span>{formattedDate}</span>
+      </div>
+    </>
+  );
+}
+
 export function NewTabPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -65,7 +90,6 @@ export function NewTabPage() {
   const [activeSpace, setActiveSpace] = useState<Space | null>(null);
   const [wallpaperId, setWallpaperId] = useState<string>(() => loadWallpaperId());
   const [widgetPrefs, setWidgetPrefs] = useState<NewTabWidgetPrefs>(() => loadWidgetPrefs());
-  const [now, setNow] = useState<Date>(() => new Date());
   const [copiedNotice, setCopiedNotice] = useState<string | null>(null);
 
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -76,8 +100,6 @@ export function NewTabPage() {
 
   useEffect(() => {
     setMounted(true);
-    const interval = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(interval);
   }, []);
 
   // Sync active Space metadata and prime omnibox caches
@@ -155,7 +177,7 @@ export function NewTabPage() {
       case "pedal": {
         const a = suggestion.action;
         if (a === "open_settings") {
-          lumi.windows.openSettingsWindow();
+          lumi.windows.openSettings();
         } else if (a === "open_new_window") {
           lumi.browser.createWindow();
         } else if (a === "open_incognito_window") {
@@ -244,9 +266,6 @@ export function NewTabPage() {
     () => buildWallpaperStyle(wallpaperId, resolvedTheme, activeSpace ?? undefined),
     [wallpaperId, resolvedTheme, activeSpace]
   );
-
-  const formattedTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const formattedDate = now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
 
   if (!mounted) {
     return <div className="min-h-screen bg-background" />;
@@ -359,16 +378,7 @@ export function NewTabPage() {
           className="flex flex-col items-center text-center"
         >
           {widgetPrefs.clock ? (
-            <>
-              <div className="font-semibold tracking-tight text-5xl tabular-nums text-foreground md:text-6xl">
-                {formattedTime}
-              </div>
-              <div className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{getGreeting(now.getHours())}</span>
-                <span>·</span>
-                <span>{formattedDate}</span>
-              </div>
-            </>
+            <NewTabClock />
           ) : (
             <img
               src="/assets/logo.svg"

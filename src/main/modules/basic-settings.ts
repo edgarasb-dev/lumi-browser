@@ -228,7 +228,7 @@ export const BasicSettings: BasicSetting[] = [
     description: "Unload inactive background tabs from memory to save battery and RAM.",
     showName: true,
     type: "enum",
-    defaultValue: "never",
+    defaultValue: "30m",
     options: [
       {
         id: "5m",

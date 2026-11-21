@@ -13,6 +13,9 @@ function newWebContents(webContents: WebContents) {
 
   if (registeredWebContentIds.has(webContents.id)) return;
   registeredWebContentIds.add(webContents.id);
+  webContents.once("destroyed", () => {
+    registeredWebContentIds.delete(webContents.id);
+  });
 
   webContents.on("before-input-event", (event, input) => {
     if (input.key === "w" && input.control) {

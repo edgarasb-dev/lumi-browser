@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { BasicSetting, BasicSettingCard } from "~/types/settings";
 
 interface SettingsContextValue {
@@ -37,21 +37,17 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   const fetchSettings = useCallback(async () => {
     if (!lumi) return;
 
-    const { settings: fetchedSettings, cards: fetchedCards } = await lumi.settings.getBasicSettings();
+    const { settings: fetchedSettings, cards: fetchedCards, values } = await lumi.settings.getBasicSettings();
     setSettings(fetchedSettings);
     setCards(fetchedCards);
-
-    const promises = fetchedSettings.map(async (setting) => {
-      const value = await lumi.settings.getSetting(setting.id);
-      setSettingsValues((prev) => ({ ...prev, [setting.id]: value }));
-    });
-
-    await Promise.all(promises);
+    setSettingsValues(values);
   }, []);
 
   const revalidate = useCallback(async () => {
-    await fetchSettings();
-  }, [fetchSettings]);
+    if (!lumi) return;
+    const values = await lumi.settings.getAllSettings();
+    setSettingsValues(values);
+  }, []);
 
   useEffect(() => {
     fetchSettings();
@@ -59,7 +55,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
 
   useEffect(() => {
     const unsub = lumi.settings.onSettingsChanged(() => {
-      revalidate();
+      void revalidate();
     });
     return () => unsub();
   }, [revalidate]);
@@ -75,16 +71,15 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
     return lumi.settings.setSetting(settingId, value);
   }, []);
 
-  return (
-    <SettingsContext.Provider
-      value={{
-        settings,
-        cards,
-        getSetting: getSetting as <T>(settingId: string) => T,
-        setSetting
-      }}
-    >
-      {children}
-    </SettingsContext.Provider>
+  const contextValue = useMemo<SettingsContextValue>(
+    () => ({
+      settings,
+      cards,
+      getSetting: getSetting as <T>(settingId: string) => T,
+      setSetting
+    }),
+    [settings, cards, getSetting, setSetting]
   );
+
+  return <SettingsContext.Provider value={contextValue}>{children}</SettingsContext.Provider>;
 };

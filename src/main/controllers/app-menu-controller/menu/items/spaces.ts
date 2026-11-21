@@ -146,7 +146,9 @@ async function createSpaceMenuItem(
 export async function createSpacesMenu(): Promise<MenuItemConstructorOptions> {
   const manageSpacesItem = {
     label: "Manage Spaces",
-    click: () => settings.show()
+    click: () => {
+      void settings.show("spaces");
+    }
   };
   const noSpacesMenu = {
     label: "Spaces",

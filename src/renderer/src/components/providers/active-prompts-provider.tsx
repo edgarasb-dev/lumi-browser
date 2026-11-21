@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ActivePrompt } from "~/types/prompts";
 
 interface ActivePromptsContextValue {
@@ -37,5 +37,7 @@ export function ActivePromptsProvider({ children }: ActivePromptsProviderProps) 
     return () => unsub();
   }, [fetchActivePrompts]);
 
-  return <ActivePromptsContext.Provider value={{ activePrompts }}>{children}</ActivePromptsContext.Provider>;
+  const value = useMemo(() => ({ activePrompts }), [activePrompts]);
+
+  return <ActivePromptsContext.Provider value={value}>{children}</ActivePromptsContext.Provider>;
 }

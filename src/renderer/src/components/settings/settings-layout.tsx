@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { SettingsSidebar, Section } from "./settings-sidebar";
-import { SettingsTitlebar } from "./settings-titlebar";
 import { GeneralSettings } from "@/components/settings/sections/general/section";
 import { AppearanceSettings } from "@/components/settings/sections/appearance/section";
 import { AboutSettings } from "@/components/settings/sections/about/section";
@@ -142,44 +141,90 @@ function GlobalSearchResults({
           </p>
         </div>
       ) : (
-        grouped.map(([sectionId, entries]) => (
-          <SettingsGroup key={sectionId} title={SECTION_LABELS[sectionId]}>
-            {entries.map((entry) => (
-              <SettingsRow
-                key={entry.id}
-                label={entry.title}
-                description={entry.description}
-                onClick={() => onSelectResult(entry)}
-              >
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
-                  Open
-                  <ArrowUpRight className="size-3.5" />
-                </span>
-              </SettingsRow>
-            ))}
-          </SettingsGroup>
-        ))
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          {grouped.map(([sectionId, entries]) => (
+            <SettingsGroup key={sectionId} title={SECTION_LABELS[sectionId]}>
+              {entries.map((entry) => (
+                <SettingsRow
+                  key={entry.id}
+                  label={entry.title}
+                  description={entry.description}
+                  onClick={() => onSelectResult(entry)}
+                >
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                    Open
+                    <ArrowUpRight className="size-3.5" />
+                  </span>
+                </SettingsRow>
+              ))}
+            </SettingsGroup>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
+function getSectionFromLocation(): SettingsSectionId {
+  if (typeof window === "undefined") return "general";
+  const params = new URLSearchParams(window.location.search);
+  const querySection = params.get("section");
+  const hashSection = window.location.hash.replace(/^#/, "");
+  return resolveDeepLinkSection(querySection || hashSection || null);
+}
+
+function getSpaceFromLocation(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("spaceId");
+}
+
+function syncUrlForSection(section: SettingsSectionId, replace = false) {
+  if (typeof window === "undefined") return;
+  const nextUrl = new URL(window.location.href);
+  if (section === "general") {
+    nextUrl.searchParams.delete("section");
+  } else {
+    nextUrl.searchParams.set("section", section);
+  }
+  nextUrl.searchParams.delete("spaceId");
+  nextUrl.hash = "";
+  const targetHref = nextUrl.toString();
+  if (targetHref === window.location.href) return;
+  if (replace) {
+    window.history.replaceState({ section }, "", targetHref);
+  } else {
+    window.history.pushState({ section }, "", targetHref);
+  }
+}
+
 function SettingsWorkspace() {
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>(getSectionFromLocation);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(getSpaceFromLocation);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
 
+  const selectSection = useCallback((nextSection: SettingsSectionId, replaceUrl = false) => {
+    setActiveSection(nextSection);
+    syncUrlForSection(nextSection, replaceUrl);
+  }, []);
+
   useEffect(() => {
-    void lumi.windows.consumePendingSettingsSection().then((section) => {
-      if (section) {
-        setActiveSection(resolveDeepLinkSection(section));
-      }
-    });
+    const onPopState = () => {
+      setSearchQuery("");
+      setActiveSection(getSectionFromLocation());
+      setSelectedSpaceId(getSpaceFromLocation());
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
     const unsub = lumi.windows.onSettingsSectionNavigate((section) => {
       setSearchQuery("");
-      setActiveSection(resolveDeepLinkSection(section));
+      const resolved = resolveDeepLinkSection(section);
+      setActiveSection(resolved);
+      syncUrlForSection(resolved, true);
     });
     return unsub;
   }, []);
@@ -190,27 +235,36 @@ function SettingsWorkspace() {
     return () => window.clearTimeout(timer);
   }, [highlightedRowId]);
 
-  const jumpToSetting = useCallback((sectionId: SettingsSectionId, targetRowId?: string) => {
-    setSearchQuery("");
-    setActiveSection(sectionId);
-    if (targetRowId) {
-      window.setTimeout(() => setHighlightedRowId(targetRowId), 120);
-    }
-  }, []);
+  const jumpToSetting = useCallback(
+    (sectionId: SettingsSectionId, targetRowId?: string) => {
+      setSearchQuery("");
+      selectSection(sectionId);
+      if (targetRowId) {
+        window.setTimeout(() => setHighlightedRowId(targetRowId), 120);
+      }
+    },
+    [selectSection]
+  );
 
-  const navigateToSpaces = (profileId: string) => {
-    setSelectedProfileId(profileId);
-    setSelectedSpaceId(null);
-    setSearchQuery("");
-    setActiveSection("spaces");
-  };
+  const navigateToSpaces = useCallback(
+    (profileId: string) => {
+      setSelectedProfileId(profileId);
+      setSelectedSpaceId(null);
+      setSearchQuery("");
+      selectSection("spaces");
+    },
+    [selectSection]
+  );
 
-  const navigateToSpace = (profileId: string, spaceId: string) => {
-    setSelectedProfileId(profileId);
-    setSelectedSpaceId(spaceId);
-    setSearchQuery("");
-    setActiveSection("spaces");
-  };
+  const navigateToSpace = useCallback(
+    (profileId: string, spaceId: string) => {
+      setSelectedProfileId(profileId);
+      setSelectedSpaceId(spaceId);
+      setSearchQuery("");
+      selectSection("spaces");
+    },
+    [selectSection]
+  );
 
   const navContextValue = useMemo(() => ({ highlightedRowId, jumpToSetting }), [highlightedRowId, jumpToSetting]);
 
@@ -235,29 +289,42 @@ function SettingsWorkspace() {
       default:
         return <GeneralSettings />;
     }
-  }, [activeSection, selectedProfileId, selectedSpaceId]);
+  }, [activeSection, navigateToSpace, navigateToSpaces, selectedProfileId, selectedSpaceId]);
 
   const isSearching = searchQuery.trim().length > 0;
   const currentTitle = isSearching ? "Search Results" : SECTION_LABELS[activeSection];
 
   return (
     <SettingsNavigationContext.Provider value={navContextValue}>
-      <div className="select-none flex h-screen w-full lumi-vibrant-window text-foreground overflow-hidden">
-        <title>Lumi Settings</title>
+      <div className="relative flex h-screen w-full overflow-hidden bg-background text-foreground">
+        <div
+          className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_55%_40%_at_38%_0%,oklch(0.6_0.2_258_/_0.085),transparent_70%)]"
+          aria-hidden
+        />
+        <title>{`Settings — ${currentTitle}`}</title>
 
         <SettingsSidebar
           activeSection={activeSection}
-          setActiveSection={setActiveSection}
+          setActiveSection={selectSection}
           sections={SECTIONS}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
 
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <SettingsTitlebar title={currentTitle} />
+        <div className="relative flex-1 flex flex-col min-w-0 overflow-hidden">
+          <header className="sticky top-0 z-10 h-11 border-b border-black/[0.06] dark:border-white/[0.08] bg-background/75 backdrop-blur-2xl saturate-150 px-6 lg:px-8 flex items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+              <span className="font-medium">Settings</span>
+              <span className="text-muted-foreground/50">/</span>
+              <span className="font-semibold text-foreground truncate">{currentTitle}</span>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground/85 bg-black/[0.035] dark:bg-white/[0.05] px-2.5 py-0.5 rounded-full border border-black/[0.05] dark:border-white/[0.07]">
+              {activeSection === "general" ? "lumi://settings" : `lumi://settings?section=${activeSection}`}
+            </span>
+          </header>
 
-          <main className="flex-1 overflow-y-auto px-6 py-6 md:px-8 no-scrollbar">
-            <div className="mx-auto max-w-3xl pb-8">
+          <main className="flex-1 overflow-y-auto px-6 py-5 lg:px-8 no-scrollbar">
+            <div className="mx-auto w-full max-w-6xl pb-10">
               {isSearching ? (
                 <GlobalSearchResults
                   query={searchQuery}

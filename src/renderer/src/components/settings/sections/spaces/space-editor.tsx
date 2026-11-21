@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Save, Settings, Trash2, PaintBucket, Check } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Trash2, Check } from "lucide-react";
 import type { Space } from "~/lumi/interfaces/sessions/spaces";
 import { BasicSettingsTab, ThemeSettingsTab } from "./editor-tabs";
 import { DeleteConfirmDialog } from "./space-dialogs";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SpaceIcon } from "@/lib/phosphor-icons";
+import { SpaceIconEditor } from "./theme-editors/space-icon";
 
 interface SpaceEditorProps {
   space: Space;
@@ -16,7 +16,6 @@ interface SpaceEditorProps {
 
 export function SpaceEditor({ space, onClose, onDelete, onSpacesUpdate }: SpaceEditorProps) {
   const [editedSpace, setEditedSpace] = useState<Space>({ ...space });
-  const [activeTab, setActiveTab] = useState("theme");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -73,9 +72,9 @@ export function SpaceEditor({ space, onClose, onDelete, onSpacesUpdate }: SpaceE
   };
 
   return (
-    <div className="space-y-5 remove-app-drag">
+    <div className="space-y-4 remove-app-drag">
       {/* Editor Header */}
-      <div className="lumi-glass-panel rounded-2xl p-4 flex items-center justify-between gap-3">
+      <div className="lumi-glass-panel rounded-2xl p-3.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Button variant="ghost" size="icon" onClick={onClose} className="size-8 shrink-0">
             <ArrowLeft className="size-4" />
@@ -130,31 +129,23 @@ export function SpaceEditor({ space, onClose, onDelete, onSpacesUpdate }: SpaceE
         </div>
       </div>
 
-      {/* Horizontal Segmented Tabs (No nested sidebars!) */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
-        <TabsList className="grid w-full max-w-sm grid-cols-2">
-          <TabsTrigger value="theme" className="text-xs gap-1.5">
-            <PaintBucket className="size-3.5" />
-            Theme &amp; Preview
-          </TabsTrigger>
-          <TabsTrigger value="basic" className="text-xs gap-1.5">
-            <Settings className="size-3.5" />
-            Details &amp; IDs
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="theme" className="m-0">
+      {/* Side-by-Side Space Workbench */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="lg:col-span-7 space-y-5">
           <ThemeSettingsTab editedSpace={editedSpace} updateEditedSpace={updateEditedSpace} />
-        </TabsContent>
-
-        <TabsContent value="basic" className="m-0">
           <BasicSettingsTab
             space={space}
             editedSpace={editedSpace}
             handleNameChange={(e) => setEditedSpace({ ...editedSpace, name: e.target.value })}
           />
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        <div className="lg:col-span-5">
+          <div className="lumi-glass-panel rounded-2xl p-4">
+            <SpaceIconEditor editedSpace={editedSpace} updateEditedSpace={updateEditedSpace} />
+          </div>
+        </div>
+      </div>
 
       <DeleteConfirmDialog
         isOpen={deleteDialogOpen}

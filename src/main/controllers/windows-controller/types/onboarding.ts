@@ -38,7 +38,7 @@ export class OnboardingWindow extends BaseWindow {
       browserWindow.loadURL("lumi-internal://onboarding/");
     });
 
-    // Use settings.hide's behavior instead of the default one
+    // Keep onboarding hidden on close so lifecycle state stays intact
     browserWindow.on("close", () => {
       browserWindow.hide();
     });

@@ -1,4 +1,3 @@
-import { sleep } from "@/modules/utils";
 import { registerProtocolsWithSession } from "../protocols";
 import { app, session } from "electron";
 import { setupInterceptRules } from "@/controllers/sessions-controller/intercept-rules";
@@ -17,12 +16,7 @@ function initializeDefaultSession() {
 
 export let isDefaultSessionReady = false;
 
-export const defaultSessionReady = app.whenReady().then(async () => {
+export const defaultSessionReady = app.whenReady().then(() => {
   initializeDefaultSession();
-
-  // wait for 50 ms before returning
-  await sleep(50);
-
-  // Set the flag to true
   isDefaultSessionReady = true;
 });

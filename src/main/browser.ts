@@ -20,10 +20,17 @@ import { pinnedTabsController } from "@/controllers/pinned-tabs-controller";
 import { downloadsController } from "@/controllers/downloads-controller";
 import { setupBasicAuthHandler } from "@/app/basic-auth";
 
-async function bootstrapBrowser() {
-  await cleanupStaleEphemeralProfiles().catch((error) => {
-    console.error("Failed to cleanup stale ephemeral profiles:", error);
-  });
+function bootstrapBrowser() {
+  // Prioritize onboarding / initial BrowserWindow creation at the front of app.whenReady()
+  runOnboardingOrInitialWindow();
+
+  // Handle initial URL (runs asynchronously)
+  processInitialUrl();
+
+  // Setup second instance handler & app lifecycle events
+  setupSecondInstanceHandling();
+  setupAppLifecycle();
+  setupBasicAuthHandler();
 
   // Start tab persistence flush interval (writes dirty tabs to disk every ~2s)
   tabPersistenceManager.start();
@@ -35,26 +42,18 @@ async function bootstrapBrowser() {
   // Start cursor edge monitor (detects pointer near window edges for floating sidebar)
   initCursorEdgeMonitor();
 
-  // Initialize tab sync (handles moving active tabs between windows when sync enabled)
-  initTabSync();
+  // Defer secondary platform dock/task integration and tab sync listener setup off the critical launch tick
+  setImmediate(() => {
+    initTabSync();
+    setupPlatformIntegration();
+  });
 
-  // Handle initial URL (runs asynchronously)
-  processInitialUrl();
-
-  // Setup second instance handler
-  setupSecondInstanceHandling();
-
-  // Setup platform specific features
-  setupPlatformIntegration();
-
-  // Open onboarding / create initial window
-  runOnboardingOrInitialWindow();
-
-  // App lifecycle events
-  setupAppLifecycle();
-
-  // Handle app.on("login") events (basic auth)
-  setupBasicAuthHandler();
+  // Clean up crashed/leftover ephemeral profiles in the background without blocking startup window paint
+  setTimeout(() => {
+    void cleanupStaleEphemeralProfiles().catch((error) => {
+      console.error("Failed to cleanup stale ephemeral profiles:", error);
+    });
+  }, 1500);
 }
 
 void bootstrapBrowser();

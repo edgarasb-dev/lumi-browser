@@ -10,6 +10,9 @@ const registeredWebContentIds = new Set<number>();
 function registerTabCycleShortcuts(wc: WebContents) {
   if (registeredWebContentIds.has(wc.id)) return;
   registeredWebContentIds.add(wc.id);
+  wc.once("destroyed", () => {
+    registeredWebContentIds.delete(wc.id);
+  });
 
   wc.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
@@ -18,8 +21,8 @@ function registerTabCycleShortcuts(wc: WebContents) {
     if ((input.key === "k" || input.key === "K") && (input.meta || input.control)) {
       event.preventDefault();
       const window = browserWindowsController.getFocusedWindow();
-      if (window) {
-        const omnibox = window.omnibox;
+      const omnibox = window?.omnibox;
+      if (omnibox) {
         if (omnibox.isVisible()) {
           omnibox.hide();
         } else {

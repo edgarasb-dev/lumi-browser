@@ -127,8 +127,13 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     }
   }, [platform]);
 
+  const contextValue = useMemo(
+    () => ({ platform, platformClassName, browserBorderRadius }),
+    [platform, platformClassName, browserBorderRadius]
+  );
+
   return (
-    <PlatformContext.Provider value={{ platform, platformClassName, browserBorderRadius }}>
+    <PlatformContext.Provider value={contextValue}>
       <PlatformConsumer>{children}</PlatformConsumer>
     </PlatformContext.Provider>
   );

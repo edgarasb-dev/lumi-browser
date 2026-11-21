@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] — 2026-11-21
+
+### Codename: Prism
+
+### Added
+
+- **Unified Tab Settings (`lumi://settings`)**: Migrated Settings out of its standalone popup window into a first-class internal browser tab (`lumi://settings` and `chrome://settings` alias) with URL deep-linking (`?section=...`), browser Back/Forward history across sections, and `Cmd/Ctrl + ,` / **About Lumi** singleton tab focus-or-open behavior.
+- **Spacious Full-Tab Settings Redesign**: Replaced the embedded window titlebar with a sticky breadcrumb header bar and expanded layout grids across General, Appearance, Search Engines, Privacy & External Apps, Shortcuts, Profiles, and a side-by-side Live Preview + Icon Picker workbench inside the Space Editor.
+
+### Changed
+
+- **Renderer Bundle & Protocol Optimizations**: Removed CJS production barrel aliases for `lucide-react` and `@phosphor-icons/react`, introduced cached on-demand duotone SVG serving (`phosphor/<name>`), extracted `SettingsInput` out of full Settings cards, lazy-loaded `bangs` search triggers (`O(1)` Map) with paginated `lumi://bangs`, and scoped `UmamiScriptLoader` to top-level shell windows after idle.
+- **Cold Startup, SQLite & File I/O**: Removed artificial `50ms` session/window delays, moved Widevine/ephemeral cleanup/PostHog/auto-updater (`async codesign`) off critical boot, parallelized window tab restoration, cached `DataStore` atomic writes + bulk settings hydration, enabled `lumi.db` memory-mapped I/O with composite history indexes (`drizzle/0007_history_composite_indexes.sql`), and made `favicons.db` lazy with cached prepared statements.
+- **Memory & Lifecycle Management**: Set default background tab sleep to `30m` with audible/PiP/active-group exemptions and a `12`-tab awake cap, slimmed the idle portal pool (`MIN_IDLE_PORTALS = 1`, `0` in popups) with inactive overlay unmounting, omitted redundant providers from popup windows, fixed tab/session `WeakMap` and listener leaks, and added Adblocker binary engine disk caching.
+- **Zero-Polling IPC & Reactive Rendering**: Switched cursor edge tracking to on-demand states, replaced media mini-player and default-browser intervals with event-driven updates, bounded MV3 service worker backoff, stopped floating sidebar continuous `rAF` loops, coalesced `useBoundingRect` observers via a shared `WeakMap`, and memoized core context providers.
+- **GitHub Actions CI & Packaging Speedups**: Merged lint/format checks with ESLint & incremental `tsc` caches, skipped docs-only PR builds, cached Flatpak/fpm/pip/Bun artifacts across workflows, and tightened macOS notarization key handling.
+
+### Fixed
+
+- **macOS About Lumi Menu Action**: Clicking **Lumi → About Lumi** now opens Settings directly to the **About Lumi** section.
+- **Responsive Sidebar Bottom Dock**: Fixed button sizing and wrapping when resizing the vertical sidebar ([bottom-dock.tsx](file:///Users/edgarasbareika/Developer/lumi-browser/lumi-browser/src/renderer/src/components/browser-ui/browser-sidebar/_components/bottom/bottom-dock.tsx)).
+
+---
+
 ## [0.2.1] — 2026-11-20
 
 ### Codename: Glow

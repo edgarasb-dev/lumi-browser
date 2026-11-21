@@ -7,6 +7,7 @@ import { copyTextToClipboard } from "@/lib/utils";
 
 const LUMI_URLS = [
   { hostname: "new-tab", description: "Start page with Omnibox search, studio backdrop, and widgets" },
+  { hostname: "settings", description: "Configure General, Appearance, Search, Privacy, Spaces, Profiles & Shortcuts" },
   { hostname: "history", description: "Searchable browsing history grouped by day" },
   { hostname: "downloads", description: "Download manager with progress, pause/resume, and quick open" },
   { hostname: "bangs", description: "Quick search shortcut index across thousands of websites" },

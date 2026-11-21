@@ -34,13 +34,17 @@ async function loadAndFilterTabs(): Promise<PersistedTabData[]> {
   const allTabs = await tabPersistenceManager.loadAllTabs();
 
   const filtered: PersistedTabData[] = [];
+  const archivedUniqueIds: string[] = [];
   for (const tabData of allTabs) {
     if (typeof tabData.lastActiveAt === "number" && shouldArchiveTab(tabData.lastActiveAt)) {
-      // Remove archived tab from storage
-      await tabPersistenceManager.removeTab(tabData.uniqueId);
+      archivedUniqueIds.push(tabData.uniqueId);
       continue;
     }
     filtered.push(tabData);
+  }
+
+  if (archivedUniqueIds.length > 0) {
+    await tabPersistenceManager.removeTabsBatch(archivedUniqueIds);
   }
 
   return filtered;
@@ -67,37 +71,40 @@ async function createTabsFromPersistedData(tabDatas: PersistedTabData[]): Promis
   const windowStates = await tabPersistenceManager.loadAllWindowStates();
   const uniqueIdToTabId = new Map<string, number>();
 
-  // Create a window for each window group
-  for (const [windowGroupId, tabs] of windowGroups) {
-    // Read window state from the dedicated window state store
-    const windowState = windowStates.get(windowGroupId);
+  // Create windows concurrently so multi-window restores don't serialize window startup
+  await Promise.all(
+    Array.from(windowGroups.values()).map(async (tabs) => {
+      // All tabs in the same group share the same persisted window state
+      const windowGroupId = tabs[0]?.windowGroupId;
+      const windowState = windowGroupId ? windowStates.get(windowGroupId) : undefined;
 
-    const windowType: BrowserWindowType = windowState?.isPopup ? "popup" : "normal";
-    const windowOptions: BrowserWindowCreationOptions = {};
-    if (windowState) {
-      windowOptions.width = windowState.width;
-      windowOptions.height = windowState.height;
-      if (windowState.x !== undefined) windowOptions.x = windowState.x;
-      if (windowState.y !== undefined) windowOptions.y = windowState.y;
-    }
-    const window = await browserWindowsController.create(windowType, windowOptions);
+      const windowType: BrowserWindowType = windowState?.isPopup ? "popup" : "normal";
+      const windowOptions: BrowserWindowCreationOptions = {};
+      if (windowState) {
+        windowOptions.width = windowState.width;
+        windowOptions.height = windowState.height;
+        if (windowState.x !== undefined) windowOptions.x = windowState.x;
+        if (windowState.y !== undefined) windowOptions.y = windowState.y;
+      }
+      const window = await browserWindowsController.create(windowType, windowOptions);
 
-    for (const tabData of tabs) {
-      const tab = await tabsController.createTab(window.id, tabData.profileId, tabData.spaceId, undefined, {
-        asleep: true,
-        createdAt: tabData.createdAt,
-        lastActiveAt: tabData.lastActiveAt,
-        position: tabData.position,
-        navHistory: tabData.navHistory,
-        navHistoryIndex: tabData.navHistoryIndex,
-        uniqueId: tabData.uniqueId,
-        title: tabData.title,
-        faviconURL: tabData.faviconURL || undefined
-      });
+      for (const tabData of tabs) {
+        const tab = await tabsController.createTab(window.id, tabData.profileId, tabData.spaceId, undefined, {
+          asleep: true,
+          createdAt: tabData.createdAt,
+          lastActiveAt: tabData.lastActiveAt,
+          position: tabData.position,
+          navHistory: tabData.navHistory,
+          navHistoryIndex: tabData.navHistoryIndex,
+          uniqueId: tabData.uniqueId,
+          title: tabData.title,
+          faviconURL: tabData.faviconURL || undefined
+        });
 
-      uniqueIdToTabId.set(tabData.uniqueId, tab.id);
-    }
-  }
+        uniqueIdToTabId.set(tabData.uniqueId, tab.id);
+      }
+    })
+  );
 
   await restoreTabGroups(persistedGroups, uniqueIdToTabId);
 }

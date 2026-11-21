@@ -2,6 +2,7 @@ import { loadedProfilesController } from "@/controllers/loaded-profiles-controll
 import { tabPersistenceManager } from "@/saving/tabs";
 import { closeDatabase } from "@/saving/db";
 import { closeFaviconsDatabase } from "@/modules/favicons";
+import { contentBlocker } from "@/modules/content-blocker";
 import { sleep } from "@/modules/utils";
 
 async function flushSessionsData() {
@@ -59,7 +60,20 @@ export function beforeQuit(): boolean | Promise<boolean> {
       return true;
     });
 
-  return Promise.all([flushTabsPromise, flushSessionsDataPromise, closeFaviconsPromise]).then((results) => {
+  const flushContentBlockerPromise = contentBlocker
+    .flushPendingStats()
+    .then(() => true)
+    .catch((err) => {
+      console.error("[beforeQuit] Failed to flush content blocker stats:", err);
+      return true;
+    });
+
+  return Promise.all([
+    flushTabsPromise,
+    flushSessionsDataPromise,
+    closeFaviconsPromise,
+    flushContentBlockerPromise
+  ]).then((results) => {
     return results.every((result) => result);
   });
 }

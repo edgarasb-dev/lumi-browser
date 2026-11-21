@@ -64,6 +64,10 @@ export function useSidePanel(): SidePanelContextValue {
   return ctx;
 }
 
+export function useOptionalSidePanel(): SidePanelContextValue | null {
+  return useContext(SidePanelContext);
+}
+
 export function SidePanelProvider({ children }: { children: ReactNode }) {
   const { currentSpace } = useSpaces();
   const currentSpaceId = currentSpace?.id;

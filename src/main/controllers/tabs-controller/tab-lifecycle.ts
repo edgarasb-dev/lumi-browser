@@ -63,6 +63,8 @@ export class TabLifecycleManager {
 
     this.tab.updateStateProperty("asleep", true);
 
+    this.disconnectFullScreenListener();
+
     // Destroy the view and webContents to free resources
     this.tab.teardownView();
   }
@@ -190,24 +192,20 @@ export class TabLifecycleManager {
     });
 
     // Disconnect previous leave-full-screen listener before registering a new one
-    if (this.disconnectLeaveFullScreen) {
-      this.disconnectLeaveFullScreen();
-      this.disconnectLeaveFullScreen = null;
-    }
+    this.disconnectFullScreenListener();
 
     const disconnectLeaveFullScreen = window.connect("leave-full-screen", () => {
       this.setFullScreen(false);
     });
 
     this.disconnectLeaveFullScreen = disconnectLeaveFullScreen;
+  }
 
-    this.tab.on("destroyed", () => {
-      if (window.isEmitterDestroyed()) return;
-      if (this.disconnectLeaveFullScreen) {
-        this.disconnectLeaveFullScreen();
-        this.disconnectLeaveFullScreen = null;
-      }
-    });
+  private disconnectFullScreenListener(): void {
+    if (this.disconnectLeaveFullScreen) {
+      this.disconnectLeaveFullScreen();
+      this.disconnectLeaveFullScreen = null;
+    }
   }
 
   // --- Picture-in-Picture ---
@@ -297,11 +295,15 @@ export class TabLifecycleManager {
    * Handles cleanup of fullscreen state if needed.
    */
   onDestroy(): void {
-    if (this.tab.fullScreen) {
-      const window = this.tab.getWindow();
-      if (!window.destroyed) {
-        window.browserWindow.setFullScreen(false);
-      }
+    const window = this.tab.getWindow();
+    if (!window.isEmitterDestroyed()) {
+      this.disconnectFullScreenListener();
+    } else {
+      this.disconnectLeaveFullScreen = null;
+    }
+
+    if (this.tab.fullScreen && !window.destroyed) {
+      window.browserWindow.setFullScreen(false);
     }
   }
 }

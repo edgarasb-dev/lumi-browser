@@ -2,6 +2,8 @@ import { BrowserWindow as ElectronWindow } from "electron";
 import { BrowserWindow } from "@/controllers/windows-controller/types";
 import { ipcMain } from "electron";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
+import { setWindowCursorEdgeMode } from "@/controllers/windows-controller/utils/cursor-edge-monitor";
+import type { CursorEdgeMonitorMode } from "~/lumi/interfaces/browser/interface";
 
 ipcMain.on("window-button:set-position", (event, position: { x: number; y: number }) => {
   const win = ElectronWindow.fromWebContents(event.sender);
@@ -110,3 +112,10 @@ ipcMain.handle("interface:get-window-state", (event) => {
 export function fireWindowStateChanged(win: BrowserWindow) {
   win.sendMessage("interface:window-state-changed", getWindowState(win));
 }
+
+ipcMain.on("interface:set-cursor-edge-monitor-mode", (event, mode: CursorEdgeMonitorMode) => {
+  const win = browserWindowsController.getWindowFromWebContents(event.sender);
+  if (win) {
+    setWindowCursorEdgeMode(win.id, mode);
+  }
+});

@@ -20,6 +20,7 @@ ipcMain.on("omnibox:show", (event, bounds: Electron.Rectangle | null, params: Om
   }
 
   const omnibox = parentWindow.omnibox;
+  if (!omnibox) return;
   omnibox.setBounds(bounds);
   omnibox.setOpenState(params);
   omnibox.show();
@@ -36,7 +37,7 @@ ipcMain.handle("omnibox:get-state", (event) => {
     return null;
   }
 
-  return parentWindow.omnibox.getOpenState();
+  return parentWindow.omnibox?.getOpenState() ?? null;
 });
 
 ipcMain.on("omnibox:hide", (event) => {
@@ -52,6 +53,5 @@ ipcMain.on("omnibox:hide", (event) => {
     return;
   }
 
-  const omnibox = parentWindow.omnibox;
-  omnibox.hide();
+  parentWindow.omnibox?.hide();
 });

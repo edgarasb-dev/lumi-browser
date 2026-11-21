@@ -5,8 +5,8 @@ import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provi
 import { useAdaptiveTopbar } from "@/components/browser-ui/adaptive-topbar";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { useFocusedTab, useTabsGroups } from "@/components/providers/tabs-provider";
-import { useFocusMode } from "@/components/providers/focus-mode-provider";
-import { useSidePanel } from "@/components/providers/side-panel-provider";
+import { useOptionalFocusMode } from "@/components/providers/focus-mode-provider";
+import { useOptionalSidePanel } from "@/components/providers/side-panel-provider";
 import { ReaderView } from "@/components/browser-ui/reader-view";
 import type { TabPlaceholderUpdate } from "~/types/tabs";
 import "./browser-content.css";
@@ -30,8 +30,10 @@ const PLACEHOLDER_CLEAR_DELAY_MS = 180;
 function BrowserContent() {
   const { mode, recordedSidebarSizeRef, isAnimating, attachedDirection, onSidebarResize } = useBrowserSidebar();
   const { topbarHeight, topbarVisible, contentTopOffset } = useAdaptiveTopbar();
-  const { isZenMode } = useFocusMode();
-  const { isOpen: isSidePanelOpen, panelWidth: sidePanelWidth } = useSidePanel();
+  const isZenMode = useOptionalFocusMode()?.isZenMode ?? false;
+  const sidePanel = useOptionalSidePanel();
+  const isSidePanelOpen = sidePanel?.isOpen ?? false;
+  const sidePanelWidth = sidePanel?.panelWidth ?? 0;
   const { currentSpace } = useSpaces();
   const { activeTabGroup } = useTabsGroups();
   const focusedTab = useFocusedTab();

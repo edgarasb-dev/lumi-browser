@@ -113,7 +113,10 @@ export function ThemeProvider({
   }, []);
 
   const themeClassName: ThemeClassName = appliedTheme === "dark" ? "dark" : "light";
-  const value = { theme, appliedTheme, setTheme, resolvedTheme, themeClassName };
+  const value = useMemo(
+    () => ({ theme, appliedTheme, setTheme, resolvedTheme, themeClassName }),
+    [theme, appliedTheme, setTheme, resolvedTheme, themeClassName]
+  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

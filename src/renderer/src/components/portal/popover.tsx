@@ -2,7 +2,7 @@ import { useOptionalBrowserSidebar } from "@/components/browser-ui/browser-sideb
 import { PortalComponent } from "@/components/portal/portal";
 import { Popover as BasePopover, PopoverContent as BasePopoverContent } from "@/components/ui/popover";
 import { type PopoverRootChangeEventDetails } from "@base-ui/react";
-import { createContext, useContext, useEffect, useId, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useState } from "react";
 
 export { PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 
@@ -32,8 +32,10 @@ export function Popover({
     return () => sidebar?.removeActivePopover(id);
   }, [open, sidebar, id]);
 
+  const contextValue = useMemo(() => ({ open, setOpen }), [open, setOpen]);
+
   return (
-    <PopoverContext.Provider value={{ open, setOpen }}>
+    <PopoverContext.Provider value={contextValue}>
       <BasePopover {...props} open={open} onOpenChange={setOpen} />
     </PopoverContext.Provider>
   );

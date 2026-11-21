@@ -94,6 +94,7 @@ function hasPermission(permission: Permission) {
   const isExtensions = isLocation("lumi:", "extensions");
   const isHistoryPage = isLocation("lumi:", "history");
   const isDownloadsPage = isLocation("lumi:", "downloads");
+  const isSettingsPage = isLocation("lumi:", "settings");
 
   switch (permission) {
     case "all":
@@ -103,7 +104,7 @@ function hasPermission(permission: Permission) {
     case "browser":
       return isBrowserUI || isOmnibox || isHistoryPage || isDownloadsPage;
     case "session":
-      return isLumiInternalProtocol || isOmnibox || isBrowserUI;
+      return isLumiInternalProtocol || isOmnibox || isBrowserUI || isSettingsPage;
     case "settings":
       return isInternalProtocols;
     default:
@@ -479,6 +480,9 @@ const interfaceAPI: LumiInterfaceAPI = {
   onCursorAtEdge: (callback: (event: import("~/lumi/interfaces/browser/interface").CursorEdgeEvent) => void) => {
     return listenOnIPCChannel("interface:cursor-at-edge", callback);
   },
+  setCursorEdgeMonitorMode: (mode: import("~/lumi/interfaces/browser/interface").CursorEdgeMonitorMode) => {
+    return ipcRenderer.send("interface:set-cursor-edge-monitor-mode", mode);
+  },
   setComponentWindowBounds: (componentId: string, bounds: Electron.Rectangle) => {
     return ipcRenderer.send("interface:set-component-window-bounds", componentId, bounds);
   },
@@ -717,6 +721,9 @@ const settingsAPI: LumiSettingsAPI = {
   getSetting: async (settingId: string) => {
     return ipcRenderer.invoke("settings:get-setting", settingId);
   },
+  getAllSettings: async () => {
+    return ipcRenderer.invoke("settings:get-all-settings");
+  },
   setSetting: async (settingId: string, value: unknown) => {
     return ipcRenderer.invoke("settings:set-setting", settingId, value);
   },
@@ -758,17 +765,11 @@ const searchEnginesAPI: LumiSearchEnginesAPI = {
 
 // WINDOWS API //
 const windowsAPI: LumiWindowsAPI = {
-  openSettingsWindow: (section?: string) => {
+  openSettings: (section?: string) => {
     return ipcRenderer.send("settings:open", section);
-  },
-  consumePendingSettingsSection: () => {
-    return ipcRenderer.invoke("settings:consume-pending-section");
   },
   onSettingsSectionNavigate: (callback: (section: string) => void) => {
     return listenOnIPCChannel("settings:navigate-section", callback);
-  },
-  closeSettingsWindow: () => {
-    return ipcRenderer.send("settings:close");
   },
 
   // Generic window controls (work for any internal window)
@@ -1015,6 +1016,9 @@ const mediaAPI: LumiMediaAPI = {
   },
   control: async (tabId: number, action: MediaControlAction) => {
     return ipcRenderer.invoke("media:control", tabId, action);
+  },
+  onChanged: (callback: () => void) => {
+    return listenOnIPCChannel("media:on-changed", callback);
   }
 };
 

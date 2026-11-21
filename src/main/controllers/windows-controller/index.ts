@@ -1,6 +1,5 @@
 import { WindowTypeManager } from "@/controllers/windows-controller/type-manager";
 import {
-  SettingsWindow,
   BaseWindow,
   OnboardingWindow,
   BrowserWindow,
@@ -12,13 +11,12 @@ import { BrowserWindow as ElectronBrowserWindow, type WebContents } from "electr
 import "./utils/close-preventer";
 import "./utils/tab-cycle-shortcuts";
 
-export type WindowType = "browser" | "settings" | "onboarding" | "extension-popup";
+export type WindowType = "browser" | "onboarding" | "extension-popup";
 
 const WINDOW_PRIORITY: Record<WindowType, number> = {
   browser: 0,
   "extension-popup": 1,
-  onboarding: 2,
-  settings: 3
+  onboarding: 2
 };
 
 type WindowsControllerEvents = {
@@ -32,7 +30,6 @@ class WindowsController extends TypedEventEmitter<WindowsControllerEvents> {
   private focusOrder: number[] = [];
 
   // Window Type Managers //
-  public settings: WindowTypeManager<typeof SettingsWindow>;
   public onboarding: WindowTypeManager<typeof OnboardingWindow>;
   public browser: WindowTypeManager<typeof BrowserWindow>;
   public extensionPopup: WindowTypeManager<typeof ExtensionPopupWindow>;
@@ -43,7 +40,6 @@ class WindowsController extends TypedEventEmitter<WindowsControllerEvents> {
     this.windows = new Map();
 
     // Window Type Managers //
-    this.settings = new WindowTypeManager(this, "settings", SettingsWindow, { singleton: true });
     this.onboarding = new WindowTypeManager(this, "onboarding", OnboardingWindow, { singleton: true });
     this.browser = new WindowTypeManager(this, "browser", BrowserWindow);
     this.extensionPopup = new WindowTypeManager(this, "extension-popup", ExtensionPopupWindow);

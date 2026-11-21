@@ -1,6 +1,8 @@
 import { flushSearchSuggestions } from "./suggestors/search-suggestions";
 import { type OmniboxFlush } from "./helpers";
 import { getZeroSuggestSuggestions } from "./zero-suggest";
+import { isBangsLoaded, waitForBangsLoad } from "./bangs-initializer";
+import { extractBangTrigger } from "./suggestors/verbatim";
 import {
   getInstantAnswerSuggestions,
   getOpenTabSuggestions,
@@ -35,6 +37,15 @@ export function getOmniboxSuggestions(input: string, flush: OmniboxFlush, signal
     ...openTabSuggestions,
     ...pedalSuggestions
   ]);
+
+  // Lazy-load the 2 MB bangs dictionary only when user types a `!trigger`
+  if (!isBangsLoaded() && extractBangTrigger(trimmedInput)) {
+    void waitForBangsLoad().then(() => {
+      if (!signal.aborted) {
+        flush(getVerbatimSuggestions(trimmedInput));
+      }
+    });
+  }
 
   // Asynchronous suggestions (search)
   flushSearchSuggestions(trimmedInput, flush, signal);

@@ -46,13 +46,7 @@ const mainAliases: Record<string, string> = {
 };
 
 const rendererAliases: Record<string, string> = {
-  "@": resolve("src/renderer/src"),
-  ...(isProductionBuild()
-    ? {
-        "@phosphor-icons/react": resolve("node_modules/@phosphor-icons/react/dist/index.cjs.js"),
-        "lucide-react": resolve("node_modules/lucide-react/dist/cjs/lucide-react.js")
-      }
-    : {})
+  "@": resolve("src/renderer/src")
 };
 
 const sharedAliases: Record<string, string> = {

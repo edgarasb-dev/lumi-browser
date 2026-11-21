@@ -19,17 +19,14 @@ let readyPromise: Promise<void> | null = null;
 
 async function waitUntilReady() {
   if (!readyPromise) {
-    readyPromise = (async () => {
-      // Wait for electron to finish initializing
-      await app.whenReady();
-
-      // Wait for WidevineCDM to be ready with timeout
-      // Could fail when Widevine is not available, but we don't care
-      const isReady = await waitForElectronComponentsToBeReady();
-      if (!isReady) {
-        warnWidevineLoadFailed();
-      }
-    })();
+    readyPromise = app.whenReady().then(() => {
+      // Warm WidevineCDM in the background so it never stalls first-window creation up to 1.5s
+      void waitForElectronComponentsToBeReady().then((isReady) => {
+        if (!isReady) {
+          warnWidevineLoadFailed();
+        }
+      });
+    });
   }
   return readyPromise;
 }

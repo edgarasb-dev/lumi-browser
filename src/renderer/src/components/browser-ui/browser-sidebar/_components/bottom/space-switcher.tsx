@@ -2,7 +2,7 @@ import { Space } from "~/lumi/interfaces/sessions/spaces";
 import { cn } from "@/lib/utils";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { SpaceIcon } from "@/lib/phosphor-icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { TabGroupSourceData } from "@/components/browser-ui/browser-sidebar/_components/tab-group";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { AnimatePresence, motion } from "motion/react";
@@ -11,7 +11,8 @@ import { SpaceThemePopover } from "@/components/browser-ui/browser-sidebar/_comp
 // Layout constants (px)
 const ICON_SIZE = 28; // size-7
 const DOT_SIZE = 20; // size-5
-const GAP = 2; // gap-0.5
+const COMPACT_GAP = 2; // gap-0.5
+const FULL_GAP = 4; // gap-1
 
 type SpaceButtonProps = {
   space: Space;
@@ -111,7 +112,7 @@ function SpaceButton({ space, isActive, compact }: SpaceButtonProps) {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          "relative flex items-center justify-center rounded-md",
+          "relative shrink-0 flex items-center justify-center rounded-md",
           "transition-all duration-150",
           showIcon ? "size-7" : "size-5",
           showIcon && "hover:bg-black/10 active:bg-black/15 dark:hover:bg-white/10 dark:active:bg-white/15",
@@ -159,27 +160,37 @@ function SpaceButton({ space, isActive, compact }: SpaceButtonProps) {
  * When all spaces fit as icons, returns compact=false.
  * Otherwise returns a windowed subset around the active space with compact=true.
  */
-function useVisibleSpaces(spaces: Space[], activeIndex: number, containerWidth: number) {
+function useVisibleSpaces(spaces: Space[], activeIndex: number, containerWidth: number | null) {
   return useMemo<{ visibleSpaces: Space[]; compact: boolean }>(() => {
-    if (spaces.length === 0 || containerWidth <= 0) {
+    if (spaces.length === 0) {
+      return { visibleSpaces: [], compact: false };
+    }
+
+    // Before first layout measurement, render uncompacted so shrink-wrapped parents (like Topbar) can expand.
+    if (containerWidth === null) {
       return { visibleSpaces: spaces, compact: false };
     }
 
+    // Never overflow into adjacent dock controls when available width is smaller than a single icon.
+    if (containerWidth < ICON_SIZE) {
+      return { visibleSpaces: [], compact: true };
+    }
+
     // Check if everything fits as full icons
-    const allIconsNeeded = spaces.length * ICON_SIZE + Math.max(0, spaces.length - 1) * GAP;
+    const allIconsNeeded = spaces.length * ICON_SIZE + Math.max(0, spaces.length - 1) * FULL_GAP;
     if (allIconsNeeded <= containerWidth) {
       return { visibleSpaces: spaces, compact: false };
     }
 
     // Compact mode: 1 active icon + surrounding dots
-    const totalNeeded = ICON_SIZE + Math.max(0, spaces.length - 1) * (DOT_SIZE + GAP);
+    const totalNeeded = ICON_SIZE + Math.max(0, spaces.length - 1) * (DOT_SIZE + COMPACT_GAP);
     if (totalNeeded <= containerWidth) {
       return { visibleSpaces: spaces, compact: true };
     }
 
     // Budget for dots after reserving space for the active icon
     const remaining = containerWidth - ICON_SIZE;
-    const maxDots = Math.max(0, Math.floor(remaining / (DOT_SIZE + GAP)));
+    const maxDots = Math.max(0, Math.floor(remaining / (DOT_SIZE + COMPACT_GAP)));
 
     // Distribute dots equally left and right of active
     let leftCount = Math.floor(maxDots / 2);
@@ -205,24 +216,36 @@ function useVisibleSpaces(spaces: Space[], activeIndex: number, containerWidth: 
   }, [spaces, activeIndex, containerWidth]);
 }
 
-export function SpaceSwitcher() {
+export function SpaceSwitcher({ className }: { className?: string } = {}) {
   const { spaces, currentSpace, isCurrentSpaceInternal } = useSpaces();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const hasSpaces = spaces.length > 0;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!hasSpaces || isCurrentSpaceInternal) {
+      setContainerWidth(null);
+      return;
+    }
+
     const el = containerRef.current;
     if (!el) return;
 
+    const measure = (width: number) => {
+      setContainerWidth(width);
+    };
+
+    measure(el.getBoundingClientRect().width);
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setContainerWidth(entry.contentBoxSize[0].inlineSize);
+        measure(entry.contentBoxSize?.[0]?.inlineSize ?? el.getBoundingClientRect().width);
       }
     });
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [hasSpaces, isCurrentSpaceInternal]);
 
   const activeIndex = useMemo(() => {
     if (!currentSpace) return 0;
@@ -234,11 +257,11 @@ export function SpaceSwitcher() {
 
   // Don't show the space switcher when the current space is internal (e.g. incognito)
   if (isCurrentSpaceInternal) {
-    return <div className="flex-1 min-w-0" />;
+    return <div className={cn("flex-1 min-w-0", className)} />;
   }
 
   return (
-    <div ref={containerRef} className="flex-1 min-w-0 flex justify-center">
+    <div ref={containerRef} className={cn("flex-1 min-w-0 overflow-hidden flex justify-center", className)}>
       <div className={cn("flex flex-row items-center", compact ? "gap-0.5" : "gap-1")}>
         {visibleSpaces.map((space) => (
           <SpaceButton key={space.id} space={space} isActive={currentSpace?.id === space.id} compact={compact} />

@@ -27,9 +27,7 @@ interface FocusModeContextValue {
   isZenMode: boolean;
   setZenMode: (enabled: boolean) => void;
   toggleZenMode: () => void;
-  phase: FocusPhase;
   timerRunning: boolean;
-  remainingSeconds: number;
   startTimer: () => void;
   pauseTimer: () => void;
   resetTimer: (nextPhase?: FocusPhase) => void;
@@ -40,12 +38,30 @@ interface FocusModeContextValue {
   setBlockedDomains: (domains: string[]) => void;
 }
 
+interface FocusTimerContextValue {
+  phase: FocusPhase;
+  remainingSeconds: number;
+}
+
 const FocusModeContext = createContext<FocusModeContextValue | null>(null);
+const FocusTimerContext = createContext<FocusTimerContextValue | null>(null);
 
 export function useFocusMode(): FocusModeContextValue {
   const ctx = useContext(FocusModeContext);
   if (!ctx) {
     throw new Error("useFocusMode must be used within FocusModeProvider");
+  }
+  return ctx;
+}
+
+export function useOptionalFocusMode(): FocusModeContextValue | null {
+  return useContext(FocusModeContext);
+}
+
+export function useFocusTimer(): FocusTimerContextValue {
+  const ctx = useContext(FocusTimerContext);
+  if (!ctx) {
+    throw new Error("useFocusTimer must be used within FocusModeProvider");
   }
   return ctx;
 }
@@ -99,15 +115,24 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("lumi:workspace-action", onWorkspaceAction);
   }, [isZenMode, setZenMode]);
 
-  // Keep Focus Blocklist in sync with main-process ContentBlocker
+  const wasFocusBlockActiveRef = useRef(false);
+
+  // Keep Focus Blocklist in sync with main-process ContentBlocker (skip mount IPC when inactive)
   useEffect(() => {
     const active = blockDistractions && (timerRunning || isZenMode) && phase === "focus";
+    if (!active && !wasFocusBlockActiveRef.current) {
+      return;
+    }
+    wasFocusBlockActiveRef.current = active;
     void lumi.contentBlocker.setFocusBlocklist(active, blockedDomains).catch(() => undefined);
   }, [blockDistractions, timerRunning, isZenMode, phase, blockedDomains]);
 
   useEffect(() => {
     return () => {
-      void lumi.contentBlocker.setFocusBlocklist(false).catch(() => undefined);
+      if (wasFocusBlockActiveRef.current) {
+        wasFocusBlockActiveRef.current = false;
+        void lumi.contentBlocker.setFocusBlocklist(false).catch(() => undefined);
+      }
     };
   }, []);
 
@@ -156,9 +181,7 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
       isZenMode,
       setZenMode,
       toggleZenMode,
-      phase,
       timerRunning,
-      remainingSeconds,
       startTimer,
       pauseTimer,
       resetTimer,
@@ -172,9 +195,7 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
       isZenMode,
       setZenMode,
       toggleZenMode,
-      phase,
       timerRunning,
-      remainingSeconds,
       startTimer,
       pauseTimer,
       resetTimer,
@@ -185,5 +206,17 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return <FocusModeContext.Provider value={value}>{children}</FocusModeContext.Provider>;
+  const timerValue = useMemo<FocusTimerContextValue>(
+    () => ({
+      phase,
+      remainingSeconds
+    }),
+    [phase, remainingSeconds]
+  );
+
+  return (
+    <FocusModeContext.Provider value={value}>
+      <FocusTimerContext.Provider value={timerValue}>{children}</FocusTimerContext.Provider>
+    </FocusModeContext.Provider>
+  );
 }

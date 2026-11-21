@@ -6,7 +6,12 @@ import { defaultBrowserController } from "@/controllers/default-browser-controll
 export const createAppMenu = (): MenuItemConstructorOptions => ({
   role: "appMenu",
   submenu: [
-    { role: "about" },
+    {
+      label: "About Lumi",
+      click: () => {
+        void settings.show("about");
+      }
+    },
     { type: "separator" },
     {
       label: "Settings",

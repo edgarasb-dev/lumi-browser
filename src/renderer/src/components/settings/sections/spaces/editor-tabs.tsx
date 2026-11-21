@@ -2,7 +2,6 @@ import { ChangeEvent } from "react";
 import { Input } from "@/components/ui/input";
 import type { Space } from "~/lumi/interfaces/sessions/spaces";
 import { BackgroundGradientEditor } from "@/components/settings/sections/spaces/theme-editors/background-gradient";
-import { SpaceIconEditor } from "@/components/settings/sections/spaces/theme-editors/space-icon";
 import { SettingsGroup, SettingsRow } from "@/components/settings/components/setting-row";
 
 interface BasicSettingsTabProps {
@@ -46,13 +45,8 @@ interface ThemeSettingsTabProps {
 
 export function ThemeSettingsTab({ editedSpace, updateEditedSpace }: ThemeSettingsTabProps) {
   return (
-    <div className="space-y-5">
-      <div className="lumi-glass-panel rounded-2xl p-5 space-y-6">
-        <BackgroundGradientEditor editedSpace={editedSpace} updateEditedSpace={updateEditedSpace} />
-        <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-5">
-          <SpaceIconEditor editedSpace={editedSpace} updateEditedSpace={updateEditedSpace} />
-        </div>
-      </div>
+    <div className="lumi-glass-panel rounded-2xl p-5">
+      <BackgroundGradientEditor editedSpace={editedSpace} updateEditedSpace={updateEditedSpace} />
     </div>
   );
 }

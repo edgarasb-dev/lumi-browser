@@ -1,9 +1,13 @@
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { InternalPageShell } from "@/components/main/internal-page-shell";
 import { getBangs, waitForBangsLoad, type BangEntry } from "@/lib/omnibox-new/bangs-initializer";
 import { motion } from "motion/react";
 import { Search, Sparkles } from "lucide-react";
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+
+const INITIAL_BANGS_RENDER_LIMIT = 150;
+const BANGS_PAGE_STEP = 200;
 
 function getBangDestination(entry: BangEntry): string {
   if (entry.d.includes(".")) {
@@ -71,7 +75,12 @@ function groupBangsByCategory(entries: BangEntry[], query: string) {
 function BangsPage() {
   const [bangEntries, setBangEntries] = useState(() => getBangs());
   const [search, setSearch] = useState("");
+  const [renderLimit, setRenderLimit] = useState(INITIAL_BANGS_RENDER_LIMIT);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+
+  useEffect(() => {
+    setRenderLimit(INITIAL_BANGS_RENDER_LIMIT);
+  }, [deferredSearch]);
 
   useEffect(() => {
     if (bangEntries.length > 0) return;
@@ -90,23 +99,23 @@ function BangsPage() {
     };
   }, [bangEntries.length]);
 
-  const groupedBangs = useMemo(() => {
+  const { groupedBangs, totalMatching } = useMemo(() => {
     const filteredBangs = deferredSearch
       ? bangEntries.filter((entry) => getBangSearchTokens(entry).includes(deferredSearch))
       : bangEntries;
 
-    return groupBangsByCategory(filteredBangs, deferredSearch);
-  }, [bangEntries, deferredSearch]);
+    return {
+      totalMatching: filteredBangs.length,
+      groupedBangs: groupBangsByCategory(filteredBangs.slice(0, renderLimit), deferredSearch)
+    };
+  }, [bangEntries, deferredSearch, renderLimit]);
 
-  const resultCount = useMemo(
-    () => groupedBangs.reduce((total, group) => total + group.items.length, 0),
-    [groupedBangs]
-  );
+  const remainingCount = Math.max(0, totalMatching - renderLimit);
 
   return (
     <InternalPageShell
       title="Search Bangs"
-      subtitle={`${resultCount.toLocaleString()} shortcuts`}
+      subtitle={`${totalMatching.toLocaleString()} shortcuts`}
       icon={<Sparkles className="size-4" />}
       searchSlot={
         <div className="relative">
@@ -129,46 +138,59 @@ function BangsPage() {
       >
         {bangEntries.length === 0 ? (
           <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>
-        ) : resultCount === 0 ? (
+        ) : totalMatching === 0 ? (
           <div className="lumi-glass-panel py-16 text-center">
             <p className="font-medium text-foreground">No bangs found</p>
             <p className="mt-1 text-sm text-muted-foreground">Try a different search keyword.</p>
           </div>
         ) : (
-          groupedBangs.map((group) => (
-            <Card key={group.category} className="lumi-glass-panel gap-0 overflow-clip py-0">
-              <CardHeader className="sticky top-15 z-5 gap-0 border-b border-black/8 bg-background/85 px-4 py-2.5! backdrop-blur-xl dark:border-white/10">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group.category}
-                </span>
-              </CardHeader>
-              <CardContent className="p-1.5">
-                <ul>
-                  {group.items.map((entry) => (
-                    <li key={entry.t}>
-                      <a
-                        href={getBangDestination(entry)}
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 rounded-xl px-2.5 py-2 text-inherit no-underline transition-colors hover:bg-black/4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:hover:bg-white/6"
-                      >
-                        <div className="flex h-8 min-w-14 shrink-0 items-center justify-center rounded-lg border border-black/8 bg-black/4 px-2 dark:border-white/12 dark:bg-white/6">
-                          <span className="truncate font-mono text-[11px] font-medium text-primary">!{entry.t}</span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium leading-snug text-foreground">
-                            {entry.s}
-                          </span>
-                          <span className="block truncate text-[11px] leading-snug text-muted-foreground">
-                            {[entry.sc, getBangHost(entry)].filter(Boolean).join(" • ")}
-                          </span>
-                        </div>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))
+          <>
+            {groupedBangs.map((group) => (
+              <Card key={group.category} className="lumi-glass-panel gap-0 overflow-clip py-0">
+                <CardHeader className="sticky top-15 z-5 gap-0 border-b border-black/8 bg-background/85 px-4 py-2.5! backdrop-blur-xl dark:border-white/10">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.category}
+                  </span>
+                </CardHeader>
+                <CardContent className="p-1.5">
+                  <ul>
+                    {group.items.map((entry) => (
+                      <li key={entry.t}>
+                        <a
+                          href={getBangDestination(entry)}
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-xl px-2.5 py-2 text-inherit no-underline transition-colors hover:bg-black/4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:hover:bg-white/6"
+                        >
+                          <div className="flex h-8 min-w-14 shrink-0 items-center justify-center rounded-lg border border-black/8 bg-black/4 px-2 dark:border-white/12 dark:bg-white/6">
+                            <span className="truncate font-mono text-[11px] font-medium text-primary">!{entry.t}</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium leading-snug text-foreground">
+                              {entry.s}
+                            </span>
+                            <span className="block truncate text-[11px] leading-snug text-muted-foreground">
+                              {[entry.sc, getBangHost(entry)].filter(Boolean).join(" • ")}
+                            </span>
+                          </div>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+            {remainingCount > 0 && (
+              <div className="flex justify-center py-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRenderLimit((prev) => prev + BANGS_PAGE_STEP)}
+                >
+                  Load more ({remainingCount.toLocaleString()} remaining)
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </motion.div>
     </InternalPageShell>

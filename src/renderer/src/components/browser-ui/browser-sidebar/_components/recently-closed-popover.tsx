@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { RecentlyClosedTabData } from "~/types/tabs";
 import type { WorkspaceSnapshot } from "~/types/snapshots";
 import { toast } from "sonner";
+import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./bottom/dock-button-sizes";
 
 function formatRelativeTime(timestamp: number): string {
   const ms = timestamp < 1e12 ? timestamp * 1000 : timestamp;
@@ -29,7 +30,7 @@ function getHostname(url: string): string {
   }
 }
 
-export function RecentlyClosedPopover({ compact = false }: { compact?: boolean }) {
+export function RecentlyClosedPopover({ compact = false, size }: { compact?: boolean; size?: DockButtonSize }) {
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
   const currentSpaceId = currentSpace?.id;
   const [open, setOpen] = useState(false);
@@ -129,6 +130,9 @@ export function RecentlyClosedPopover({ compact = false }: { compact?: boolean }
     }
   };
 
+  const effectiveSize: DockButtonSize = size ?? (compact ? "sm" : "sm");
+  const sizeClasses = DOCK_BUTTON_CLASSES[effectiveSize];
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -136,8 +140,8 @@ export function RecentlyClosedPopover({ compact = false }: { compact?: boolean }
         onClick={(e) => e.stopPropagation()}
         title="Recently Closed Tabs & Workspace Snapshots"
         className={cn(
-          "flex items-center justify-center rounded-lg text-black/65 transition-colors hover:bg-black/8 hover:text-black/90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white",
-          compact ? "size-7" : "size-7"
+          "flex items-center justify-center text-black/65 transition-colors hover:bg-black/8 hover:text-black/90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white",
+          sizeClasses.button
         )}
       >
         <RotateCcw className="size-3.5" />

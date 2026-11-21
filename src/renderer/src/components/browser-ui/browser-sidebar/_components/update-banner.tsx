@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useAppUpdates } from "@/components/providers/app-updates-provider";
 import { useSettings } from "@/components/providers/settings-provider";
-import { SettingsInput } from "@/components/settings/sections/general/basic-settings-cards";
+import { SettingsInput } from "@/components/settings/components/setting-input";
 import { cn } from "@/lib/utils";
 import { Download, RefreshCw, ArrowUpCircle, ExternalLink } from "lucide-react";
 

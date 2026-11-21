@@ -13,8 +13,17 @@ export function SetAsDefaultBrowserSetting({ highlighted = false }: { highlighte
     };
 
     refetchDefaultBrowser();
-    const interval = setInterval(refetchDefaultBrowser, 2000);
-    return () => clearInterval(interval);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refetchDefaultBrowser();
+      }
+    };
+    window.addEventListener("focus", refetchDefaultBrowser);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", refetchDefaultBrowser);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const setDefaultBrowser = () => {

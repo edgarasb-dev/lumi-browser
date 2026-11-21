@@ -1,7 +1,6 @@
 import { useSettings } from "@/components/providers/settings-provider";
-import { BasicSetting, BasicSettingCard } from "~/types/settings";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { BasicSettingCard } from "~/types/settings";
+import { SettingsInput } from "@/components/settings/components/setting-input";
 import { ResetOnboardingCard } from "@/components/settings/sections/general/reset-onboarding-card";
 import { UpdateCard } from "@/components/settings/sections/general/update-card";
 import { SetAsDefaultBrowserSetting } from "@/components/settings/sections/general/set-as-default-browser-setting";
@@ -9,38 +8,7 @@ import { SettingsGroup, SettingsRow } from "@/components/settings/components/set
 import { cn } from "@/lib/utils";
 import { Archive, Cpu, FileText, FlaskConical, RefreshCw, Layers } from "lucide-react";
 
-export function SettingsInput({ setting }: { setting: BasicSetting }) {
-  const { getSetting, setSetting } = useSettings();
-
-  const handleSettingChange = (value: BasicSetting["defaultValue"]) => {
-    void setSetting(setting.id, value);
-  };
-
-  if (setting.type === "enum") {
-    const settingValue = getSetting<string>(setting.id);
-    return (
-      <Select value={settingValue} onValueChange={handleSettingChange}>
-        <SelectTrigger className="w-[180px] h-8 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="remove-app-drag z-popover">
-          {setting.options.map((option) => (
-            <SelectItem key={option.id} value={option.id} className="text-xs">
-              {option.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  if (setting.type === "boolean") {
-    const settingValue = getSetting<boolean>(setting.id);
-    return <Switch id={setting.id} checked={Boolean(settingValue)} onCheckedChange={handleSettingChange} />;
-  }
-
-  return null;
-}
+export { SettingsInput };
 
 export function BasicSettingsCard({ card, transparent }: { card: BasicSettingCard; transparent?: boolean }) {
   const { settings } = useSettings();
@@ -98,7 +66,7 @@ function BasicSettingRowItem({
 
 export function BasicSettingsCards({ highlightedRowId }: { highlightedRowId?: string | null }) {
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       <SettingsGroup title="Application & Updates">
         <UpdateCard highlighted={highlightedRowId === "internal_updateCheck"} />
         <BasicSettingRowItem
@@ -114,38 +82,40 @@ export function BasicSettingsCards({ highlightedRowId }: { highlightedRowId?: st
         />
       </SettingsGroup>
 
-      <SettingsGroup
-        title="Tabs & Memory Optimization"
-        description="Balance responsiveness with background battery and RAM savings."
-      >
-        <BasicSettingRowItem
-          settingId="archiveTabAfter"
-          icon={<Archive className="size-4" />}
-          highlightedRowId={highlightedRowId}
-        />
-        <BasicSettingRowItem
-          settingId="sleepTabAfter"
-          icon={<Cpu className="size-4" />}
-          highlightedRowId={highlightedRowId}
-        />
-      </SettingsGroup>
+      <div className="space-y-6">
+        <SettingsGroup
+          title="Tabs & Memory Optimization"
+          description="Balance responsiveness with background battery and RAM savings."
+        >
+          <BasicSettingRowItem
+            settingId="archiveTabAfter"
+            icon={<Archive className="size-4" />}
+            highlightedRowId={highlightedRowId}
+          />
+          <BasicSettingRowItem
+            settingId="sleepTabAfter"
+            icon={<Cpu className="size-4" />}
+            highlightedRowId={highlightedRowId}
+          />
+        </SettingsGroup>
 
-      <SettingsGroup
-        title="Experimental & Troubleshooting"
-        description="Optional capabilities and workspace reset tools."
-      >
-        <BasicSettingRowItem
-          settingId="enableLumiPdfViewer"
-          icon={<FileText className="size-4" />}
-          highlightedRowId={highlightedRowId}
-        />
-        <BasicSettingRowItem
-          settingId="enableMv2Extensions"
-          icon={<FlaskConical className="size-4" />}
-          highlightedRowId={highlightedRowId}
-        />
-        <ResetOnboardingCard highlighted={highlightedRowId === "internal_resetOnboarding"} />
-      </SettingsGroup>
+        <SettingsGroup
+          title="Experimental & Troubleshooting"
+          description="Optional capabilities and workspace reset tools."
+        >
+          <BasicSettingRowItem
+            settingId="enableLumiPdfViewer"
+            icon={<FileText className="size-4" />}
+            highlightedRowId={highlightedRowId}
+          />
+          <BasicSettingRowItem
+            settingId="enableMv2Extensions"
+            icon={<FlaskConical className="size-4" />}
+            highlightedRowId={highlightedRowId}
+          />
+          <ResetOnboardingCard highlighted={highlightedRowId === "internal_resetOnboarding"} />
+        </SettingsGroup>
+      </div>
     </div>
   );
 }

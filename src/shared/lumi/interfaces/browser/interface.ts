@@ -9,6 +9,8 @@ export type CursorEdgeEvent = {
   x: number;
 };
 
+export type CursorEdgeMonitorMode = "off" | "edge-only" | "track";
+
 // API //
 export interface LumiInterfaceAPI {
   /**
@@ -36,6 +38,11 @@ export interface LumiInterfaceAPI {
    * mouse events and prevent the chrome renderer from seeing them.
    */
   onCursorAtEdge: IPCListener<[CursorEdgeEvent]>;
+
+  /**
+   * Controls whether and how the main process monitors cursor edge proximity for this window.
+   */
+  setCursorEdgeMonitorMode: (mode: CursorEdgeMonitorMode) => void;
 
   /**
    * Sets the bounds of a component window

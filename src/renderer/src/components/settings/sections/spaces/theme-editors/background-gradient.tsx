@@ -54,7 +54,7 @@ export function BackgroundGradientEditor({ editedSpace, updateEditedSpace }: Bac
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Palette className="size-4 text-primary" />
@@ -68,7 +68,7 @@ export function BackgroundGradientEditor({ editedSpace, updateEditedSpace }: Bac
 
       {/* Live Mini-Lumi Browser Window Preview */}
       <div
-        className="rounded-2xl overflow-hidden border border-black/15 dark:border-white/15 shadow-lg p-2.5 flex gap-2.5 h-44"
+        className="rounded-2xl overflow-hidden border border-black/15 dark:border-white/15 shadow-lg p-2.5 flex gap-2.5 h-40"
         style={{
           background: `linear-gradient(135deg, ${localPreview.bgStartColor}, ${localPreview.bgEndColor})`
         }}

@@ -1,6 +1,7 @@
 import { BaseTabGroup, TabGroup } from "@/controllers/tabs-controller/tab-groups";
 import { spacesController } from "@/controllers/spaces-controller";
 import { clipboard, ipcMain, Menu, MenuItem } from "electron";
+import { hasSnapshot } from "@/controllers/sessions-controller/protocols/_protocols/lumi-internal/tab-snapshot";
 import { SplitDirection, TabData, WindowActiveTabIds, WindowFocusedTabIds } from "~/types/tabs";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 import { BrowserWindow } from "@/controllers/windows-controller/types";
@@ -310,6 +311,10 @@ ipcMain.handle("tabs:get-tab-preview", async (_event, tabId: number) => {
   if (!tab || tab.isDestroyed) return null;
 
   let snapshotId = tab.previewSnapshotId;
+  if (snapshotId && !hasSnapshot(snapshotId)) {
+    snapshotId = undefined;
+    tab.previewSnapshotId = undefined;
+  }
   if (!snapshotId && tab.view && !tab.asleep && tab.webContents && !tab.webContents.isDestroyed()) {
     snapshotId = (await tabsController.captureTabPreview(tab)) || undefined;
   }

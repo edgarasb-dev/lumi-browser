@@ -57,8 +57,8 @@ export const createFileMenu = (): MenuItemConstructorOptions => ({
       accelerator: getCurrentShortcut("navigation.commandPalette"),
       click: () => {
         const window = getFocusedBrowserWindow();
-        if (!window) return;
-        const omnibox = window.omnibox;
+        const omnibox = window?.omnibox;
+        if (!omnibox) return;
         if (omnibox.isVisible()) {
           omnibox.hide();
         } else {
@@ -76,9 +76,9 @@ export const createFileMenu = (): MenuItemConstructorOptions => ({
       accelerator: getCurrentShortcut("navigation.toggleCommandPalette"),
       click: () => {
         const window = getFocusedBrowserWindow();
-        if (!window) return;
+        const omnibox = window?.omnibox;
+        if (!window || !omnibox) return;
         const tab = getTabFromFocusedWindow();
-        const omnibox = window.omnibox;
         if (omnibox.isVisible()) {
           omnibox.hide();
         } else {

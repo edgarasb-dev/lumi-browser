@@ -1,9 +1,9 @@
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useUnmount } from "react-use";
 import { copyStylesToDocument } from "@/hooks/use-copy-styles";
 
-const MAX_IDLE_PORTALS = 10;
-const MIN_IDLE_PORTALS = 5;
+const MAX_IDLE_PORTALS = 3;
+const DEFAULT_MIN_IDLE_PORTALS = 1;
 
 interface Portal {
   id: string;
@@ -141,11 +141,15 @@ function getAvailablePortals() {
   return window.portals.available;
 }
 
+// Global handler populated by the active PortalsProvider so pool optimization respects its minIdlePortals setting
+let onPortalReleasedHook: (() => void) | null = null;
+
 function releasePortal(portal: Portal) {
   window.portals.used.delete(portal.id);
   window.portals.available.set(portal.id, portal);
 
   lumi.interface.releaseComponentWindow(portal.id);
+  onPortalReleasedHook?.();
 }
 
 function removePortal(portal: Portal) {
@@ -178,64 +182,85 @@ function usePortal() {
 }
 
 /// PROVIDER ///
-export function PortalsProvider({ children }: { children: React.ReactNode }) {
-  useMemo(() => {
-    const availablePortals = getAvailablePortals();
-    while (availablePortals.size < MIN_IDLE_PORTALS) {
-      const portal = createPortal();
-      if (!portal) {
-        // something went wrong, stop the loop
-        break;
-      }
+export function PortalsProvider({
+  children,
+  minIdlePortals = DEFAULT_MIN_IDLE_PORTALS
+}: {
+  children: React.ReactNode;
+  minIdlePortals?: number;
+}) {
+  const minIdlePortalsRef = useRef(minIdlePortals);
+  minIdlePortalsRef.current = minIdlePortals;
+  const optimizeTimerRef = useRef<number | null>(null);
+
+  const scheduleOptimizePortalPool = useCallback(() => {
+    if (optimizeTimerRef.current !== null) {
+      window.clearTimeout(optimizeTimerRef.current);
     }
+    optimizeTimerRef.current = window.setTimeout(() => {
+      optimizeTimerRef.current = null;
+      const runOptimize = () => {
+        const availablePortals = window.portals.available;
+
+        // Check all the portals are still alive
+        for (const portal of availablePortals.values()) {
+          if (portal.window.closed) {
+            removePortal(portal);
+          }
+        }
+
+        // Top up toward minIdlePortals cleanly (one per idle tick, stopping on failure)
+        if (availablePortals.size < minIdlePortalsRef.current) {
+          const created = createPortal();
+          if (created) {
+            scheduleOptimizePortalPool();
+          }
+          return;
+        }
+
+        // If the count of available portals exceeds MAX_IDLE_PORTALS, close the excess portals
+        while (availablePortals.size > MAX_IDLE_PORTALS) {
+          const portal = availablePortals.values().next().value;
+          if (!portal) break;
+          removePortal(portal);
+        }
+      };
+
+      if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(runOptimize, { timeout: 500 });
+      } else {
+        runOptimize();
+      }
+    }, 100);
   }, []);
 
-  const optimizePortalPool = useMemo(
-    () =>
-      function optimizePool() {
-        setTimeout(() => {
-          requestIdleCallback(() => {
-            const availablePortals = window.portals.available;
+  useEffect(() => {
+    onPortalReleasedHook = scheduleOptimizePortalPool;
+    if (minIdlePortals > 0 && window.portals.available.size < minIdlePortals) {
+      scheduleOptimizePortalPool();
+    }
+    return () => {
+      if (onPortalReleasedHook === scheduleOptimizePortalPool) {
+        onPortalReleasedHook = null;
+      }
+      if (optimizeTimerRef.current !== null) {
+        window.clearTimeout(optimizeTimerRef.current);
+        optimizeTimerRef.current = null;
+      }
+    };
+  }, [minIdlePortals, scheduleOptimizePortalPool]);
 
-            // Check all the portals are still alive
-            for (const portal of availablePortals.values()) {
-              if (portal.window.closed) {
-                removePortal(portal);
-              }
-            }
-
-            // Check if we need more portals
-            if (availablePortals.size < MIN_IDLE_PORTALS) {
-              createPortal();
-              optimizePortalPool();
-              return;
-            }
-
-            // If the count of available portals exceeds MAX_UNUSED_PORTALS, close the excess portals.
-            while (availablePortals.size > MAX_IDLE_PORTALS) {
-              const portal = availablePortals.values().next().value;
-              if (portal) {
-                removePortal(portal);
-              }
-            }
-          });
-        }, 100);
-      },
+  const contextValue = useMemo<PortalContextValue>(
+    () => ({
+      takePortal,
+      takeAvailablePortal,
+      getAvailablePortals,
+      releasePortal,
+      removePortal,
+      usePortal
+    }),
     []
   );
 
-  return (
-    <PortalContext.Provider
-      value={{
-        takePortal,
-        takeAvailablePortal,
-        getAvailablePortals,
-        releasePortal,
-        removePortal,
-        usePortal
-      }}
-    >
-      {children}
-    </PortalContext.Provider>
-  );
+  return <PortalContext.Provider value={contextValue}>{children}</PortalContext.Provider>;
 }

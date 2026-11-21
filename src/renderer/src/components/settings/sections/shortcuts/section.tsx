@@ -230,25 +230,27 @@ export function ShortcutsSettings() {
             />
           )}
 
-          {sortedEntries.map(([category, items]) => (
-            <CategorySection
-              key={category}
-              categoryName={category}
-              shortcuts={items}
-              editingActionId={editingActionId}
-              shortcutInputValue={shortcutInputValue}
-              isRecording={isRecording}
-              conflictName={conflictingAction?.name ?? null}
-              highlightedRowId={highlightedRowId}
-              inputRef={inputRef}
-              formatShortcutForDisplay={formatShortcutForDisplay}
-              onEditClick={handleEditClick}
-              onSaveEdit={handleSaveEdit}
-              onCancelEdit={handleCancelEdit}
-              onResetShortcut={handleResetIndividualKeybind}
-              onKeyDown={handleShortcutKeyDown}
-            />
-          ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+            {sortedEntries.map(([category, items]) => (
+              <CategorySection
+                key={category}
+                categoryName={category}
+                shortcuts={items}
+                editingActionId={editingActionId}
+                shortcutInputValue={shortcutInputValue}
+                isRecording={isRecording}
+                conflictName={conflictingAction?.name ?? null}
+                highlightedRowId={highlightedRowId}
+                inputRef={inputRef}
+                formatShortcutForDisplay={formatShortcutForDisplay}
+                onEditClick={handleEditClick}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={handleCancelEdit}
+                onResetShortcut={handleResetIndividualKeybind}
+                onKeyDown={handleShortcutKeyDown}
+              />
+            ))}
+          </div>
         </div>
       )}
 

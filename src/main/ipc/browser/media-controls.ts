@@ -1,7 +1,71 @@
 import { ipcMain } from "electron";
 import { tabsController } from "@/controllers/tabs-controller";
+import type { Tab, TabPublicProperty } from "@/controllers/tabs-controller/tab";
 import { windowsController } from "@/controllers/windows-controller";
+import { quitController } from "@/controllers/quit-controller";
 import type { MediaControlAction, MediaTabInfo } from "~/types/media";
+
+const MEDIA_PUSH_DEBOUNCE_MS = 80;
+const MEDIA_RELEVANT_KEYS = new Set<TabPublicProperty>([
+  "audible",
+  "muted",
+  "isPictureInPicture",
+  "title",
+  "url",
+  "faviconURL",
+  "asleep"
+]);
+
+const pendingMediaNotifyTimers = new Map<number, NodeJS.Timeout>();
+
+function scheduleMediaChangedForWindowId(windowId: number) {
+  const existing = pendingMediaNotifyTimers.get(windowId);
+  if (existing) return;
+
+  const timer = setTimeout(() => {
+    pendingMediaNotifyTimers.delete(windowId);
+    if (quitController.isQuitting) return;
+    const win = windowsController.browser.getById(windowId);
+    if (!win || win.destroyed || win.browserWindow.isDestroyed()) return;
+    win.sendMessageToCoreWebContents("media:on-changed");
+  }, MEDIA_PUSH_DEBOUNCE_MS);
+
+  pendingMediaNotifyTimers.set(windowId, timer);
+}
+
+function attachMediaListenersToTab(tab: Tab) {
+  tab.on("media-changed", () => {
+    if (quitController.isQuitting) return;
+    scheduleMediaChangedForWindowId(tab.getWindow().id);
+  });
+
+  tab.on("updated", (keys) => {
+    if (quitController.isQuitting) return;
+    if (keys.some((key) => MEDIA_RELEVANT_KEYS.has(key))) {
+      scheduleMediaChangedForWindowId(tab.getWindow().id);
+    }
+  });
+
+  tab.on("window-changed", (oldWindowId) => {
+    if (quitController.isQuitting) return;
+    scheduleMediaChangedForWindowId(tab.getWindow().id);
+    if (oldWindowId !== tab.getWindow().id) {
+      scheduleMediaChangedForWindowId(oldWindowId);
+    }
+  });
+
+  tab.on("destroyed", () => {
+    if (quitController.isQuitting) return;
+    if (tab.audible || tab.muted || tab.isPictureInPicture || tab.hasMediaPlayback) {
+      scheduleMediaChangedForWindowId(tab.getWindow().id);
+    }
+  });
+}
+
+for (const existingTab of tabsController.tabs.values()) {
+  attachMediaListenersToTab(existingTab);
+}
+tabsController.on("tab-created", attachMediaListenersToTab);
 
 interface DomMediaProbe {
   mediaTitle?: string;
@@ -101,6 +165,8 @@ ipcMain.handle("media:control", async (_event, tabId: number, action: MediaContr
 
   if (action === "mute" || action === "unmute") {
     wc.setAudioMuted(action === "mute");
+    tab.updateTabState();
+    scheduleMediaChangedForWindowId(tab.getWindow().id);
     return true;
   }
 
@@ -115,6 +181,7 @@ ipcMain.handle("media:control", async (_event, tabId: number, action: MediaContr
         })()`,
         true
       );
+      scheduleMediaChangedForWindowId(tab.getWindow().id);
       return true;
     }
 
@@ -129,6 +196,7 @@ ipcMain.handle("media:control", async (_event, tabId: number, action: MediaContr
         })()`,
         true
       );
+      scheduleMediaChangedForWindowId(tab.getWindow().id);
       return true;
     }
 
@@ -148,6 +216,7 @@ ipcMain.handle("media:control", async (_event, tabId: number, action: MediaContr
         })()`,
         true
       );
+      scheduleMediaChangedForWindowId(tab.getWindow().id);
       return Boolean(toggled);
     }
   } catch {

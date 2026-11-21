@@ -65,6 +65,8 @@ function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
   sqlite.pragma("synchronous = NORMAL");
   sqlite.pragma("cache_size = -64000"); // 64MB cache
   sqlite.pragma("busy_timeout = 3000");
+  sqlite.pragma("temp_store = MEMORY");
+  sqlite.pragma("mmap_size = 268435456"); // 256MB memory-mapped I/O
 
   debugPrint("DB", "Configured SQLite pragmas");
 
@@ -82,15 +84,27 @@ function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
     throw err;
   }
 
-  try {
-    pruneBrowsingHistory();
-  } catch (err) {
-    debugError("DB", "Browsing history prune failed:", err);
-  }
+  // Defer expired history pruning until after startup window creation completes
+  scheduleHistoryPrune();
 
   debugPrint("DB", "Database initialized successfully");
 
   return db;
+}
+
+let historyPruneTimer: NodeJS.Timeout | null = null;
+
+function scheduleHistoryPrune(): void {
+  if (historyPruneTimer) return;
+  historyPruneTimer = setTimeout(() => {
+    historyPruneTimer = null;
+    if (!db || !sqlite) return;
+    try {
+      pruneBrowsingHistory();
+    } catch (err) {
+      debugError("DB", "Browsing history prune failed:", err);
+    }
+  }, 3000);
 }
 
 /**
@@ -109,6 +123,10 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
  * Should be called during app shutdown.
  */
 export function closeDatabase(): void {
+  if (historyPruneTimer) {
+    clearTimeout(historyPruneTimer);
+    historyPruneTimer = null;
+  }
   if (sqlite) {
     debugPrint("DB", "Closing database connection");
     try {

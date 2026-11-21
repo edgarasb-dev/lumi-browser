@@ -15,7 +15,7 @@ export function menuCloseTab() {
     return;
   }
 
-  if (window.omnibox.isVisible()) {
+  if (window.omnibox?.isVisible()) {
     window.omnibox.hide();
   } else {
     const tab = getTab(window);

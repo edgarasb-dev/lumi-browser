@@ -1,33 +1,33 @@
 import { sendMessageToListeners } from "@/ipc/listeners-manager";
 import { BasicSettings, BasicSettingCards } from "@/modules/basic-settings";
-import { getSettingValueById, setSettingValueById } from "@/saving/settings";
+import { getAllSettingValues, getSettingValueById, onSettingsCached, setSettingValueById } from "@/saving/settings";
 import { settings } from "@/controllers/windows-controller/interfaces/settings";
 import { ipcMain } from "electron";
 
 ipcMain.on("settings:open", (_event, section?: string) => {
-  settings.show(section);
+  void settings.show(section);
 });
 
-ipcMain.on("settings:close", () => {
-  settings.hide();
-});
-
-ipcMain.handle("settings:consume-pending-section", () => {
-  return settings.consumePendingSection();
-});
-
-ipcMain.handle("settings:get-setting", (_event, settingId: string) => {
+ipcMain.handle("settings:get-setting", async (_event, settingId: string) => {
+  await onSettingsCached();
   return getSettingValueById(settingId);
+});
+
+ipcMain.handle("settings:get-all-settings", async () => {
+  await onSettingsCached();
+  return getAllSettingValues();
 });
 
 ipcMain.handle("settings:set-setting", (_event, settingId: string, value: unknown) => {
   return setSettingValueById(settingId, value);
 });
 
-ipcMain.handle("settings:get-basic-settings", () => {
+ipcMain.handle("settings:get-basic-settings", async () => {
+  await onSettingsCached();
   return {
     settings: BasicSettings,
-    cards: BasicSettingCards
+    cards: BasicSettingCards,
+    values: getAllSettingValues()
   };
 });
 

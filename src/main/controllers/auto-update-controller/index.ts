@@ -5,7 +5,10 @@ import { getVersionUpdatedFrom, markUpdateStarted } from "@/saving/ephemeral";
 import { getSettingValueById, onSettingsCached, settingsEmitter } from "@/saving/settings";
 import { app } from "electron";
 import { autoUpdater, ProgressInfo, UpdateInfo, UpdateCheckResult } from "electron-updater";
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 import { UpdateStatus } from "~/types/updates";
 import {
   checkMacAdhocEligibility,
@@ -53,18 +56,55 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   private mockBytesDownloaded: number = 0;
   private isDownloadingAdhoc: boolean = false;
   private adhocDownloadedUpdate: { version: string; zipPath: string; sha512: string } | null = null;
+  private macCodeSignedCache: boolean | null = null;
+  private macCodeSignedCheckPromise: Promise<boolean> | null = null;
+  private initialCheckTimer: NodeJS.Timeout | null = null;
 
-  private isMacCodeSigned(): boolean {
-    if (process.platform !== "darwin") return true;
-    if (!app.isPackaged) return false;
-    try {
-      const result = spawnSync("codesign", ["-dvvv", process.execPath], { encoding: "utf8" });
-      const stderr = result.stderr || "";
-      // Squirrel.Mac requires an official Apple Developer ID certificate, not adhoc
-      return !stderr.includes("Signature=adhoc") && stderr.includes("Authority=Developer ID");
-    } catch {
+  private async checkMacCodeSignedAsync(): Promise<boolean> {
+    if (this.macCodeSignedCache !== null) {
+      return this.macCodeSignedCache;
+    }
+    if (this.macCodeSignedCheckPromise) {
+      return this.macCodeSignedCheckPromise;
+    }
+
+    if (process.platform !== "darwin") {
+      this.macCodeSignedCache = true;
+      return true;
+    }
+    if (!app.isPackaged) {
+      this.macCodeSignedCache = false;
       return false;
     }
+
+    this.macCodeSignedCheckPromise = execFileAsync("codesign", ["-dvvv", process.execPath], {
+      encoding: "utf8"
+    })
+      .then(({ stderr }) => {
+        // Squirrel.Mac requires an official Apple Developer ID certificate, not adhoc
+        const signed = !stderr.includes("Signature=adhoc") && stderr.includes("Authority=Developer ID");
+        this.macCodeSignedCache = signed;
+        return signed;
+      })
+      .catch((error: { stderr?: string } | unknown) => {
+        const stderr =
+          error && typeof error === "object" && "stderr" in error && typeof error.stderr === "string"
+            ? error.stderr
+            : "";
+        const signed =
+          stderr.length > 0 && !stderr.includes("Signature=adhoc") && stderr.includes("Authority=Developer ID");
+        this.macCodeSignedCache = signed;
+        return signed;
+      })
+      .finally(() => {
+        this.macCodeSignedCheckPromise = null;
+      });
+
+    return this.macCodeSignedCheckPromise;
+  }
+
+  private isMacCodeSigned(): boolean {
+    return this.macCodeSignedCache ?? false;
   }
 
   private shouldUseAdhocMacSelfUpdater(): boolean {
@@ -90,6 +130,12 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   }
 
   public async checkForUpdates(): Promise<UpdateCheckResult | null> {
+    if (this.initialCheckTimer) {
+      clearTimeout(this.initialCheckTimer);
+      this.initialCheckTimer = null;
+    }
+    await this.checkMacCodeSignedAsync();
+
     if (MOCK_DATA_ENABLED) {
       debugPrint("AUTO_UPDATER", "[MOCK] Checking for updates");
 
@@ -417,7 +463,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       debugError("AUTO_UPDATER", "Failed to set default feed URL:", err);
     }
 
-    await onSettingsCached();
+    const codeSignCheck = this.checkMacCodeSignedAsync();
+    await Promise.all([onSettingsCached(), codeSignCheck]);
 
     // Update Auto Updater Config
     await this.updateAutoUpdaterConfig();
@@ -434,8 +481,11 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       this.connectUpdaterListeners();
     }
 
-    // Initial check for updates (works for both mock and real)
-    this.checkForUpdates();
+    // Defer initial update check briefly so it does not compete with cold startup / first window load
+    this.initialCheckTimer = setTimeout(() => {
+      this.initialCheckTimer = null;
+      void this.checkForUpdates();
+    }, 4000);
     setInterval(() => this.checkForUpdates(), 1000 * 60 * 15); // Check every 15 minutes
   }
 }

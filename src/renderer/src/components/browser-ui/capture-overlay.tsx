@@ -93,34 +93,13 @@ function drawStrokeOnCanvas(ctx: CanvasRenderingContext2D, stroke: AnnotationStr
 }
 
 export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLDivElement | null> }) {
-  const contentRect = useBoundingRect(anchorRef);
-
   const [mode, setMode] = useState<OverlayMode>("closed");
   const [capturing, setCapturing] = useState(false);
   const [captureResult, setCaptureResult] = useState<CapturedPageResult | null>(null);
 
-  // Selection box drag state (relative to viewport)
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
-  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null);
-
-  // Annotation state
-  const [tool, setTool] = useState<AnnotationTool>("pen");
-  const [color, setColor] = useState<string>(COLORS[0].hex);
-  const [strokes, setStrokes] = useState<AnnotationStroke[]>([]);
-  const [activeStroke, setActiveStroke] = useState<AnnotationStroke | null>(null);
-  const [copiedFlag, setCopiedFlag] = useState(false);
-
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const loadedImageRef = useRef<HTMLImageElement | null>(null);
-
   const closeOverlay = useCallback(() => {
     setMode("closed");
-    setDragStart(null);
-    setDragEnd(null);
-    setActiveStroke(null);
-    setStrokes([]);
     setCaptureResult(null);
-    setCopiedFlag(false);
   }, []);
 
   const runCapture = useCallback(
@@ -133,8 +112,6 @@ export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLD
       try {
         const res = kind === "full" ? await lumi.capture.captureFullPage() : await lumi.capture.captureVisible(rect);
         if (res) {
-          setStrokes([]);
-          setActiveStroke(null);
           setCaptureResult(res);
           setMode("annotate");
         } else {
@@ -153,8 +130,6 @@ export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLD
     const onWorkspaceAction = (e: Event) => {
       const action = (e as CustomEvent<string>).detail;
       if (action === "capture_region") {
-        setDragStart(null);
-        setDragEnd(null);
         setMode("select");
       } else if (action === "capture_full_page") {
         void runCapture("full");
@@ -164,8 +139,69 @@ export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLD
     return () => window.removeEventListener("lumi:workspace-action", onWorkspaceAction);
   }, [runCapture]);
 
+  if (mode === "closed") {
+    return null;
+  }
+
+  return (
+    <CaptureOverlayModal
+      anchorRef={anchorRef}
+      mode={mode}
+      captureResult={captureResult}
+      onClose={closeOverlay}
+      onRunCapture={runCapture}
+    />
+  );
+}
+
+function CaptureOverlayModal({
+  anchorRef,
+  mode,
+  captureResult,
+  onClose,
+  onRunCapture
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  mode: Exclude<OverlayMode, "closed">;
+  captureResult: CapturedPageResult | null;
+  onClose: () => void;
+  onRunCapture: (kind: "visible" | "full", rect?: CaptureRect) => Promise<void>;
+}) {
+  const contentRect = useBoundingRect(anchorRef);
+
+  // Selection box drag state (relative to viewport)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null);
+
+  // Annotation state
+  const [tool, setTool] = useState<AnnotationTool>("pen");
+  const [color, setColor] = useState<string>(COLORS[0].hex);
+  const [strokes, setStrokes] = useState<AnnotationStroke[]>([]);
+  const [activeStroke, setActiveStroke] = useState<AnnotationStroke | null>(null);
+  const [copiedFlag, setCopiedFlag] = useState(false);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const loadedImageRef = useRef<HTMLImageElement | null>(null);
+
+  const closeOverlay = useCallback(() => {
+    setDragStart(null);
+    setDragEnd(null);
+    setActiveStroke(null);
+    setStrokes([]);
+    setCopiedFlag(false);
+    onClose();
+  }, [onClose]);
+
+  const runCapture = useCallback(
+    async (kind: "visible" | "full", rect?: CaptureRect) => {
+      setStrokes([]);
+      setActiveStroke(null);
+      await onRunCapture(kind, rect);
+    },
+    [onRunCapture]
+  );
+
   useEffect(() => {
-    if (mode === "closed") return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         closeOverlay();
@@ -173,7 +209,7 @@ export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLD
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mode, closeOverlay]);
+  }, [closeOverlay]);
 
   // Decode captured image into offscreen HTMLImageElement
   useEffect(() => {
@@ -181,6 +217,8 @@ export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLD
       loadedImageRef.current = null;
       return;
     }
+    setStrokes([]);
+    setActiveStroke(null);
     const img = new Image();
     img.onload = () => {
       loadedImageRef.current = img;
@@ -191,12 +229,11 @@ export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLD
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          for (const s of strokes) drawStrokeOnCanvas(ctx, s, canvas.width, canvas.height);
         }
       }
     };
     img.src = captureResult.dataUrl;
-  }, [captureResult]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [captureResult]);
 
   // Redraw preview canvas whenever strokes or activeStroke update
   useLayoutEffect(() => {
@@ -288,7 +325,7 @@ export function CaptureOverlay({ anchorRef }: { anchorRef: React.RefObject<HTMLD
       : 480;
 
   return (
-    <PortalComponent visible={mode !== "closed"} layerType="pageCaptureOverlay" autoFocus className="fixed inset-0">
+    <PortalComponent visible={true} layerType="pageCaptureOverlay" autoFocus className="fixed inset-0">
       {mode === "select" && (
         <div
           className="dark relative h-screen w-screen cursor-crosshair bg-black/38 backdrop-blur-[1px] select-none"

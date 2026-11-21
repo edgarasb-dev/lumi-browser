@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { PortalComponent } from "@/components/portal/portal";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useFocusedTabId, useTabs } from "@/components/providers/tabs-provider";
+import { useFocusedTabId, useTabIds } from "@/components/providers/tabs-provider";
 import { useBoundingRect } from "@/hooks/use-bounding-rect";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -248,15 +248,18 @@ const TabWebPrompt = memo(function TabWebPrompt({
   );
 });
 
-export function WebPrompts({ anchorRef }: WebPromptsProps) {
-  const focusedTabId = useFocusedTabId();
-  const { tabsData } = useTabs();
+function ActiveWebPrompts({
+  anchorRef,
+  activePrompts,
+  focusedTabId
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  activePrompts: ActivePrompt[];
+  focusedTabId: number | null;
+}) {
   const anchorRect = useBoundingRect(anchorRef);
-  const { activePrompts: allActivePrompts } = useActivePrompts();
 
-  if (!tabsData || !anchorRect) return null;
-
-  const activePrompts = allActivePrompts.filter((prompt) => tabsData.tabs.some((tab) => tab.id === prompt.tabId));
+  if (!anchorRect) return null;
 
   const portalStyle: React.CSSProperties = {
     top: anchorRect.y,
@@ -267,12 +270,27 @@ export function WebPrompts({ anchorRef }: WebPromptsProps) {
 
   return (
     <>
-      {activePrompts.map((prompt) => {
-        const tabId = prompt.tabId;
-        return (
-          <TabWebPrompt key={prompt.id} isVisible={tabId === focusedTabId} portalStyle={portalStyle} prompt={prompt} />
-        );
-      })}
+      {activePrompts.map((prompt) => (
+        <TabWebPrompt
+          key={prompt.id}
+          isVisible={prompt.tabId === focusedTabId}
+          portalStyle={portalStyle}
+          prompt={prompt}
+        />
+      ))}
     </>
   );
+}
+
+export function WebPrompts({ anchorRef }: WebPromptsProps) {
+  const focusedTabId = useFocusedTabId();
+  const tabIds = useTabIds();
+  const { activePrompts: allActivePrompts } = useActivePrompts();
+
+  if (allActivePrompts.length === 0) return null;
+
+  const activePrompts = allActivePrompts.filter((prompt) => tabIds.has(prompt.tabId));
+  if (activePrompts.length === 0) return null;
+
+  return <ActiveWebPrompts anchorRef={anchorRef} activePrompts={activePrompts} focusedTabId={focusedTabId} />;
 }

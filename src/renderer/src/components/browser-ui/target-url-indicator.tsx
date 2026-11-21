@@ -2,8 +2,7 @@ import { measureNaturalWidth, prepareWithSegments } from "@chenglou/pretext";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { PortalComponent } from "@/components/portal/portal";
 import { useBoundingRect } from "@/hooks/use-bounding-rect";
-import { useSpaces } from "@/components/providers/spaces-provider";
-import { useTabs } from "@/components/providers/tabs-provider";
+import { useFocusedTabId, useTabIds } from "@/components/providers/tabs-provider";
 import { cn } from "@/lib/utils";
 import type { TabTargetUrlUpdate } from "~/types/tabs";
 import { AnimatePresence, motion } from "motion/react";
@@ -130,50 +129,21 @@ function UnmountDetector({ onUnmount }: { onUnmount: () => void }) {
   return null;
 }
 
-/**
- * Chrome-like hover URL preview at the bottom-left of the browser content area.
- * Uses PortalComponent so it stacks above the tab WebContentsView (same pattern as FindInPage).
- */
-export function TargetUrlIndicator({ anchorRef }: TargetUrlIndicatorProps) {
-  const { tabsData, getFocusedTabId } = useTabs();
-  const { currentSpace } = useSpaces();
-  const [urlsByTabId, setUrlsByTabId] = useState(() => new Map<number, string>());
-
+function ActiveTargetUrlPortal({
+  anchorRef,
+  url,
+  protocolType,
+  focusedTabId,
+  onHideCompleted
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  url: string;
+  protocolType: CommonProtocolType | null;
+  focusedTabId: number | null;
+  onHideCompleted: () => void;
+}) {
   const anchorRect = useBoundingRect(anchorRef);
-
-  useEffect(() => {
-    return lumi.tabs.onTargetUrlChanged((update: TabTargetUrlUpdate) => {
-      setUrlsByTabId((prev) => {
-        const next = new Map(prev);
-        if (update.url) {
-          next.set(update.tabId, update.url);
-        } else {
-          next.delete(update.tabId);
-        }
-        return next;
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!tabsData) return;
-    const validIds = new Set(tabsData.tabs.map((t) => t.id));
-    setUrlsByTabId((prev) => {
-      let changed = false;
-      const next = new Map(prev);
-      for (const id of next.keys()) {
-        if (!validIds.has(id)) {
-          next.delete(id);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [tabsData]);
-
-  const focusedTabId = currentSpace ? getFocusedTabId(currentSpace.id) : null;
-  const currentUrl = focusedTabId != null ? urlsByTabId.get(focusedTabId) : undefined;
-  const { url, protocolType } = useDelayedUrl(currentUrl, focusedTabId);
+  const lastPortalStyle = useRef<CSSProperties | null>(null);
 
   const portalStyle = useMemo((): CSSProperties | null => {
     if (!anchorRect || !url) return null;
@@ -197,28 +167,18 @@ export function TargetUrlIndicator({ anchorRef }: TargetUrlIndicatorProps) {
       height: BAR_HEIGHT
     };
   }, [anchorRect, url, protocolType]);
-  const lastPortalStyle = useRef<CSSProperties | null>(null);
+
   if (portalStyle) {
     lastPortalStyle.current = portalStyle;
   }
 
-  const [urlPresent, setUrlPresent] = useState(false);
-  useEffect(() => {
-    if (url) {
-      setUrlPresent(true);
-    }
-  }, [url]);
-  const isVisible = !!(urlPresent && lastPortalStyle.current);
+  if (!lastPortalStyle.current) return null;
+
   return (
-    <PortalComponent
-      visible={isVisible}
-      layerType="tabTargetUrlIndicator"
-      className="fixed"
-      style={lastPortalStyle.current ?? {}}
-    >
+    <PortalComponent visible={true} layerType="tabTargetUrlIndicator" className="fixed" style={lastPortalStyle.current}>
       {/* key={focusedTabId} so the component re-creates WITHOUT the exit animation on tab change */}
-      <AnimatePresence key={focusedTabId} onExitComplete={() => setUrlPresent(false)}>
-        <UnmountDetector key="presence-unmount-detector" onUnmount={() => setUrlPresent(false)} />
+      <AnimatePresence key={focusedTabId} onExitComplete={onHideCompleted}>
+        <UnmountDetector key="presence-unmount-detector" onUnmount={onHideCompleted} />
         {url && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -239,5 +199,72 @@ export function TargetUrlIndicator({ anchorRef }: TargetUrlIndicatorProps) {
         )}
       </AnimatePresence>
     </PortalComponent>
+  );
+}
+
+/**
+ * Chrome-like hover URL preview at the bottom-left of the browser content area.
+ * Uses PortalComponent so it stacks above the tab WebContentsView (same pattern as FindInPage).
+ */
+export function TargetUrlIndicator({ anchorRef }: TargetUrlIndicatorProps) {
+  const focusedTabId = useFocusedTabId();
+  const tabIds = useTabIds();
+  const [urlsByTabId, setUrlsByTabId] = useState(() => new Map<number, string>());
+
+  useEffect(() => {
+    return lumi.tabs.onTargetUrlChanged((update: TabTargetUrlUpdate) => {
+      setUrlsByTabId((prev) => {
+        const next = new Map(prev);
+        if (update.url) {
+          next.set(update.tabId, update.url);
+        } else {
+          next.delete(update.tabId);
+        }
+        return next;
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    setUrlsByTabId((prev) => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Map(prev);
+      for (const id of next.keys()) {
+        if (!tabIds.has(id)) {
+          next.delete(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [tabIds]);
+
+  const currentUrl = focusedTabId != null ? urlsByTabId.get(focusedTabId) : undefined;
+  const { url, protocolType } = useDelayedUrl(currentUrl, focusedTabId);
+
+  const [urlPresent, setUrlPresent] = useState(false);
+  useEffect(() => {
+    if (url) {
+      setUrlPresent(true);
+    }
+  }, [url]);
+
+  const handleHideCompleted = useCallback(() => {
+    setUrlPresent(false);
+  }, []);
+
+  if (!urlPresent) {
+    return null;
+  }
+
+  return (
+    <ActiveTargetUrlPortal
+      anchorRef={anchorRef}
+      url={url}
+      protocolType={protocolType}
+      focusedTabId={focusedTabId}
+      onHideCompleted={handleHideCompleted}
+    />
   );
 }

@@ -20,14 +20,6 @@ export const STATIC_DOMAINS: StaticDomainInfo[] = [
   },
   {
     protocol: "lumi-internal",
-    hostname: "settings",
-    actual: {
-      type: "route",
-      route: "settings"
-    }
-  },
-  {
-    protocol: "lumi-internal",
     hostname: "omnibox",
     actual: {
       type: "route",
@@ -44,6 +36,14 @@ export const STATIC_DOMAINS: StaticDomainInfo[] = [
   },
 
   // lumi
+  {
+    protocol: "lumi",
+    hostname: "settings",
+    actual: {
+      type: "route",
+      route: "settings"
+    }
+  },
   {
     protocol: "lumi",
     hostname: "new-tab",

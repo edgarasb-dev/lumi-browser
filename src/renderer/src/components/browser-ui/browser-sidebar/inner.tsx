@@ -1,4 +1,3 @@
-import { SidebarVariant } from "@/components/browser-ui/types";
 import { AttachedDirection, useBrowserSidebar } from "./provider";
 import { SidebarWindowControlsMacOS } from "@/components/browser-ui/window-controls/macos";
 import { usePlatform } from "@/components/main/platform";
@@ -12,16 +11,10 @@ import {
   SlotMachinePinGrid,
   resetSlotMachine
 } from "@/components/browser-ui/browser-sidebar/_components/pin-grid/slot-machine/main";
-import { SpaceSwitcher } from "@/components/browser-ui/browser-sidebar/_components/bottom/space-switcher";
 import { SpacePagesCarousel } from "@/components/browser-ui/browser-sidebar/_components/space-pages-carousel";
 import { UpdateBanner } from "@/components/browser-ui/browser-sidebar/_components/update-banner";
-import { BottomExtrasMenu } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-extras-menu";
-import { DownloadsButton } from "@/components/browser-ui/browser-sidebar/_components/downloads-button";
-import { RecentlyClosedPopover } from "@/components/browser-ui/browser-sidebar/_components/recently-closed-popover";
-import { SpaceScratchpad } from "./_components/space-scratchpad";
+import { BottomDock } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-dock";
 import { MediaMiniPlayer } from "@/components/browser-ui/media-mini-player";
-import { useSidePanel } from "@/components/providers/side-panel-provider";
-import { PanelRight } from "lucide-react";
 import { useWindowDrag } from "@/hooks/use-window-drag";
 
 function SidebarIcon({ className }: { className?: string }) {
@@ -42,10 +35,9 @@ function SidebarIcon({ className }: { className?: string }) {
   );
 }
 
-export function SidebarInner({ direction, variant }: { direction: AttachedDirection; variant: SidebarVariant }) {
+export function SidebarInner({ direction }: { direction: AttachedDirection }) {
   const { isAnimating, setVisible, mode, slotMachineEnabled, setSlotMachineEnabled } = useBrowserSidebar();
   const { platform } = usePlatform();
-  const { isOpen: sidePanelOpen, toggleOpen: toggleSidePanel } = useSidePanel();
 
   const { isCurrentSpaceLight } = useSpaces();
 
@@ -86,9 +78,7 @@ export function SidebarInner({ direction, variant }: { direction: AttachedDirect
       {/* Top Section */}
       <div className="shrink-0 flex items-center justify-between px-1 pb-2">
         <div className="flex items-center gap-1.5">
-          {direction === "left" && platform === "darwin" && (
-            <SidebarWindowControlsMacOS isAnimating={isAnimating || variant === "floating"} />
-          )}
+          {direction === "left" && platform === "darwin" && <SidebarWindowControlsMacOS isAnimating={isAnimating} />}
           <NavButton
             icon={<SidebarIcon className="size-5.5" />}
             onClick={() => setVisible(!mode.startsWith("attached"))}
@@ -107,30 +97,7 @@ export function SidebarInner({ direction, variant }: { direction: AttachedDirect
       <UpdateBanner />
       <MediaMiniPlayer variant="sidebar" />
       {/* Bottom Dock Section */}
-      <div className="shrink-0 flex items-center justify-between h-9 mt-1 mb-2 px-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08]">
-        <div className="flex items-center gap-0.5">
-          <BottomExtrasMenu />
-          <DownloadsButton />
-          <RecentlyClosedPopover />
-        </div>
-        <SpaceSwitcher />
-        <div className="flex items-center gap-0.5">
-          <SpaceScratchpad />
-          <button
-            type="button"
-            onClick={toggleSidePanel}
-            title="Toggle Split Side Panel (Cmd+Shift+.)"
-            className={cn(
-              "size-7 rounded-lg flex items-center justify-center transition-colors",
-              sidePanelOpen
-                ? "bg-primary/20 text-primary dark:bg-primary/30"
-                : "text-black/65 hover:bg-black/8 hover:text-black/90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-            )}
-          >
-            <PanelRight className="size-3.5" />
-          </button>
-        </div>
-      </div>
+      <BottomDock />
     </div>
   );
 }

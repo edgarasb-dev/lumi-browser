@@ -144,20 +144,20 @@ export const MediaMiniPlayer = memo(function MediaMiniPlayer({
 
   useEffect(() => {
     void fetchMedia();
-    if (!hasPotentialMedia && mediaTabs.length === 0) return;
-    const timer = window.setInterval(() => {
+    return lumi.media.onChanged(() => {
       void fetchMedia();
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [fetchMedia, hasPotentialMedia, mediaTabs.length]);
+    });
+  }, [fetchMedia]);
 
-  const handleControl = useCallback(
-    async (tabId: number, action: MediaControlAction) => {
-      await lumi.media.control(tabId, action);
-      window.setTimeout(() => void fetchMedia(), 120);
-    },
-    [fetchMedia]
-  );
+  useEffect(() => {
+    if (hasPotentialMedia) {
+      void fetchMedia();
+    }
+  }, [hasPotentialMedia, fetchMedia]);
+
+  const handleControl = useCallback(async (tabId: number, action: MediaControlAction) => {
+    await lumi.media.control(tabId, action);
+  }, []);
 
   const active = mediaTabs[0];
   if (!active) return null;

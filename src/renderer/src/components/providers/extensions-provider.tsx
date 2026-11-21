@@ -1,5 +1,5 @@
 import { useSpaces } from "@/components/providers/spaces-provider";
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SharedExtensionData } from "~/types/extensions";
 
 interface ExtensionsContextValue {
@@ -95,16 +95,15 @@ export const ExtensionsProvider = ({ dataKey = "extensions", profileId = null, c
     return () => unsubscribe();
   }, [hasExplicitProfileScope]);
 
-  return (
-    <ExtensionsContext.Provider
-      value={{
-        extensions,
-        revalidate
-      }}
-    >
-      {children}
-    </ExtensionsContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      extensions,
+      revalidate
+    }),
+    [extensions, revalidate]
   );
+
+  return <ExtensionsContext.Provider value={contextValue}>{children}</ExtensionsContext.Provider>;
 };
 
 export function ExtensionsProviderWithSpaces({ children }: { children: React.ReactNode }) {

@@ -25,12 +25,24 @@ class PosthogController {
       enableExceptionAutocapture
     });
 
-    // Warm identifier cache
-    const identifierPromise = this.getPosthogIdentifier();
-    identifierPromise.then((identifier) => {
+    // Defer PostHog identifier lookup, exception SDK setup, and boot ping until after cold launch
+    void app.whenReady().then(() => {
+      setTimeout(() => {
+        void this.initializeTelemetry();
+      }, 2500);
+    });
+
+    // Shutdown client on app quit
+    app.on("before-quit", () => {
+      this.client.shutdown();
+    });
+  }
+
+  private async initializeTelemetry(): Promise<void> {
+    try {
+      const identifier = await this.getPosthogIdentifier();
       this.isIdentifierReady = true;
 
-      // Identify user
       this.client.identify({
         distinctId: identifier,
         properties: {
@@ -38,20 +50,15 @@ class PosthogController {
         }
       });
 
-      // Auto capture exceptions
       new ErrorTracking(this.client, {
         fallbackDistinctId: identifier,
         enableExceptionAutocapture: true
       });
-    });
 
-    // Capture app started
-    this.captureEvent("app-started");
-
-    // Shutdown client on app quit
-    app.on("before-quit", () => {
-      this.client.shutdown();
-    });
+      await this.captureEvent("app-started");
+    } catch {
+      // Ignore startup telemetry failures
+    }
   }
 
   /**

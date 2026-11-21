@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { ChevronUp, ChevronDown, X } from "lucide-react";
 import { PortalComponent } from "@/components/portal/portal";
 import { useBoundingRect } from "@/hooks/use-bounding-rect";
-import { useFocusedTabId, useTabs } from "@/components/providers/tabs-provider";
+import { useFocusedTabId, useTabIds } from "@/components/providers/tabs-provider";
 
 const FIND_BAR_WIDTH = 380;
 const FIND_BAR_HEIGHT = 44;
@@ -224,51 +224,18 @@ const TabFindInPage = memo(function TabFindInPage({
   );
 });
 
-/**
- * Top-level orchestrator. Manages which tabs have find bars open and
- * renders one TabFindInPage per open tab.
- */
-export function FindInPage({ anchorRef }: FindInPageProps) {
-  const focusedTabId = useFocusedTabId();
-  const { tabsData } = useTabs();
-  const [openTabIds, setOpenTabIds] = useState<number[]>([]);
-  const openTabIdsRef = useRef(openTabIds);
-  openTabIdsRef.current = openTabIds;
-  const focusedTabIdRef = useRef(focusedTabId);
-  focusedTabIdRef.current = focusedTabId;
-
+function FindInPageOverlays({
+  anchorRef,
+  openTabIds,
+  focusedTabId,
+  onClose
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  openTabIds: number[];
+  focusedTabId: number | null;
+  onClose: (tabId: number) => void;
+}) {
   const anchorRect = useBoundingRect(anchorRef);
-
-  useEffect(() => {
-    return lumi.findInPage.onToggle(() => {
-      const tabId = focusedTabIdRef.current;
-      if (tabId === null) return;
-
-      if (openTabIdsRef.current.includes(tabId)) {
-        lumi.findInPage.stop("keepSelection");
-        setOpenTabIds((prev) => prev.filter((id) => id !== tabId));
-      } else {
-        setOpenTabIds((prev) => [...prev, tabId]);
-      }
-    });
-  }, []);
-
-  // Prune openTabIds when tabs are destroyed
-  useEffect(() => {
-    if (!tabsData) return;
-    const existingTabIds = new Set(tabsData.tabs.map((t) => t.id));
-    setOpenTabIds((prev) => {
-      const next = prev.filter((id) => existingTabIds.has(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [tabsData]);
-
-  const handleClose = useCallback((tabId: number) => {
-    if (tabId === focusedTabIdRef.current) {
-      lumi.findInPage.stop("keepSelection");
-    }
-    setOpenTabIds((prev) => prev.filter((id) => id !== tabId));
-  }, []);
 
   if (!anchorRect) return null;
 
@@ -287,9 +254,63 @@ export function FindInPage({ anchorRef }: FindInPageProps) {
           tabId={tabId}
           isFocused={tabId === focusedTabId}
           portalStyle={portalStyle}
-          onClose={handleClose}
+          onClose={onClose}
         />
       ))}
     </>
+  );
+}
+
+/**
+ * Top-level orchestrator. Manages which tabs have find bars open and
+ * renders one TabFindInPage per open tab.
+ */
+export function FindInPage({ anchorRef }: FindInPageProps) {
+  const focusedTabId = useFocusedTabId();
+  const tabIds = useTabIds();
+  const [openTabIds, setOpenTabIds] = useState<number[]>([]);
+  const openTabIdsRef = useRef(openTabIds);
+  openTabIdsRef.current = openTabIds;
+  const focusedTabIdRef = useRef(focusedTabId);
+  focusedTabIdRef.current = focusedTabId;
+
+  useEffect(() => {
+    return lumi.findInPage.onToggle(() => {
+      const tabId = focusedTabIdRef.current;
+      if (tabId === null) return;
+
+      if (openTabIdsRef.current.includes(tabId)) {
+        lumi.findInPage.stop("keepSelection");
+        setOpenTabIds((prev) => prev.filter((id) => id !== tabId));
+      } else {
+        setOpenTabIds((prev) => [...prev, tabId]);
+      }
+    });
+  }, []);
+
+  // Prune openTabIds when tabs are destroyed
+  useEffect(() => {
+    setOpenTabIds((prev) => {
+      const next = prev.filter((id) => tabIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [tabIds]);
+
+  const handleClose = useCallback((tabId: number) => {
+    if (tabId === focusedTabIdRef.current) {
+      lumi.findInPage.stop("keepSelection");
+    }
+    setOpenTabIds((prev) => prev.filter((id) => id !== tabId));
+  }, []);
+
+  if (openTabIds.length === 0) return null;
+
+  return (
+    <FindInPageOverlays
+      anchorRef={anchorRef}
+      openTabIds={openTabIds}
+      focusedTabId={focusedTabId}
+      onClose={handleClose}
+    />
   );
 }

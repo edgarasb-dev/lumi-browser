@@ -7,15 +7,28 @@ const snapshotTimestamps = new Map<string, number>();
 
 // Evict snapshots older than 30s (safety net if removeSnapshot is never called).
 const SNAPSHOT_TTL_MS = 30_000;
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, ts] of snapshotTimestamps.entries()) {
-    if (now - ts > SNAPSHOT_TTL_MS) {
-      snapshotStore.delete(id);
-      snapshotTimestamps.delete(id);
-    }
+let evictionTimer: NodeJS.Timeout | null = null;
+
+function stopEvictionTimerIfEmpty() {
+  if (snapshotTimestamps.size === 0 && evictionTimer) {
+    clearInterval(evictionTimer);
+    evictionTimer = null;
   }
-}, 5_000);
+}
+
+function ensureEvictionTimer() {
+  if (evictionTimer) return;
+  evictionTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [id, ts] of snapshotTimestamps.entries()) {
+      if (now - ts > SNAPSHOT_TTL_MS) {
+        snapshotStore.delete(id);
+        snapshotTimestamps.delete(id);
+      }
+    }
+    stopEvictionTimerIfEmpty();
+  }, 5_000);
+}
 
 // JPEG quality — encoding is much faster and more consistent than PNG.
 const SNAPSHOT_JPEG_QUALITY = 70;
@@ -43,12 +56,18 @@ export function storeSnapshot(image: Electron.NativeImage): string {
   const jpegBuffer = toEncode.toJPEG(SNAPSHOT_JPEG_QUALITY);
   snapshotStore.set(id, jpegBuffer);
   snapshotTimestamps.set(id, Date.now());
+  ensureEvictionTimer();
   return id;
+}
+
+export function hasSnapshot(id: string): boolean {
+  return snapshotStore.has(id);
 }
 
 export function removeSnapshot(id: string): void {
   snapshotStore.delete(id);
   snapshotTimestamps.delete(id);
+  stopEvictionTimerIfEmpty();
 }
 
 export function registerTabSnapshotRoutes(app: HonoApp) {

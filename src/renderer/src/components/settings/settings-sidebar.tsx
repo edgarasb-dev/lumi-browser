@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePlatform } from "@/components/main/platform";
 import { useAppUpdates } from "@/components/providers/app-updates-provider";
+import { getReleaseCodename } from "~/version";
 import type { SettingsSectionId } from "./settings-search-index";
 
 export interface Section {
@@ -66,23 +67,28 @@ export function SettingsSidebar({
   }, [searchQuery, onSearchChange]);
 
   const hasAvailableUpdate = Boolean(updateStatus?.availableUpdate || updateStatus?.updateDownloaded);
+  const codename = appVersion ? getReleaseCodename(appVersion) : undefined;
 
   return (
-    <aside className="w-60 sm:w-64 shrink-0 lumi-vibrant-sidebar border-r border-black/[0.06] dark:border-white/[0.08] flex flex-col select-none">
-      {/* Top Safe Titlebar Area */}
-      <div className="h-11 shrink-0 app-drag flex items-center px-3.5">
-        {platform === "darwin" ? (
-          <div className="w-16 h-full shrink-0" />
-        ) : (
-          <div className="flex items-center gap-2">
-            <img src="/assets/logo.svg" alt="Lumi" className="size-5 rounded-md object-contain" />
-            <span className="text-xs font-semibold tracking-tight text-foreground">Lumi Settings</span>
+    <aside className="w-56 xl:w-64 shrink-0 bg-black/[0.02] dark:bg-white/[0.025] backdrop-blur-2xl border-r border-black/[0.06] dark:border-white/[0.08] flex flex-col select-none">
+      {/* Brand Header */}
+      <div className="px-4 pt-5 pb-3.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <img src="/assets/logo.svg" alt="Lumi" className="size-6 rounded-lg object-contain shrink-0 shadow-xs" />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold tracking-tight text-foreground leading-tight">Settings</div>
+            <div className="text-[11px] text-muted-foreground leading-tight truncate">Preferences</div>
           </div>
+        </div>
+        {appVersion && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/12 text-primary border border-primary/20 shrink-0">
+            v{appVersion}
+          </span>
         )}
       </div>
 
       {/* Global Settings Search */}
-      <div className="px-3 pb-3 remove-app-drag">
+      <div className="px-3.5 pb-3.5">
         <div className="relative flex items-center">
           <Search className="absolute left-2.5 size-3.5 text-muted-foreground pointer-events-none" />
           <input
@@ -184,24 +190,25 @@ export function SettingsSidebar({
       </nav>
 
       {/* Clean Interactive Build Pill Footer */}
-      <div className="p-3 border-t border-black/[0.06] dark:border-white/[0.07] remove-app-drag">
+      <div className="p-3 border-t border-black/[0.06] dark:border-white/[0.07]">
         <button
           type="button"
           onClick={() => {
             onSearchChange("");
             setActiveSection(hasAvailableUpdate ? "general" : "about");
           }}
-          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer text-left"
+          className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-black/[0.025] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] hover:bg-black/[0.045] dark:hover:bg-white/[0.06] transition-colors cursor-pointer text-left"
         >
           <div className="flex items-center gap-2 min-w-0">
             <img src="/assets/logo.svg" alt="Lumi" className="size-4 rounded-xs object-contain shrink-0" />
             <span className="text-xs font-medium text-foreground/90 truncate">
-              Lumi {appVersion ? `v${appVersion}` : ""}
+              {appVersion ? `v${appVersion}` : "Lumi"}
+              {codename ? ` · ${codename}` : ""}
             </span>
           </div>
           <span
             className={cn(
-              "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full",
+              "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0",
               hasAvailableUpdate ? "bg-primary/15 text-primary" : "text-muted-foreground"
             )}
           >

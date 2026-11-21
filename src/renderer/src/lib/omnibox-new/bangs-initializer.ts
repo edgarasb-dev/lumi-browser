@@ -16,34 +16,44 @@ export type BangEntry = {
 };
 
 let bangs: BangEntry[] | undefined;
+let bangByTrigger: Map<string, BangEntry> | undefined;
 let bangsPromise: Promise<BangEntry[]> | undefined;
 
-async function preloadBangs() {
-  if (bangs) return false;
+async function preloadBangs(): Promise<BangEntry[]> {
+  if (bangs) return bangs;
   const bangsModule = (await import("./bangs")) as unknown as { bangs: BangEntry[] };
   bangs = bangsModule.bangs;
-  return true;
-}
-
-export async function waitForBangsLoad() {
-  if (bangs) return bangs;
-  getBangs();
-  if (bangsPromise) {
-    return await bangsPromise;
+  const map = new Map<string, BangEntry>();
+  for (const entry of bangs) {
+    const key = entry.t.toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, entry);
+    }
   }
-  throw new Error("Bangs not loaded - should be unreachable!!");
+  bangByTrigger = map;
+  return bangs;
 }
 
-export function getBangs() {
+export function isBangsLoaded(): boolean {
+  return bangs !== undefined;
+}
+
+export async function waitForBangsLoad(): Promise<BangEntry[]> {
   if (bangs) return bangs;
   if (!bangsPromise) {
-    bangsPromise = preloadBangs().then(() => {
+    bangsPromise = preloadBangs().finally(() => {
       bangsPromise = undefined;
-      if (bangs) return bangs;
-      throw new Error("Bangs not loaded after preload - should be unreachable!!");
     });
   }
-  return [];
+  return await bangsPromise;
 }
 
-getBangs();
+export function getBangs(): BangEntry[] {
+  return bangs ?? [];
+}
+
+/** O(1) lookup for a loaded bang trigger; returns null until bangs are loaded on demand. */
+export function getBangByTrigger(trigger: string): BangEntry | null {
+  if (!bangByTrigger) return null;
+  return bangByTrigger.get(trigger.toLowerCase()) ?? null;
+}

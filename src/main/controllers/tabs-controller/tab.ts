@@ -14,6 +14,7 @@ import { generateID, getCurrentTimestamp } from "@/modules/utils";
 import { BrowserWindow } from "@/controllers/windows-controller/types";
 import { LoadedProfile } from "@/controllers/loaded-profiles-controller";
 import { createModalTo, focusPriorities, type LayerType, zIndexes } from "~/layers";
+import { removeSnapshot } from "@/controllers/sessions-controller/protocols/_protocols/lumi-internal/tab-snapshot";
 import { type TabsController } from "./index";
 
 export const SLEEP_MODE_URL = "about:blank?sleep=true";
@@ -56,6 +57,7 @@ export type TabEvents = {
   focused: [];
   // Updated property keys
   updated: [TabPublicProperty[]];
+  "media-changed": [];
   destroyed: [];
 };
 
@@ -557,18 +559,29 @@ export class Tab extends TypedEventEmitter<TabEvents> {
     webContents.on("did-start-navigation", (_event, _url, _isInPlace, isMainFrame) => {
       if (isMainFrame) {
         this.smartDarkCssKey = null;
-        this.hasMediaPlayback = false;
+        if (this.hasMediaPlayback) {
+          this.hasMediaPlayback = false;
+          this.emit("media-changed");
+        }
       }
     });
 
     webContents.on("media-started-playing", () => {
       this.hasMediaPlayback = true;
+      this.emit("media-changed");
+    });
+
+    webContents.on("media-paused", () => {
+      this.emit("media-changed");
     });
 
     webContents.on("did-navigate-in-page", (_event, url, isMainFrame) => {
       if (!isMainFrame) return;
       this.recordBrowsingHistoryFromWebContents(webContents, url);
       void this.applySiteSettingsForCurrentUrl();
+      if (this.hasMediaPlayback) {
+        this.emit("media-changed");
+      }
     });
 
     // Note: Fullscreen listeners are set up by TabLifecycleManager
@@ -1022,6 +1035,10 @@ export class Tab extends TypedEventEmitter<TabEvents> {
     if (this.isDestroyed) return;
 
     this.sendTargetUrlToRenderer("");
+    if (this.previewSnapshotId) {
+      removeSnapshot(this.previewSnapshotId);
+      this.previewSnapshotId = undefined;
+    }
 
     this.isDestroyed = true;
     this.emit("destroyed");
@@ -1031,6 +1048,10 @@ export class Tab extends TypedEventEmitter<TabEvents> {
     if (this.webContents && !this.webContents.isDestroyed()) {
       this.webContents.close();
     }
+
+    this.view = null;
+    this.webContents = null;
+    this.layer = null;
 
     // Note: fullscreen cleanup is handled by TabLifecycleManager.onDestroy()
 

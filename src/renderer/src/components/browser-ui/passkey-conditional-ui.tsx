@@ -506,46 +506,28 @@ function useConditionalPasskeyPanels(conditionalRequests: ConditionalPasskeyRequ
 
 /* ---------------------------------- Main Component ---------------------------------- */
 
-export function PasskeyConditionalUI({ anchorRef }: PasskeyConditionalUIProps) {
-  const focusedTabId = useFocusedTabId();
-  const { conditionalRequests } = usePasskeyRequests();
+function PasskeyConditionalPanels({
+  anchorRef,
+  panels,
+  focusedTabId,
+  panelHeights,
+  dismissPanel,
+  requestPermission,
+  selectPasskey,
+  handlePanelResize,
+  handleAnimationComplete
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  panels: ReturnType<typeof useConditionalPasskeyPanels>["panels"];
+  focusedTabId: number | null;
+  panelHeights: Record<number, number>;
+  dismissPanel: (tabId: number) => void;
+  requestPermission: (tabId: number) => void;
+  selectPasskey: (tabId: number, passkey: PasskeyCredential) => void;
+  handlePanelResize: (tabId: number, height: number) => void;
+  handleAnimationComplete: (tabId: number) => void;
+}) {
   const anchorRect = useBoundingRect(anchorRef);
-  const { panels, dismissPanel, requestPermission, selectPasskey, handleAnimationComplete } =
-    useConditionalPasskeyPanels(conditionalRequests);
-  const [panelHeights, setPanelHeights] = useState<Record<number, number>>({});
-
-  useEffect(() => {
-    setPanelHeights((prev) => {
-      const activeTabIds = new Set(panels.map((panel) => panel.tabId));
-      let changed = false;
-      const next = { ...prev };
-
-      for (const tabIdString of Object.keys(prev)) {
-        const tabId = Number(tabIdString);
-        if (activeTabIds.has(tabId)) {
-          continue;
-        }
-
-        delete next[tabId];
-        changed = true;
-      }
-
-      return changed ? next : prev;
-    });
-  }, [panels]);
-
-  const handlePanelResize = useCallback((tabId: number, height: number) => {
-    setPanelHeights((prev) => {
-      if (prev[tabId] === height) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        [tabId]: height
-      };
-    });
-  }, []);
 
   if (!anchorRect) return null;
 
@@ -585,6 +567,63 @@ export function PasskeyConditionalUI({ anchorRef }: PasskeyConditionalUIProps) {
         );
       })}
     </>
+  );
+}
+
+export function PasskeyConditionalUI({ anchorRef }: PasskeyConditionalUIProps) {
+  const focusedTabId = useFocusedTabId();
+  const { conditionalRequests } = usePasskeyRequests();
+  const { panels, dismissPanel, requestPermission, selectPasskey, handleAnimationComplete } =
+    useConditionalPasskeyPanels(conditionalRequests);
+  const [panelHeights, setPanelHeights] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    setPanelHeights((prev) => {
+      const activeTabIds = new Set(panels.map((panel) => panel.tabId));
+      let changed = false;
+      const next = { ...prev };
+
+      for (const tabIdString of Object.keys(prev)) {
+        const tabId = Number(tabIdString);
+        if (activeTabIds.has(tabId)) {
+          continue;
+        }
+
+        delete next[tabId];
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, [panels]);
+
+  const handlePanelResize = useCallback((tabId: number, height: number) => {
+    setPanelHeights((prev) => {
+      if (prev[tabId] === height) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [tabId]: height
+      };
+    });
+  }, []);
+
+  if (panels.length === 0) return null;
+
+  return (
+    <PasskeyConditionalPanels
+      anchorRef={anchorRef}
+      panels={panels}
+      focusedTabId={focusedTabId}
+      panelHeights={panelHeights}
+      dismissPanel={dismissPanel}
+      requestPermission={requestPermission}
+      selectPasskey={selectPasskey}
+      handlePanelResize={handlePanelResize}
+      handleAnimationComplete={handleAnimationComplete}
+    />
   );
 }
 

@@ -8,7 +8,7 @@ import { tabsController } from "@/controllers/tabs-controller";
 export function openNewTab(window: BrowserWindow) {
   const omnibox = window.omnibox;
 
-  if (getSettingValueById("newTabMode") === "omnibox") {
+  if (omnibox && getSettingValueById("newTabMode") === "omnibox") {
     if (omnibox.isVisible()) {
       omnibox.hide();
     } else {

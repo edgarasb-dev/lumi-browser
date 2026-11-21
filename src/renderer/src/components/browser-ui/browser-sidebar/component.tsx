@@ -193,7 +193,7 @@ export function BrowserSidebar({
           direction === "right" && !isFloating && "ml-0"
         )}
       >
-        <SidebarInner direction={direction} variant={variant} />
+        <SidebarInner direction={direction} />
       </div>
     </div>
   );

@@ -208,20 +208,33 @@ export const SpacesProvider = ({ windowType, children }: SpacesProviderProps) =>
     lumi.omnibox.hide();
   }, [currentSpace, isReadOnlyConsumer]);
 
+  const contextValue = useMemo<SpacesContextValue>(
+    () => ({
+      windowType,
+      spaces: visibleSpaces,
+      currentSpace,
+      isLoading,
+      isCurrentSpaceLight: isSpaceLight,
+      isCurrentSpaceInternal,
+      isProfileEphemeral,
+      revalidate,
+      setCurrentSpace: handleSetCurrentSpace
+    }),
+    [
+      windowType,
+      visibleSpaces,
+      currentSpace,
+      isLoading,
+      isSpaceLight,
+      isCurrentSpaceInternal,
+      isProfileEphemeral,
+      revalidate,
+      handleSetCurrentSpace
+    ]
+  );
+
   return (
-    <SpacesContext.Provider
-      value={{
-        windowType,
-        spaces: visibleSpaces,
-        currentSpace,
-        isLoading,
-        isCurrentSpaceLight: isSpaceLight,
-        isCurrentSpaceInternal,
-        isProfileEphemeral,
-        revalidate,
-        setCurrentSpace: handleSetCurrentSpace
-      }}
-    >
+    <SpacesContext.Provider value={contextValue}>
       {createPortal(<SpaceBackgroundStylesheet />, document.head)}
       {children}
     </SpacesContext.Provider>

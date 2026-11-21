@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ShortcutAction } from "~/types/shortcuts";
 
 interface ShortcutsContextValue {
@@ -108,18 +108,17 @@ export const ShortcutsProvider = ({ children }: ShortcutsProviderProps) => {
     }
   }, [shortcuts, fetchShortcuts]);
 
-  return (
-    <ShortcutsContext.Provider
-      value={{
-        shortcuts,
-        isLoading,
-        setShortcut,
-        resetShortcut,
-        resetAllShortcuts,
-        formatShortcutForDisplay
-      }}
-    >
-      {children}
-    </ShortcutsContext.Provider>
+  const contextValue = useMemo<ShortcutsContextValue>(
+    () => ({
+      shortcuts,
+      isLoading,
+      setShortcut,
+      resetShortcut,
+      resetAllShortcuts,
+      formatShortcutForDisplay
+    }),
+    [shortcuts, isLoading, setShortcut, resetShortcut, resetAllShortcuts, formatShortcutForDisplay]
   );
+
+  return <ShortcutsContext.Provider value={contextValue}>{children}</ShortcutsContext.Provider>;
 };

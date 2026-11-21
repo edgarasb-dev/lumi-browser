@@ -6,6 +6,7 @@ import { TabLayoutManager } from "./tab-layout";
 import { TabLifecycleManager } from "./tab-lifecycle";
 import { windowTabsChanged, windowTabContentChanged } from "@/ipc/browser/tabs";
 import { shouldArchiveTab, shouldSleepTab, tabPersistenceManager } from "@/saving/tabs";
+import { getSettingValueById } from "@/saving/settings";
 import { serializeTab, serializeTabGroup } from "@/saving/tabs/serialization";
 import { recentlyClosedManager } from "./recently-closed-manager";
 import { GlanceTabGroup } from "./tab-groups/glance";
@@ -19,11 +20,16 @@ import { TabGroupMode, SplitDirection } from "~/types/tabs";
 import { FLAGS } from "@/modules/flags";
 import { quitController } from "@/controllers/quit-controller";
 import { clearPlaceholdersForTab, isSyncExcludedTab, isTabSyncEnabled, registerTabsController } from "./tab-sync";
-import { storeSnapshot } from "@/controllers/sessions-controller/protocols/_protocols/lumi-internal/tab-snapshot";
+import {
+  hasSnapshot,
+  removeSnapshot,
+  storeSnapshot
+} from "@/controllers/sessions-controller/protocols/_protocols/lumi-internal/tab-snapshot";
 import { readerModeController } from "@/controllers/reader-mode-controller";
 
 export const NEW_TAB_URL = "lumi://new-tab";
 const ARCHIVE_CHECK_INTERVAL_MS = 10 * 1000;
+const MAX_AWAKE_BACKGROUND_TABS = 12;
 
 type TabsControllerEvents = {
   "tab-created": [Tab];
@@ -128,15 +134,41 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
 
     // Archive/sleep check interval
     const interval = setInterval(() => {
+      const awakeBackgroundTabs: Tab[] = [];
+      const sleepSettingEnabled = getSettingValueById("sleepTabAfter") !== "never";
+
+      const isTabSleepExempt = (tab: Tab): boolean => {
+        if (tab.audible || tab.isPictureInPicture) return true;
+        if (tab.groupId) {
+          const group = this.tabGroups.get(tab.groupId);
+          if (group && group.tabs.some((groupTab) => groupTab.visible)) {
+            return true;
+          }
+        }
+        return false;
+      };
+
       for (const tab of this.tabs.values()) {
         if (tab.ephemeral) continue;
         if (!tab.visible && shouldArchiveTab(tab.lastActiveAt)) {
           tab.destroy();
           continue;
         }
-        if (!tab.visible && !tab.asleep && shouldSleepTab(tab.lastActiveAt)) {
-          const managers = this.getTabManagers(tab.id);
-          managers?.lifecycle.putToSleep();
+        if (!tab.visible && !tab.asleep && !isTabSleepExempt(tab)) {
+          if (shouldSleepTab(tab.lastActiveAt)) {
+            this.getTabManagers(tab.id)?.lifecycle.putToSleep();
+          } else if (sleepSettingEnabled) {
+            awakeBackgroundTabs.push(tab);
+          }
+        }
+      }
+
+      // Enforce LRU ceiling on awake background renderers when auto-sleep is active
+      if (sleepSettingEnabled && awakeBackgroundTabs.length > MAX_AWAKE_BACKGROUND_TABS) {
+        awakeBackgroundTabs.sort((a, b) => a.lastActiveAt - b.lastActiveAt);
+        const excessCount = awakeBackgroundTabs.length - MAX_AWAKE_BACKGROUND_TABS;
+        for (let i = 0; i < excessCount; i++) {
+          this.getTabManagers(awakeBackgroundTabs[i]!.id)?.lifecycle.putToSleep();
         }
       }
     }, ARCHIVE_CHECK_INTERVAL_MS);
@@ -638,18 +670,27 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
    * Captures a preview screenshot of a tab and stores it in the tab-snapshot store.
    */
   public async captureTabPreview(tab: Tab): Promise<string | null> {
+    const existingValidSnapshotId =
+      tab.previewSnapshotId && hasSnapshot(tab.previewSnapshotId) ? tab.previewSnapshotId : null;
+    if (tab.previewSnapshotId && !existingValidSnapshotId) {
+      tab.previewSnapshotId = undefined;
+    }
+
     const wc = tab.webContents;
-    if (!wc || wc.isDestroyed() || tab.asleep) return tab.previewSnapshotId || null;
+    if (!wc || wc.isDestroyed() || tab.asleep) return existingValidSnapshotId;
 
     const view = tab.view;
-    if (!view) return tab.previewSnapshotId || null;
+    if (!view) return existingValidSnapshotId;
 
     const bounds = view.getBounds();
-    if (bounds.width <= 0 || bounds.height <= 0) return tab.previewSnapshotId || null;
+    if (bounds.width <= 0 || bounds.height <= 0) return existingValidSnapshotId;
 
     try {
       const image = await wc.capturePage({ x: 0, y: 0, width: bounds.width, height: bounds.height });
       if (!image.isEmpty()) {
+        if (tab.previewSnapshotId) {
+          removeSnapshot(tab.previewSnapshotId);
+        }
         const snapshotId = storeSnapshot(image);
         tab.previewSnapshotId = snapshotId;
         return snapshotId;
@@ -657,7 +698,7 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     } catch {
       // Ignore capture failure
     }
-    return tab.previewSnapshotId || null;
+    return existingValidSnapshotId;
   }
 
   /**

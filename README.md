@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.2.1-2563EB?style=flat-square&logo=github" alt="Release v0.2.1" /></a>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.3.0-2563EB?style=flat-square&logo=github" alt="Release v0.3.0" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-10B981?style=flat-square" alt="License GPL-3.0" /></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-6366F1?style=flat-square" alt="Platforms" />
     <img src="https://img.shields.io/badge/Electron-45+-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 45+" />
@@ -87,9 +87,9 @@ Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, f
 
 <div align="center">
 
-|                                    **Native Vibrancy Settings & Layout Wireframes**                                    |                                            **Custom Spaces & Live Theme Preview**                                             |
-| :--------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
-| <img src="./docs/assets/screenshots/beta-settings-1.png" width="460" alt="Liquid Glass Settings and Layout Pickers" /> | <img src="./docs/assets/screenshots/showcase-spaces-settings.png" width="460" alt="Spaces Settings and Live Theme Preview" /> |
+|                           **Full-Tab Settings (`lumi://settings`) & Layout Wireframes**                            |                                          **Spaces Workbench: Live Preview & Icon Picker**                                           |
+| :----------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/beta-settings-1.png" width="460" alt="Full-Tab Settings and Layout Pickers" /> | <img src="./docs/assets/screenshots/showcase-spaces-settings.png" width="460" alt="Spaces Settings Live Preview and Icon Picker" /> |
 
 |                                 **Search Bangs Directory (`lumi://bangs`)**                                  |                              **Liquid Glass First-Run Onboarding**                              |
 | :----------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------: |
@@ -125,6 +125,7 @@ Lumi provides fast, offline-ready internal routes via the `lumi://` protocol:
 | Protocol            | Description                                                                                                       |
 | :------------------ | :---------------------------------------------------------------------------------------------------------------- |
 | `lumi://new-tab`    | Customizable start page with omnibox search, Studio Wallpapers, Speed Dial, Recently Closed, and Space Scratchpad |
+| `lumi://settings`   | Unified browser settings workspace for General, Appearance, Search, Privacy, Spaces, Profiles & Shortcuts         |
 | `lumi://history`    | Infinite-scroll browsing timeline grouped by day with instant search and site-wide cleanup                        |
 | `lumi://downloads`  | Native download manager with filter pills, live transfer speed, pause/resume, and Reveal in Finder                |
 | `lumi://bangs`      | Filterable directory of `!` quick search shortcuts (`!gh`, `!mdn`, `!yt`, and 13,500+ more)                       |

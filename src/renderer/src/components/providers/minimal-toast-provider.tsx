@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { PortalComponent } from "@/components/portal/portal";
 import { useBoundingRect } from "@/hooks/use-bounding-rect";
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { SidebarSide } from "@/components/browser-ui/types";
 import { cn } from "@/lib/utils";
@@ -81,39 +81,24 @@ interface ToastProviderProps {
   sidebarSide: SidebarSide;
 }
 
-function ToastContainer({
+function ActiveToastPortal({
   activeToast,
+  isVisible,
+  onHideCompleted,
   anchorRef,
   sidebarSide,
   onRemoveToast
 }: {
   activeToast: ActiveToast | null;
+  isVisible: boolean;
+  onHideCompleted: () => void;
   anchorRef: React.RefObject<HTMLDivElement | null>;
   sidebarSide: SidebarSide;
   onRemoveToast: (toastUID: string) => void;
 }) {
   const { isCurrentSpaceLight } = useSpaces();
-  const [isVisible, setIsVisible] = useState(false);
   const anchorRect = useBoundingRect(anchorRef);
   const currentMessage = activeToast?.message ?? null;
-  const activeToastRef = useRef(activeToast);
-
-  activeToastRef.current = activeToast;
-
-  useEffect(() => {
-    if (!activeToast) return;
-    setIsVisible(true);
-  }, [activeToast]);
-
-  useEffect(() => {
-    if (!activeToast) return;
-
-    const timer = window.setTimeout(() => {
-      onRemoveToast(activeToast.uid);
-    }, activeToast.duration);
-
-    return () => window.clearTimeout(timer);
-  }, [activeToast, onRemoveToast]);
 
   if (!anchorRect) {
     return null;
@@ -135,14 +120,7 @@ function ToastContainer({
       }}
     >
       <div className={cn("relative w-full h-full select-none", spaceInjectedClasses)}>
-        <AnimatePresence
-          mode="sync"
-          onExitComplete={() => {
-            if (!activeToastRef.current) {
-              setIsVisible(false);
-            }
-          }}
-        >
+        <AnimatePresence mode="sync" onExitComplete={onHideCompleted}>
           {currentMessage && activeToast && (
             <motion.div
               key={activeToast.uid}
@@ -188,6 +166,59 @@ function ToastContainer({
   );
 }
 
+function ToastContainer({
+  activeToast,
+  anchorRef,
+  sidebarSide,
+  onRemoveToast
+}: {
+  activeToast: ActiveToast | null;
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  sidebarSide: SidebarSide;
+  onRemoveToast: (toastUID: string) => void;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const activeToastRef = useRef(activeToast);
+
+  activeToastRef.current = activeToast;
+
+  useEffect(() => {
+    if (!activeToast) return;
+    setIsVisible(true);
+  }, [activeToast]);
+
+  useEffect(() => {
+    if (!activeToast) return;
+
+    const timer = window.setTimeout(() => {
+      onRemoveToast(activeToast.uid);
+    }, activeToast.duration);
+
+    return () => window.clearTimeout(timer);
+  }, [activeToast, onRemoveToast]);
+
+  const handleHideCompleted = useCallback(() => {
+    if (!activeToastRef.current) {
+      setIsVisible(false);
+    }
+  }, []);
+
+  if (!activeToast && !isVisible) {
+    return null;
+  }
+
+  return (
+    <ActiveToastPortal
+      activeToast={activeToast}
+      isVisible={isVisible}
+      onHideCompleted={handleHideCompleted}
+      anchorRef={anchorRef}
+      sidebarSide={sidebarSide}
+      onRemoveToast={onRemoveToast}
+    />
+  );
+}
+
 export function MinimalToastProvider({ children, anchorRef, sidebarSide }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ActiveToast[]>([]);
 
@@ -195,30 +226,25 @@ export function MinimalToastProvider({ children, anchorRef, sidebarSide }: Toast
     setToasts((prev) => prev.filter((t) => t.uid !== toastUID));
   }, []);
 
-  const showToast = <T extends ToastId>(
-    toastId: T,
-    ...args: Parameters<(typeof TOAST_CONFIGURATIONS)[T]["generate"]>
-  ) => {
-    type GenerateFunction = (...args: Parameters<(typeof TOAST_CONFIGURATIONS)[T]["generate"]>) => ToastGenerateData;
+  const showToast = useCallback(
+    <T extends ToastId>(toastId: T, ...args: Parameters<(typeof TOAST_CONFIGURATIONS)[T]["generate"]>) => {
+      type GenerateFunction = (...args: Parameters<(typeof TOAST_CONFIGURATIONS)[T]["generate"]>) => ToastGenerateData;
 
-    const configuration = TOAST_CONFIGURATIONS[toastId];
-    const generateToastData = configuration.generate as GenerateFunction;
-    const { message, duration } = generateToastData(...args);
-    const uid = crypto.randomUUID();
-    setToasts((prev) => [...prev, { uid, message, duration }]);
-    return uid;
-  };
+      const configuration = TOAST_CONFIGURATIONS[toastId];
+      const generateToastData = configuration.generate as GenerateFunction;
+      const { message, duration } = generateToastData(...args);
+      const uid = crypto.randomUUID();
+      setToasts([{ uid, message, duration }]);
+      return uid;
+    },
+    []
+  );
 
   const activeToast = toasts.length > 0 ? toasts[toasts.length - 1]! : null;
-  if (activeToast && toasts.length > 1) {
-    for (const toast of toasts) {
-      if (toast.uid === activeToast.uid) continue;
-      removeToast(toast.uid);
-    }
-  }
+  const contextValue = useMemo(() => ({ showToast, removeToast }), [showToast, removeToast]);
 
   return (
-    <ToastContext.Provider value={{ showToast, removeToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <ToastContainer
         activeToast={activeToast}

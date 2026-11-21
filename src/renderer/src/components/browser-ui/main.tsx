@@ -30,7 +30,7 @@ import MinimalToastProvider from "@/components/providers/minimal-toast-provider"
 import { ActionsProvider } from "@/components/providers/actions-provider";
 import { PinnedTabsProvider } from "@/components/providers/pinned-tabs-provider";
 import { DownloadsProvider } from "@/components/providers/downloads-provider";
-import { FocusModeProvider, useFocusMode } from "@/components/providers/focus-mode-provider";
+import { FocusModeProvider, useOptionalFocusMode } from "@/components/providers/focus-mode-provider";
 import { SidePanelProvider } from "@/components/providers/side-panel-provider";
 import { FocusTimerPill } from "@/components/browser-ui/focus-timer-pill";
 import { SidePanel } from "@/components/browser-ui/side-panel";
@@ -120,9 +120,18 @@ const WindowTitle = memo(function WindowTitle() {
   return <title>{`${focusedTab.title} | Lumi`}</title>;
 });
 
-function AutoNewTab({ isReady }: { isReady: boolean }) {
+function AutoNewTab() {
   const { tabGroups } = useTabsGroups();
+  const [isReady, setIsReady] = useState(false);
   const openedNewTabRef = useRef(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (isReady && !openedNewTabRef.current) {
       openedNewTabRef.current = true;
@@ -235,17 +244,18 @@ const ConditionalUpdateEffect = memo(function ConditionalUpdateEffect() {
   return <UpdateEffect />;
 });
 
-function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserUIType }) {
+function InternalBrowserUI({ type }: { type: BrowserUIType }) {
   // NOTE: No useTabs() here! Tab-dependent logic is isolated in the
   // components above to prevent the entire layout from rerendering.
   const { mode: sidebarMode, attachedDirection } = useBrowserSidebar();
   const { topbarVisible, topbarHeight } = useAdaptiveTopbar();
-  const { isZenMode } = useFocusMode();
+  const isZenMode = useOptionalFocusMode()?.isZenMode ?? false;
   const [navigationLayout] = useSetting<"sidebar" | "topbar">("navigationLayout");
   const browserContentAnchorRef = useRef<HTMLDivElement>(null);
 
   const isTopbarMode = navigationLayout === "topbar";
-  const hasSidebar = type === "main" && !isTopbarMode;
+  const isMainWindow = type === "main";
+  const hasSidebar = isMainWindow && !isTopbarMode;
 
   return (
     <FullscreenGuard>
@@ -253,7 +263,7 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
         <DownloadsProvider>
           <ActionsProvider>
             <WindowTitle />
-            <AutoNewTab isReady={isReady} />
+            {isMainWindow && <AutoNewTab />}
             <div
               className={cn(
                 "w-screen h-screen overflow-hidden",
@@ -263,7 +273,7 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
                 "app-drag"
               )}
             >
-              {isTopbarMode ? (
+              {isTopbarMode && isMainWindow ? (
                 <div className="w-full h-full flex flex-col">
                   <LoadingIndicator />
                   {!isZenMode && <TopbarLayout />}
@@ -321,7 +331,7 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
                           </div>
                         </div>
 
-                        <SidePanel />
+                        {isMainWindow && <SidePanel />}
 
                         {sidebarMode !== "attached-right" ? (
                           <div className="w-2.5 shrink-0" />
@@ -342,9 +352,13 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
                 </ResizablePanelGroupWithProvider>
               )}
 
-              <ConditionalUpdateEffect />
-              <FocusTimerPill />
-              <CaptureOverlay anchorRef={browserContentAnchorRef} />
+              {isMainWindow && (
+                <>
+                  <ConditionalUpdateEffect />
+                  <FocusTimerPill />
+                  <CaptureOverlay anchorRef={browserContentAnchorRef} />
+                </>
+              )}
             </div>
           </ActionsProvider>
         </DownloadsProvider>
@@ -353,32 +367,42 @@ function InternalBrowserUI({ isReady, type }: { isReady: boolean; type: BrowserU
   );
 }
 
-function BrowserUIWithSettings({ isReady, type }: { isReady: boolean; type: BrowserUIType }) {
+function BrowserUIWithSettings({ type }: { type: BrowserUIType }) {
   const [navigationLayout] = useSetting<"sidebar" | "topbar">("navigationLayout");
   const isTopbarMode = navigationLayout === "topbar";
   const hasSidebar = type === "main" && !isTopbarMode;
+
+  const content = (
+    <>
+      <TabDisabler />
+      <InternalBrowserUI type={type} />
+    </>
+  );
 
   return (
     <BrowserSidebarProvider hasSidebar={hasSidebar}>
       <AdaptiveTopbarProvider>
         <SpacesProvider windowType={type}>
           <TabsProvider>
-            <PinnedTabsProvider>
-              <BrowserActionProvider>
-                <ExtensionsProviderWithSpaces>
-                  <PasskeysRequestProvider>
-                    <ActivePromptsProvider>
-                      <FocusModeProvider>
-                        <SidePanelProvider>
-                          <TabDisabler />
-                          <InternalBrowserUI isReady={isReady} type={type} />
-                        </SidePanelProvider>
-                      </FocusModeProvider>
-                    </ActivePromptsProvider>
-                  </PasskeysRequestProvider>
-                </ExtensionsProviderWithSpaces>
-              </BrowserActionProvider>
-            </PinnedTabsProvider>
+            {type === "main" ? (
+              <PinnedTabsProvider>
+                <BrowserActionProvider>
+                  <ExtensionsProviderWithSpaces>
+                    <PasskeysRequestProvider>
+                      <ActivePromptsProvider>
+                        <FocusModeProvider>
+                          <SidePanelProvider>{content}</SidePanelProvider>
+                        </FocusModeProvider>
+                      </ActivePromptsProvider>
+                    </PasskeysRequestProvider>
+                  </ExtensionsProviderWithSpaces>
+                </BrowserActionProvider>
+              </PinnedTabsProvider>
+            ) : (
+              <PasskeysRequestProvider>
+                <ActivePromptsProvider>{content}</ActivePromptsProvider>
+              </PasskeysRequestProvider>
+            )}
           </TabsProvider>
         </SpacesProvider>
       </AdaptiveTopbarProvider>
@@ -387,18 +411,10 @@ function BrowserUIWithSettings({ isReady, type }: { isReady: boolean; type: Brow
 }
 
 export function BrowserUI({ type }: { type: BrowserUIType }) {
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setIsReady(true);
-    }, 100);
-  }, []);
-
   return (
     <AppUpdatesProvider>
       <SettingsProvider>
-        <BrowserUIWithSettings isReady={isReady} type={type} />
+        <BrowserUIWithSettings type={type} />
       </SettingsProvider>
     </AppUpdatesProvider>
   );

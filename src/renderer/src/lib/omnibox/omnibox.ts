@@ -80,7 +80,7 @@ export class Omnibox {
       const pedalAction = autocompleteMatch.destinationUrl;
       // Execute the pedal action
       if (pedalAction === "open_settings") {
-        lumi.windows.openSettingsWindow();
+        lumi.windows.openSettings();
       } else if (pedalAction === "open_new_window") {
         lumi.browser.createWindow();
       } else if (pedalAction === "open_incognito_window") {

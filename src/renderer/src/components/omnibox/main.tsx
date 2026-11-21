@@ -61,7 +61,7 @@ function commitSuggestion(
     case "pedal": {
       const a = suggestion.action;
       if (a === "open_settings") {
-        lumi.windows.openSettingsWindow();
+        lumi.windows.openSettings();
       } else if (a === "open_new_window") {
         lumi.browser.createWindow();
       } else if (a === "open_incognito_window") {

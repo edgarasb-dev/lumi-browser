@@ -1,7 +1,7 @@
 import { useFloatingSidebarTrigger } from "@/components/browser-ui/browser-sidebar/floating-sidebar-trigger";
 import { useSettings } from "@/components/providers/settings-provider";
 import { generateUUID } from "@/lib/utils";
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useMount } from "react-use";
 import { SIDEBAR_ANIMATION_DURATION_MS } from "~/lumi/sidebar-animation";
 
@@ -298,37 +298,64 @@ export function BrowserSidebarProvider({ children, hasSidebar = true }: BrowserS
     }
   }
 
-  // Provider //
-  return (
-    <BrowserSidebarContext.Provider
-      value={{
-        hasSidebar,
+  const cursorMonitorMode = !hasSidebar ? "off" : isFloating ? "track" : mode === "hidden" ? "edge-only" : "off";
 
-        isVisible: isFloating ? true : isVisible,
-        setVisible: handleSetVisible,
+  useEffect(() => {
+    lumi.interface.setCursorEdgeMonitorMode(cursorMonitorMode);
+  }, [cursorMonitorMode]);
 
-        attachedDirection,
+  useEffect(() => {
+    return () => {
+      lumi.interface.setCursorEdgeMonitorMode("off");
+    };
+  }, []);
 
-        isAnimating,
-        startAnimation,
-        stopAnimation,
+  const effectiveIsVisible = isFloating ? true : isVisible;
 
-        mode,
-        recordedSidebarSizeRef,
+  const contextValue = useMemo<BrowserSidebarContextValue>(
+    () => ({
+      hasSidebar,
 
-        addActivePopover,
-        removeActivePopover,
+      isVisible: effectiveIsVisible,
+      setVisible: handleSetVisible,
 
-        onSidebarResize,
-        notifySidebarResize,
+      attachedDirection,
 
-        setForceFloating,
+      isAnimating,
+      startAnimation,
+      stopAnimation,
 
-        slotMachineEnabled,
-        setSlotMachineEnabled
-      }}
-    >
-      {children}
-    </BrowserSidebarContext.Provider>
+      mode,
+      recordedSidebarSizeRef,
+
+      addActivePopover,
+      removeActivePopover,
+
+      onSidebarResize,
+      notifySidebarResize,
+
+      setForceFloating,
+
+      slotMachineEnabled,
+      setSlotMachineEnabled
+    }),
+    [
+      hasSidebar,
+      effectiveIsVisible,
+      handleSetVisible,
+      attachedDirection,
+      isAnimating,
+      startAnimation,
+      stopAnimation,
+      mode,
+      addActivePopover,
+      removeActivePopover,
+      onSidebarResize,
+      notifySidebarResize,
+      slotMachineEnabled
+    ]
   );
+
+  // Provider //
+  return <BrowserSidebarContext.Provider value={contextValue}>{children}</BrowserSidebarContext.Provider>;
 }
