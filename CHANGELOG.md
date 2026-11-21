@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.2] — 2026-11-22
+
+### Codename: Prism
+
+### Fixed
+
+- **Browser Importer >180-Day & Null-Timestamp History Diffing (Comet, Opera, Firefox & All Browsers)**: Fixed `importBrowsingHistoryEntries()` and `countNewBrowsingHistoryEntries()` clamping visits older than 180 days to a moving `Date.now() - RETENTION_MS + 1` timestamp (and `chromeTimeToUnixMs` / `prTimeToUnixMs` / `cocoaTimeToUnixMs` returning `Date.now()` for `0`/`NULL` dates), which shifted by $> 1,000\text{ ms}$ one second after import and caused history items from earlier in 2025/2026 (such as Perplexity Comet, Opera, and Firefox) to remain listed as importable. Preserved real historical visit timestamps, extended history retention to 10 years, added automatic cleanup of legacy mass-clamped duplicate visit rows in `pruneBrowsingHistory()`, matched existing `history_urls.lastVisitTime >= visitTime - 1000` in $O(1)$ memory time, deduplicated source search engines and `(origin, username)` password pairs during preview, guarded password/cookie ledger watermarks against cancelled Keychain prompts, and cleared cross-browser preview caches after import.
+- **Shift + Left Click Opens New Tab & Popup Window Renderer Fix**: Updated `TabsController.handleNewTabRequested()` so `disposition === "new-window"` without explicit popup window features (`popup`, `width`, `height`, `left`, `top`) opens the link in a new foreground tab in the current window instead of spawning a separate window, and wrapped popup windows (`type === "popup"`) in `PinnedTabsProvider`, `BrowserActionProvider`, and `ExtensionsProviderWithSpaces` so OAuth/login popups with `<PopupToolbar />` render properly instead of crashing with a blank view.
+- **Atomic Draft-Until-Ready Release Publishing & Pending Manifest Handling**: Updated `.github/workflows/build-and-release.yml` to keep releases in `--draft` (`EP_DRAFT=true`) without pushing the public Git tag until all four OS runners finish uploading all artifacts and `latest*.yml` manifests, switched `autoUpdater.allowPrerelease` to `false` (`/releases/latest`), and silenced transient manifest `404` checks so Lumi never leaks incoming builds or displays `Update Check Failed` while CI is building.
+
+---
+
 ## [0.4.1] — 2026-11-22
 
 ### Codename: Prism

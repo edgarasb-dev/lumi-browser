@@ -518,21 +518,37 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     handlerDetails: Electron.HandlerDetails | undefined,
     options: { noLoadURL?: boolean }
   ) {
-    let windowId = sourceTab.getWindow().id;
-    const shouldInsertAfterSource = disposition !== "new-window";
-
-    if (disposition === "new-window") {
-      const parsedFeatures: Record<string, string | number> = {};
-      if (handlerDetails?.features) {
-        const features = handlerDetails.features.split(",");
-        for (const feature of features) {
-          const [key, value] = feature.trim().split("=");
-          if (key && value) {
-            parsedFeatures[key] = Number.isNaN(+value) ? value : +value;
-          }
+    const parsedFeatures: Record<string, string | number> = {};
+    if (handlerDetails?.features) {
+      const features = handlerDetails.features.split(",");
+      for (const feature of features) {
+        const [rawKey, rawValue] = feature.trim().split("=");
+        const key = rawKey?.trim().toLowerCase();
+        const value = rawValue?.trim();
+        if (key) {
+          parsedFeatures[key] = value === undefined ? 1 : Number.isNaN(+value) ? value : +value;
         }
       }
+    }
 
+    const isExplicitPopup =
+      disposition === "new-window" &&
+      Boolean(
+        parsedFeatures.popup ||
+        parsedFeatures.width ||
+        parsedFeatures.height ||
+        parsedFeatures.left ||
+        parsedFeatures.top
+      );
+
+    // Shift+Left-Click on a link dispatches disposition="new-window" with no popup features;
+    // open it as a foreground tab in the current window rather than spawning a separate popup window.
+    const effectiveDisposition = disposition === "new-window" && !isExplicitPopup ? "foreground-tab" : disposition;
+
+    let windowId = sourceTab.getWindow().id;
+    const shouldInsertAfterSource = effectiveDisposition !== "new-window";
+
+    if (effectiveDisposition === "new-window") {
       const popupWindow = browserWindowsController.instantCreate("popup", {
         ...(parsedFeatures.width ? { width: +parsedFeatures.width } : {}),
         ...(parsedFeatures.height ? { height: +parsedFeatures.height } : {}),
@@ -562,7 +578,7 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     sourceTab._lastCreatedWebContents = newTab.webContents;
 
     // Handle Glance tab groups if enabled
-    if (FLAGS.GLANCE_ENABLED && disposition === "foreground-tab") {
+    if (FLAGS.GLANCE_ENABLED && effectiveDisposition === "foreground-tab") {
       const existingGroup = this.getTabGroupByTabId(sourceTab.id);
       if (existingGroup && existingGroup.mode === "glance") {
         // Add the new tab to the existing glance group
@@ -577,12 +593,12 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
         }
         this.activateTab(glanceGroup);
       }
-    } else if (disposition === "foreground-tab" || disposition === "new-window") {
+    } else if (effectiveDisposition === "foreground-tab" || effectiveDisposition === "new-window") {
       this.activateTab(newTab);
     }
 
     // Keep source window in the same space for non-popup tab opens
-    if (disposition !== "new-window") {
+    if (effectiveDisposition !== "new-window") {
       setWindowSpace(sourceTab.getWindow(), sourceTab.spaceId);
     }
   }

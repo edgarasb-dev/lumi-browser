@@ -226,10 +226,11 @@ async function discoverChromiumProfiles(
 function collectChromiumBookmarks(node: ChromiumBookmarkNode | undefined, out: ImportedBookmarkItem[]): void {
   if (!node) return;
   if (node.type === "url" && node.url && isImportableHttpUrl(node.url)) {
+    const createdAt = chromeTimeToUnixMs(node.date_added);
     out.push({
       title: (node.name || "").trim() || node.url,
       url: node.url,
-      createdAt: chromeTimeToUnixMs(node.date_added)
+      createdAt: createdAt > 0 ? createdAt : undefined
     });
     return;
   }
@@ -297,7 +298,7 @@ async function readChromiumHistory(profileDir: string): Promise<ImportedHistoryI
       .prepare(
         `SELECT url, COALESCE(title, '') AS title, visit_count, last_visit_time
          FROM urls
-         WHERE hidden = 0 AND visit_count > 0
+         WHERE hidden = 0 AND visit_count > 0 AND url LIKE 'http%'
          ORDER BY last_visit_time DESC
          LIMIT ?`
       )

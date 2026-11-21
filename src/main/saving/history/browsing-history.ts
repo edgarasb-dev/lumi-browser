@@ -8,7 +8,15 @@ import type {
   HistoryVisitsPageCursor
 } from "~/types/history";
 
-const RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
+const RETENTION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
+const FALLBACK_IMPORT_VISIT_TIME = 946_684_800_000; // 2000-01-01T00:00:00Z deterministic fallback for missing source timestamps
+
+function normalizeImportedVisitTime(rawVisitTime: number | null | undefined, now: number): number {
+  if (typeof rawVisitTime !== "number" || !Number.isFinite(rawVisitTime) || rawVisitTime <= 0) {
+    return FALLBACK_IMPORT_VISIT_TIME;
+  }
+  return Math.min(Math.floor(rawVisitTime), now);
+}
 type HistoryDb = ReturnType<typeof getDb>;
 type HistoryTx = Parameters<Parameters<HistoryDb["transaction"]>[0]>[0];
 type HistoryDbExecutor = HistoryDb | HistoryTx;
@@ -314,11 +322,27 @@ export function clearBrowsingHistoryForProfile(profileId: string): void {
   db.delete(historyUrls).where(eq(historyUrls.profileId, profileId)).run();
 }
 
-/** Drop visits older than configured retention period and reconcile URL aggregates. */
+/** Drop visits older than configured retention period, deduplicate mass-clamped import visits, and reconcile URL aggregates. */
 export function pruneBrowsingHistory(): void {
   const db = getDb();
   const cutoff = Date.now() - RETENTION_MS;
   db.transaction((tx) => {
+    // Clean up duplicate visits per url_id that were inserted by legacy clamped batch imports (>100 rows sharing 1ms timestamp)
+    tx.run(sql`
+      DELETE FROM ${historyVisits}
+      WHERE ${historyVisits.visitTime} IN (
+        SELECT ${historyVisits.visitTime}
+        FROM ${historyVisits}
+        GROUP BY ${historyVisits.visitTime}
+        HAVING COUNT(*) > 100
+      )
+      AND ${historyVisits.id} NOT IN (
+        SELECT MAX(${historyVisits.id})
+        FROM ${historyVisits}
+        GROUP BY ${historyVisits.urlId}
+      )
+    `);
+
     const affectedUrlRows = tx
       .selectDistinct({ urlId: historyVisits.urlId })
       .from(historyVisits)
@@ -348,13 +372,41 @@ export function importBrowsingHistoryEntries(
   if (entries.length === 0) return 0;
 
   const db = getDb();
-  const cutoff = Date.now() - RETENTION_MS;
+  const now = Date.now();
   let importedCount = 0;
 
   db.transaction((tx) => {
+    const existingRows = tx
+      .select({
+        id: historyUrls.id,
+        url: historyUrls.url,
+        title: historyUrls.title,
+        visitCount: historyUrls.visitCount,
+        lastVisitTime: historyUrls.lastVisitTime
+      })
+      .from(historyUrls)
+      .where(eq(historyUrls.profileId, profileId))
+      .all();
+
+    const urlState = new Map<string, { id: number; title: string; visitCount: number; lastVisitTime: number }>();
+    for (const r of existingRows) {
+      urlState.set(r.url, {
+        id: r.id,
+        title: r.title,
+        visitCount: r.visitCount,
+        lastVisitTime: r.lastVisitTime
+      });
+    }
+
+    const seenInBatch = new Set<string>();
+
     for (const entry of entries) {
       if (!isHistoryRecordableUrl(entry.url)) continue;
-      const visitTime = Math.max(cutoff + 1, Math.min(entry.visitTime || Date.now(), Date.now()));
+      const visitTime = normalizeImportedVisitTime(entry.visitTime, now);
+      const batchKey = `${entry.url}\u0000${Math.floor(visitTime / 1000)}`;
+      if (seenInBatch.has(batchKey)) continue;
+      seenInBatch.add(batchKey);
+
       let displayTitle = entry.title.trim();
       if (!displayTitle) {
         try {
@@ -364,50 +416,59 @@ export function importBrowsingHistoryEntries(
         }
       }
 
-      const existing = tx
-        .select()
-        .from(historyUrls)
-        .where(and(eq(historyUrls.profileId, profileId), eq(historyUrls.url, entry.url)))
-        .limit(1)
-        .all();
-
-      let urlId: number;
-      if (existing[0]) {
-        urlId = existing[0].id;
-        // Skip if a visit within 1 second already exists for this URL (idempotent re-import)
+      const existing = urlState.get(entry.url);
+      if (existing) {
+        if (existing.lastVisitTime >= visitTime - 1000) {
+          continue;
+        }
         const nearbyVisit = tx
           .select({ id: historyVisits.id })
           .from(historyVisits)
-          .where(and(eq(historyVisits.urlId, urlId), sql`abs(${historyVisits.visitTime} - ${visitTime}) < 1000`))
+          .where(and(eq(historyVisits.urlId, existing.id), sql`abs(${historyVisits.visitTime} - ${visitTime}) < 1000`))
           .limit(1)
           .get();
         if (nearbyVisit) continue;
 
-        tx.insert(historyVisits).values({ urlId, visitTime, typed: false }).run();
+        const nextVisitCount = existing.visitCount + 1;
+        const nextLastVisitTime = Math.max(existing.lastVisitTime, visitTime);
+        const nextTitle = existing.title || displayTitle;
+
+        tx.insert(historyVisits).values({ urlId: existing.id, visitTime, typed: false }).run();
         tx.update(historyUrls)
           .set({
-            visitCount: existing[0].visitCount + 1,
-            lastVisitTime: Math.max(existing[0].lastVisitTime, visitTime),
-            title: existing[0].title || displayTitle
+            visitCount: nextVisitCount,
+            lastVisitTime: nextLastVisitTime,
+            title: nextTitle
           })
-          .where(eq(historyUrls.id, urlId))
+          .where(eq(historyUrls.id, existing.id))
           .run();
+
+        existing.visitCount = nextVisitCount;
+        existing.lastVisitTime = nextLastVisitTime;
+        existing.title = nextTitle;
         importedCount++;
       } else {
+        const initialVisitCount = Math.max(1, entry.visitCount ?? 1);
         const inserted = tx
           .insert(historyUrls)
           .values({
             profileId,
             url: entry.url,
             title: displayTitle,
-            visitCount: Math.max(1, entry.visitCount ?? 1),
+            visitCount: initialVisitCount,
             typedCount: 0,
             lastVisitTime: visitTime
           })
           .returning({ id: historyUrls.id })
           .all();
-        urlId = inserted[0]!.id;
+        const urlId = inserted[0]!.id;
         tx.insert(historyVisits).values({ urlId, visitTime, typed: false }).run();
+        urlState.set(entry.url, {
+          id: urlId,
+          title: displayTitle,
+          visitCount: initialVisitCount,
+          lastVisitTime: visitTime
+        });
         importedCount++;
       }
     }
@@ -418,7 +479,7 @@ export function importBrowsingHistoryEntries(
 
 /**
  * Counts how many external browsing history entries would be newly inserted vs skipped as already
- * present in `profileId`, using the exact same URL + 1-second visit timestamp deduplication rule
+ * present in `profileId`, using the exact same URL + visit timestamp deduplication rule
  * as `importBrowsingHistoryEntries`.
  */
 export function countNewBrowsingHistoryEntries(
@@ -428,40 +489,53 @@ export function countNewBrowsingHistoryEntries(
   if (entries.length === 0) return { newCount: 0, alreadyImportedCount: 0 };
 
   const db = getDb();
-  const cutoff = Date.now() - RETENTION_MS;
   const now = Date.now();
 
   const existingRows = db
-    .select({ id: historyUrls.id, url: historyUrls.url })
+    .select({ id: historyUrls.id, url: historyUrls.url, lastVisitTime: historyUrls.lastVisitTime })
     .from(historyUrls)
     .where(eq(historyUrls.profileId, profileId))
     .all();
-  const urlToId = new Map<string, number>();
+  const urlState = new Map<string, { id: number | null; lastVisitTime: number }>();
   for (const r of existingRows) {
-    urlToId.set(r.url, r.id);
+    urlState.set(r.url, { id: r.id, lastVisitTime: r.lastVisitTime });
   }
 
+  const seenInBatch = new Set<string>();
   let newCount = 0;
   let alreadyImportedCount = 0;
 
   for (const entry of entries) {
     if (!isHistoryRecordableUrl(entry.url)) continue;
-    const visitTime = Math.max(cutoff + 1, Math.min(entry.visitTime || now, now));
-    const urlId = urlToId.get(entry.url);
+    const visitTime = normalizeImportedVisitTime(entry.visitTime, now);
+    const batchKey = `${entry.url}\u0000${Math.floor(visitTime / 1000)}`;
+    if (seenInBatch.has(batchKey)) continue;
+    seenInBatch.add(batchKey);
 
-    if (urlId !== undefined) {
-      const nearbyVisit = db
-        .select({ id: historyVisits.id })
-        .from(historyVisits)
-        .where(and(eq(historyVisits.urlId, urlId), sql`abs(${historyVisits.visitTime} - ${visitTime}) < 1000`))
-        .limit(1)
-        .get();
-      if (nearbyVisit) {
+    const existing = urlState.get(entry.url);
+    if (existing) {
+      if (existing.lastVisitTime >= visitTime - 1000) {
         alreadyImportedCount++;
         continue;
       }
+      if (existing.id !== null) {
+        const nearbyVisit = db
+          .select({ id: historyVisits.id })
+          .from(historyVisits)
+          .where(and(eq(historyVisits.urlId, existing.id), sql`abs(${historyVisits.visitTime} - ${visitTime}) < 1000`))
+          .limit(1)
+          .get();
+        if (nearbyVisit) {
+          alreadyImportedCount++;
+          continue;
+        }
+      }
+      existing.lastVisitTime = Math.max(existing.lastVisitTime, visitTime);
+      newCount++;
+    } else {
+      urlState.set(entry.url, { id: null, lastVisitTime: visitTime });
+      newCount++;
     }
-    newCount++;
   }
 
   return { newCount, alreadyImportedCount };

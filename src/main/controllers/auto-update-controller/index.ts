@@ -41,6 +41,16 @@ const MOCK_DATA: MockUpdateData = {
 // Constants //
 const SUPPORTED_PLATFORMS: NodeJS.Platform[] = ["win32", "linux", "darwin"];
 
+function isPendingReleaseManifestError(message: string): boolean {
+  return (
+    message.includes("ERR_UPDATER_CHANNEL_FILE_NOT_FOUND") ||
+    message.includes("ERR_UPDATER_LATEST_VERSION_NOT_FOUND") ||
+    message.includes("ERR_UPDATER_NO_PUBLISHED_VERSIONS") ||
+    /Cannot find latest[^ ]*\.yml in the latest release artifacts/i.test(message) ||
+    (/HttpError:\s*404\b/i.test(message) && /releases\/(download|latest)/i.test(message))
+  );
+}
+
 type AutoUpdateControllerEvents = {
   "status-changed": [];
 };
@@ -185,10 +195,16 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       return result;
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      debugError("AUTO_UPDATER", "Check for updates failed:", errorMsg);
       this.downloadProgress = null;
-      this.lastError = errorMsg;
       this.lastChecked = Date.now();
+      if (isPendingReleaseManifestError(errorMsg)) {
+        debugPrint("AUTO_UPDATER", "Release manifest not published yet; treating as up to date");
+        this.availableUpdate = null;
+        this.lastError = null;
+      } else {
+        debugError("AUTO_UPDATER", "Check for updates failed:", errorMsg);
+        this.lastError = errorMsg;
+      }
       this.emit("status-changed");
       return null;
     }
@@ -197,6 +213,13 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   private connectUpdaterListeners() {
     autoUpdater.on("error", (error) => {
       const message = error instanceof Error ? error.message : String(error);
+      if (isPendingReleaseManifestError(message) && !this.downloadProgress && !this.isDownloadingAdhoc) {
+        debugPrint("AUTO_UPDATER", "Ignoring pending release manifest 404 during update check");
+        this.availableUpdate = null;
+        this.lastError = null;
+        this.emit("status-changed");
+        return;
+      }
       debugError("AUTO_UPDATER", "Auto-updater error:", message);
       this.downloadProgress = null;
       this.lastError = message;
@@ -445,7 +468,7 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     };
 
     // Configure update settings
-    autoUpdater.allowPrerelease = true;
+    autoUpdater.allowPrerelease = false;
     autoUpdater.allowDowngrade = false;
 
     if (!app.isPackaged) {

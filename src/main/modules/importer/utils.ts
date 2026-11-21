@@ -158,21 +158,21 @@ export function normalizeImportUrl(url: string): string {
 
 export function chromeTimeToUnixMs(webkitMicroseconds: number | string | null | undefined): number {
   const num = typeof webkitMicroseconds === "string" ? Number(webkitMicroseconds) : webkitMicroseconds;
-  if (!num || !Number.isFinite(num) || num <= 0) return Date.now();
+  if (!num || !Number.isFinite(num) || num <= 0) return 0;
   const ms = Math.floor(num / 1000 - CHROME_EPOCH_OFFSET_MS);
-  return ms > 0 ? ms : Date.now();
+  return ms > 0 ? ms : 0;
 }
 
 export function prTimeToUnixMs(prMicroseconds: number | null | undefined): number {
-  if (!prMicroseconds || !Number.isFinite(prMicroseconds) || prMicroseconds <= 0) return Date.now();
+  if (!prMicroseconds || !Number.isFinite(prMicroseconds) || prMicroseconds <= 0) return 0;
   const ms = Math.floor(prMicroseconds / 1000);
-  return ms > 0 ? ms : Date.now();
+  return ms > 0 ? ms : 0;
 }
 
 export function cocoaTimeToUnixMs(cfSeconds: number | null | undefined): number {
-  if (!cfSeconds || !Number.isFinite(cfSeconds)) return Date.now();
+  if (!cfSeconds || !Number.isFinite(cfSeconds)) return 0;
   const ms = Math.round((cfSeconds + COCOA_EPOCH_OFFSET_SEC) * 1000);
-  return ms > 0 ? ms : Date.now();
+  return ms > 0 ? ms : 0;
 }
 
 /**

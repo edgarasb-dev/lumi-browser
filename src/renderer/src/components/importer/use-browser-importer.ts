@@ -235,9 +235,9 @@ export function useBrowserImporter() {
       });
       setLastResult(result);
 
-      // Re-compute remaining unimported counts so imported categories immediately switch to "Already imported"
+      // Re-compute remaining unimported counts across all cached profiles so imported categories immediately switch to "Already imported"
       const key = `${selectedBrowser.id}::${selectedProfile.id}::${targetProfileId}`;
-      previewCacheRef.current.delete(key);
+      previewCacheRef.current.clear();
       try {
         const freshCounts = await lumi.importer.previewProfile(selectedBrowser.id, selectedProfile.id, targetProfileId);
         previewCacheRef.current.set(key, freshCounts);
@@ -259,6 +259,8 @@ export function useBrowserImporter() {
     try {
       const res = await lumi.importer.importFromHtmlFile();
       setLastHtmlResult(res);
+      previewCacheRef.current.clear();
+      setPreviewVersion((v) => v + 1);
       return res;
     } finally {
       setIsImportingHtml(false);

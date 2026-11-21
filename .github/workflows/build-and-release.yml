@@ -39,11 +39,7 @@ jobs:
               echo "should_release=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "Tag $TAG does not exist yet on origin; creating and pushing tag for $GITHUB_SHA..."
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag "$TAG" "$GITHUB_SHA"
-            git push origin "refs/tags/$TAG"
+            echo "Tag $TAG does not exist yet on origin; preparing draft release for $GITHUB_SHA (tag will be published atomically when all builds complete)..."
           fi
 
           CODENAME=$(python3 -c "
@@ -60,7 +56,7 @@ jobs:
             TITLE="Lumi $TAG"
           fi
           echo "Ensuring draft release exists for $TAG with title: $TITLE..."
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --title "$TITLE" --generate-notes || true
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "$TITLE" --generate-notes || true
           echo "should_release=true" >> "$GITHUB_OUTPUT"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -269,6 +265,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}
+          EP_DRAFT: "true"
           EP_GH_IGNORE_TIME: "true"
 
       - name: Build for macOS
@@ -279,6 +276,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}
+          EP_DRAFT: "true"
           EP_GH_IGNORE_TIME: "true"
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -294,6 +292,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_VMP: ${{ secrets.CASTLABS_EVS_ACCOUNT_NAME == '' && 'true' || 'false' }}
+          EP_DRAFT: "true"
           EP_GH_IGNORE_TIME: "true"
           GYP_MSVS_VERSION: 2022
 

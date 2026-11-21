@@ -186,10 +186,11 @@ function readGeckoBookmarks(placesPath: string): Promise<ImportedBookmarkItem[]>
     const items: ImportedBookmarkItem[] = [];
     for (const row of rows) {
       if (!isImportableHttpUrl(row.url)) continue;
+      const createdAt = prTimeToUnixMs(row.dateAdded);
       items.push({
         title: row.title.trim() || row.url,
         url: row.url,
-        createdAt: prTimeToUnixMs(row.dateAdded)
+        createdAt: createdAt > 0 ? createdAt : undefined
       });
     }
     return items;

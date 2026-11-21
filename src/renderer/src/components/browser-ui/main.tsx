@@ -388,29 +388,25 @@ function BrowserUIWithSettings({ type }: { type: BrowserUIType }) {
       <AdaptiveTopbarProvider>
         <SpacesProvider windowType={type}>
           <TabsProvider>
-            {type === "main" ? (
-              <PinnedTabsProvider>
-                <BrowserActionProvider>
-                  <ExtensionsProviderWithSpaces>
-                    <PasskeysRequestProvider>
-                      <PasswordsPromptProvider>
-                        <ActivePromptsProvider>
+            <PinnedTabsProvider>
+              <BrowserActionProvider>
+                <ExtensionsProviderWithSpaces>
+                  <PasskeysRequestProvider>
+                    <PasswordsPromptProvider>
+                      <ActivePromptsProvider>
+                        {type === "main" ? (
                           <FocusModeProvider>
                             <SidePanelProvider>{content}</SidePanelProvider>
                           </FocusModeProvider>
-                        </ActivePromptsProvider>
-                      </PasswordsPromptProvider>
-                    </PasskeysRequestProvider>
-                  </ExtensionsProviderWithSpaces>
-                </BrowserActionProvider>
-              </PinnedTabsProvider>
-            ) : (
-              <PasskeysRequestProvider>
-                <PasswordsPromptProvider>
-                  <ActivePromptsProvider>{content}</ActivePromptsProvider>
-                </PasswordsPromptProvider>
-              </PasskeysRequestProvider>
-            )}
+                        ) : (
+                          content
+                        )}
+                      </ActivePromptsProvider>
+                    </PasswordsPromptProvider>
+                  </PasskeysRequestProvider>
+                </ExtensionsProviderWithSpaces>
+              </BrowserActionProvider>
+            </PinnedTabsProvider>
           </TabsProvider>
         </SpacesProvider>
       </AdaptiveTopbarProvider>

@@ -188,10 +188,15 @@ export async function previewBrowserProfile(
         const existingEngines = getAllSearchEngines();
         const existingKeys = new Set(existingEngines.map((e) => normalizeSearchTemplate(e.searchUrl)));
         const existingNames = new Set(existingEngines.map((e) => e.name.trim().toLowerCase()));
+        const seenTemplates = new Set<string>();
+        const seenNames = new Set<string>();
 
         for (const engine of extracted.data.searchEngines) {
           const templateKey = normalizeSearchTemplate(engine.searchUrl);
           const nameKey = engine.name.trim().toLowerCase();
+          if (seenTemplates.has(templateKey) || seenNames.has(nameKey)) continue;
+          seenTemplates.add(templateKey);
+          seenNames.add(nameKey);
           if (existingKeys.has(templateKey) || existingNames.has(nameKey)) {
             alreadyImported.searchEngines++;
           } else {
@@ -215,10 +220,13 @@ export async function previewBrowserProfile(
           : (extracted?.data.passwords ?? []);
 
       if (sourceItems.length > 0) {
+        const seenSource = new Set<string>();
         for (const item of sourceItems) {
           const origin = normalizeCredentialOrigin(item.originUrl);
           if (!origin) continue;
           const key = `${origin}\u0000${item.username.trim()}`;
+          if (seenSource.has(key)) continue;
+          seenSource.add(key);
           if (savedPwKeys.has(key) || ledgerPwKeys.has(key)) {
             alreadyImported.passwords++;
           } else {
@@ -457,7 +465,7 @@ export async function executeBrowserImport(
         updatedAt: Date.now()
       };
 
-      if (categories.has("passwords") && isPasswordEncryptionAvailable()) {
+      if (categories.has("passwords") && isPasswordEncryptionAvailable() && extracted.data.passwords.length > 0) {
         const metaItems =
           def.family === "chromium"
             ? await readChromiumPasswordMetadataWithoutKeychain(request.profileId)
@@ -475,7 +483,9 @@ export async function executeBrowserImport(
       if (categories.has("sessions") && def.family === "chromium") {
         const sessionMeta = await readChromiumSessionMetadataWithoutKeychain(request.profileId);
         nextLedger.sessionsImportedAt = Date.now();
-        nextLedger.maxCookieTouchUtc = sessionMeta.maxCookieTouchUtc;
+        if (sessionMeta.cookies.length === 0 || extracted.data.cookies.length > 0) {
+          nextLedger.maxCookieTouchUtc = sessionMeta.maxCookieTouchUtc;
+        }
         nextLedger.localStorageOriginHashes = hashLocalStorageOrigins(sessionMeta.localStorageOrigins);
       }
 

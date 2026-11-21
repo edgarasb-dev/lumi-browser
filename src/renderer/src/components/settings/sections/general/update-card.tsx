@@ -107,13 +107,10 @@ export function UpdateCard({ highlighted = false }: { highlighted?: boolean }) {
       };
     }
     if (hasError) {
-      const isNotFound = updateStatus?.error?.includes("404");
       return {
         icon: <AlertCircle className="size-4 text-amber-500" />,
         label: `Update Check Failed (v${currentVersion})`,
-        description: isNotFound
-          ? "Release manifest unavailable (a new build may still be uploading)"
-          : updateStatus?.error || "Network error"
+        description: updateStatus?.error || "Network error"
       };
     }
     if (isUpToDate) {

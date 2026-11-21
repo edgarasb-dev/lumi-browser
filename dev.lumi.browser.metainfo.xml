@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.2" date="2026-11-22">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.2</url>
+      <description>
+        <p>Fix Browser Importer history diffing for entries older than 180 days or with missing timestamps across Perplexity Comet, Opera, Firefox, and all supported browsers, open Shift+Left-Click links in a new foreground tab, fix blank popup windows by providing PinnedTabs/BrowserAction/Extensions context in popup-ui, and keep CI release tags private until all OS artifacts finish uploading.</p>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-11-22">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.1</url>
       <description>
