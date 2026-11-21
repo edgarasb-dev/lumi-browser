@@ -63,7 +63,25 @@ function isProfileAllowed(context: McpExecutionContext, profileId: string): bool
 }
 
 function isInternalPageUrl(url: string): boolean {
-  return url.startsWith("lumi-internal://") || url.startsWith("chrome://") || url.startsWith("devtools://");
+  const lower = url.toLowerCase();
+  return (
+    lower.startsWith("lumi://") ||
+    lower.startsWith("lumi-internal://") ||
+    lower.startsWith("chrome://") ||
+    lower.startsWith("devtools://") ||
+    lower.startsWith("chrome-extension://") ||
+    lower.startsWith("file://")
+  );
+}
+
+function isProtectedSystemUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  return (
+    lower.startsWith("lumi-internal://") ||
+    lower.startsWith("chrome://") ||
+    lower.startsWith("devtools://") ||
+    lower.startsWith("lumi://settings")
+  );
 }
 
 function validateNavigationUrl(rawUrl: string): { ok: true; url: string } | { ok: false; error: string } {
@@ -588,9 +606,17 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       additionalProperties: false
     },
     handler: async (args, context) => {
-      const resolved = await requireWebTab(args, context);
-      if (!resolved.ok) return resolved.result;
-      const { tab, wc } = resolved;
+      const tab = resolveTabCandidate(args.tabId, context);
+      if (!tab) {
+        return textResult("No matching open tab found (or tab belongs to a profile excluded by MCP scope).", true);
+      }
+      if (isProtectedSystemUrl(tab.url)) {
+        return textResult(`Refusing navigation override on protected internal page "${tab.url}".`, true);
+      }
+      const wc = await ensureAwakeWebContents(tab);
+      if (!wc) {
+        return textResult("Target tab WebContents is unavailable or sleeping.", true);
+      }
 
       const action = typeof args.action === "string" ? args.action : "goto";
       if (action === "back") {

@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.3.4" date="2026-11-21">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.4</url>
+      <description>
+        <p>Harden the local MCP server so JavaScript evaluation, DOM automation, content extraction, and screenshots are blocked on privileged lumi://, chrome-extension://, and file:// tabs while preserving navigation out of lumi://new-tab.</p>
+      </description>
+    </release>
     <release version="0.3.3" date="2026-11-21">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.3</url>
       <description>

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.4] — 2026-11-21
+
+### Codename: Prism
+
+### Fixed
+
+- **MCP Internal Protocol Isolation**: Hardened `isInternalPageUrl()` in the local MCP server to block `lumi://`, `chrome-extension://`, and `file://` pages (alongside `lumi-internal://`, `chrome://`, and `devtools://`) from JavaScript evaluation, DOM snapshots/interaction, Reader extraction, and screenshots so privileged preload APIs (such as `lumi://settings`) cannot be inspected or scripted even when Full Automation + Script Execution is enabled, while preserving outbound `lumi_navigate_tab` navigation from `lumi://new-tab`.
+
+---
+
 ## [0.3.3] — 2026-11-21
 
 ### Codename: Prism
