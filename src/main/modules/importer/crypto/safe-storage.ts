@@ -35,6 +35,48 @@ const CHROME_SAFE_STORAGE_SERVICES: Record<string, string[]> = {
 const PBKDF2_SALT = Buffer.from("saltysalt", "utf8");
 const CHROME_CBC_IV = Buffer.alloc(16, 0x20); // 16 ASCII spaces
 
+// In-memory session cache so macOS Keychain is prompted at most once per Safe Storage service per session.
+const cachedServiceAesKeys = new Map<string, Buffer>();
+const inFlightServiceLookups = new Map<string, Promise<Buffer | null>>();
+
+async function doesKeychainServiceExist(service: string): Promise<boolean> {
+  try {
+    // Without `-w`, `find-generic-password` inspects public item metadata only and never triggers a Keychain prompt.
+    await execFileAsync("/usr/bin/security", ["find-generic-password", "-s", service], { timeout: 3000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveDarwinServiceAesKey(service: string): Promise<Buffer | null> {
+  const cached = cachedServiceAesKeys.get(service);
+  if (cached) return cached;
+
+  const inFlight = inFlightServiceLookups.get(service);
+  if (inFlight) return inFlight;
+
+  const lookupPromise = (async (): Promise<Buffer | null> => {
+    try {
+      const { stdout } = await execFileAsync("/usr/bin/security", ["find-generic-password", "-w", "-s", service], {
+        timeout: 25_000
+      });
+      const secret = stdout.replace(/[\r\n]+$/, "");
+      if (!secret) return null;
+      const derived = crypto.pbkdf2Sync(Buffer.from(secret, "utf8"), PBKDF2_SALT, 1003, 16, "sha1");
+      cachedServiceAesKeys.set(service, derived);
+      return derived;
+    } catch {
+      return null;
+    } finally {
+      inFlightServiceLookups.delete(service);
+    }
+  })();
+
+  inFlightServiceLookups.set(service, lookupPromise);
+  return lookupPromise;
+}
+
 /**
  * Resolves and derives the 16-byte AES-128-CBC key used by Chromium browsers on macOS/Linux
  * (`v10`/`v11` encrypted cookies and passwords).
@@ -43,18 +85,18 @@ export async function getChromiumSafeStorageAesKey(browserId: string): Promise<B
   if (process.platform === "darwin") {
     const services = CHROME_SAFE_STORAGE_SERVICES[browserId] ?? ["Chromium Safe Storage"];
     for (const service of services) {
-      try {
-        const { stdout } = await execFileAsync("/usr/bin/security", ["find-generic-password", "-w", "-s", service], {
-          timeout: 20_000
-        });
-        const secret = stdout.replace(/[\r\n]+$/, "");
-        if (secret) {
-          return crypto.pbkdf2Sync(Buffer.from(secret, "utf8"), PBKDF2_SALT, 1003, 16, "sha1");
-        }
-      } catch {
-        // Try next candidate service or return null if denied/missing
+      const cached = cachedServiceAesKeys.get(service);
+      if (cached) return cached;
+    }
+
+    // First locate which candidate service actually exists in Keychain without `-w` (zero prompt),
+    // and only prompt `-w` once for that exact service.
+    for (const service of services) {
+      if (await doesKeychainServiceExist(service)) {
+        return resolveDarwinServiceAesKey(service);
       }
     }
+
     return null;
   }
 

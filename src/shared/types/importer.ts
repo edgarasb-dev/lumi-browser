@@ -4,7 +4,9 @@ export type ImportDataCategory = "bookmarks" | "history" | "pinnedTabs" | "searc
 
 export type ImportCategoryAvailability = Record<ImportDataCategory, boolean>;
 
-export type ImportCategoryCounts = Record<ImportDataCategory, number>;
+export type ImportCategoryCounts = Record<ImportDataCategory, number> & {
+  alreadyImported?: Record<ImportDataCategory, number>;
+};
 
 export interface SessionImportBreakdown {
   cookies: number;

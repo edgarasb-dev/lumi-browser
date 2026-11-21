@@ -15,6 +15,10 @@ export function registerFaviconRoutes(app: HonoApp) {
       return c.text("No favicon found", 404);
     }
 
-    return c.body(bufferToArrayBuffer(favicon), 200, { "Content-Type": "image/png" });
+    return c.body(bufferToArrayBuffer(favicon), 200, {
+      "Content-Type": "image/png",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=3600"
+    });
   });
 }

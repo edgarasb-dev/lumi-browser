@@ -79,7 +79,7 @@ export const AddressBar = memo(function AddressBar() {
       onMouseDown={handleMouseDown}
       onClick={handleClick}
       className={cn(
-        "w-full min-w-0 h-9 rounded-xl select-none",
+        "group/address w-full min-w-0 h-9 rounded-xl select-none",
         "bg-white/55 dark:bg-white/[0.11] backdrop-blur-md",
         "border border-black/[0.08] dark:border-white/[0.14]",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
@@ -91,7 +91,7 @@ export const AddressBar = memo(function AddressBar() {
     >
       {isPlaceholder ? (
         <SearchIcon strokeWidth={2} className="size-3.5 shrink-0 opacity-75" />
-      ) : isHttps ? (
+      ) : isHttps && !hasSidebar ? (
         <Lock className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
       ) : null}
       <p className={cn("text-[13px] font-medium min-w-0 flex-1 truncate")}>
@@ -103,9 +103,7 @@ export const AddressBar = memo(function AddressBar() {
         <FavouriteButton />
         <SiteControlsButton />
         <PinnedBrowserActions />
-        <div>
-          <BrowserActionList />
-        </div>
+        <BrowserActionList />
       </div>
     </div>
   );

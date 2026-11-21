@@ -379,6 +379,7 @@ export function ImportDataSettings() {
                     const Icon = cat.icon;
                     const supported = selectedProfile.available[cat.id];
                     const count = previewCounts ? previewCounts[cat.id] : null;
+                    const alreadyCount = previewCounts?.alreadyImported?.[cat.id] ?? 0;
                     const isEmpty = !supported || count === 0;
                     const checked = !isEmpty && selectedCategories.has(cat.id);
 
@@ -387,7 +388,7 @@ export function ImportDataSettings() {
                         key={cat.id}
                         icon={<Icon className="size-4" />}
                         label={
-                          <span className="inline-flex items-center gap-2">
+                          <span className="inline-flex items-center gap-2 flex-wrap">
                             <span>{cat.label}</span>
                             {isPreviewing && supported ? (
                               <Loader2 className="size-3 animate-spin text-muted-foreground" />
@@ -397,10 +398,18 @@ export function ImportDataSettings() {
                                   "text-[11px] font-medium px-1.5 py-0.5 rounded-md",
                                   count > 0
                                     ? "bg-black/[0.05] dark:bg-white/[0.08] text-foreground/80"
-                                    : "text-muted-foreground/70"
+                                    : alreadyCount > 0
+                                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
+                                      : "text-muted-foreground/70"
                                 )}
                               >
-                                {count > 0 ? `${count.toLocaleString()} found` : "None found"}
+                                {count > 0
+                                  ? alreadyCount > 0
+                                    ? `${count.toLocaleString()} new • ${alreadyCount.toLocaleString()} imported`
+                                    : `${count.toLocaleString()} found`
+                                  : alreadyCount > 0
+                                    ? `Already imported (${alreadyCount.toLocaleString()})`
+                                    : "None found"}
                               </span>
                             ) : !supported ? (
                               <span className="text-[11px] text-muted-foreground/70">Unavailable</span>

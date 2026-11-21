@@ -415,6 +415,125 @@ async function readChromiumSearchEngines(profileDir: string): Promise<ImportedSe
   return engines;
 }
 
+export async function readChromiumPasswordMetadataWithoutKeychain(
+  profileDir: string
+): Promise<Array<{ originUrl: string; username: string }>> {
+  const loginDbPath = path.join(profileDir, "Login Data");
+  if (!(await isFileReadable(loginDbPath))) return [];
+
+  return withTempSqliteCopy(loginDbPath, (db) => {
+    const rows = db
+      .prepare(
+        `SELECT origin_url, username_value
+         FROM logins
+         WHERE blacklisted_by_user = 0
+           AND origin_url IS NOT NULL
+           AND password_value IS NOT NULL
+           AND length(password_value) > 0`
+      )
+      .all() as Array<{ origin_url: string; username_value: string | null }>;
+
+    const items: Array<{ originUrl: string; username: string }> = [];
+    for (const row of rows) {
+      if (!isImportableHttpUrl(row.origin_url)) continue;
+      items.push({
+        originUrl: row.origin_url,
+        username: (row.username_value ?? "").trim()
+      });
+    }
+    return items;
+  }).catch(() => []);
+}
+
+export interface ChromiumSessionPreviewMetadata {
+  cookies: Array<{ cleanHost: string; name: string; path: string; touchUtc: number }>;
+  maxCookieTouchUtc: number;
+  localStorageOrigins: ImportedLocalStorageOrigin[];
+  indexedDbDirNames: string[];
+}
+
+export async function readChromiumSessionMetadataWithoutKeychain(
+  profileDir: string
+): Promise<ChromiumSessionPreviewMetadata> {
+  const cookiesPath = await resolveChromiumCookiesPath(profileDir);
+  let cookies: Array<{ cleanHost: string; name: string; path: string; touchUtc: number }> = [];
+  let maxCookieTouchUtc = 0;
+
+  if (cookiesPath) {
+    cookies = await withTempSqliteCopy(cookiesPath, (db) => {
+      const cols = new Set((db.pragma("table_info(cookies)") as Array<{ name: string }>).map((c) => c.name));
+      const hasHasExpires = cols.has("has_expires");
+      const hasLastUpdate = cols.has("last_update_utc");
+      const hasCreation = cols.has("creation_utc");
+      const touchExpr =
+        hasLastUpdate && hasCreation
+          ? "MAX(COALESCE(last_update_utc, 0), COALESCE(creation_utc, 0))"
+          : hasLastUpdate
+            ? "COALESCE(last_update_utc, 0)"
+            : hasCreation
+              ? "COALESCE(creation_utc, 0)"
+              : "0";
+
+      const rows = db
+        .prepare(
+          `SELECT host_key, name, path, expires_utc, ${touchExpr} AS touch_utc${hasHasExpires ? ", has_expires" : ""}
+           FROM cookies
+           WHERE host_key IS NOT NULL AND host_key != ''
+             AND name IS NOT NULL AND name != ''`
+        )
+        .all() as Array<{
+        host_key: string;
+        name: string;
+        path: string | null;
+        expires_utc: number;
+        touch_utc: number;
+        has_expires?: number;
+      }>;
+
+      const nowUnixSec = Math.floor(Date.now() / 1000);
+      const valid: Array<{ cleanHost: string; name: string; path: string; touchUtc: number }> = [];
+
+      for (const row of rows) {
+        const shouldExpire = hasHasExpires ? row.has_expires !== 0 : row.expires_utc > 0;
+        if (shouldExpire && row.expires_utc > 0) {
+          const expMs = chromeTimeToUnixMs(row.expires_utc);
+          if (expMs && Math.floor(expMs / 1000) <= nowUnixSec) continue;
+        }
+        const cleanHost = row.host_key.trim().replace(/^\.+/, "").toLowerCase();
+        if (!cleanHost) continue;
+        const touchUtc = Number(row.touch_utc || 0);
+        valid.push({
+          cleanHost,
+          name: row.name,
+          path: row.path && row.path.startsWith("/") ? row.path : "/",
+          touchUtc
+        });
+      }
+      return valid;
+    }).catch(() => []);
+
+    for (const c of cookies) {
+      if (c.touchUtc > maxCookieTouchUtc) maxCookieTouchUtc = c.touchUtc;
+    }
+  }
+
+  let localStorageOrigins: ImportedLocalStorageOrigin[] = [];
+  const lsDir = path.join(profileDir, "Local Storage", "leveldb");
+  if (await isDirectory(lsDir)) {
+    localStorageOrigins = await readChromiumLocalStorage(lsDir).catch(() => []);
+  }
+
+  const idbDirs = await readChromiumIndexedDbDirs(profileDir).catch(() => []);
+  const indexedDbDirNames = idbDirs.map((d) => d.dirName);
+
+  return {
+    cookies,
+    maxCookieTouchUtc,
+    localStorageOrigins,
+    indexedDbDirNames
+  };
+}
+
 async function countChromiumPasswords(profileDir: string): Promise<number> {
   const loginDbPath = path.join(profileDir, "Login Data");
   if (!(await isFileReadable(loginDbPath))) return 0;

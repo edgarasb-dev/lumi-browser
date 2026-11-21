@@ -676,8 +676,8 @@ const importerAPI: LumiImporterAPI = {
   scanBrowsers: async () => {
     return ipcRenderer.invoke("importer:scan-browsers");
   },
-  previewProfile: async (browserId: string, profileId: string) => {
-    return ipcRenderer.invoke("importer:preview-profile", browserId, profileId);
+  previewProfile: async (browserId: string, profileId: string, targetProfileId?: string) => {
+    return ipcRenderer.invoke("importer:preview-profile", browserId, profileId, targetProfileId);
   },
   importFromBrowser: async (request) => {
     return ipcRenderer.invoke("importer:import-browser", request);

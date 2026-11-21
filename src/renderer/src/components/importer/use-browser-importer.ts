@@ -159,44 +159,48 @@ export function useBrowserImporter() {
     setLastResult(null);
   }, []);
 
-  const cacheKey = selectedBrowser && selectedProfile ? `${selectedBrowser.id}::${selectedProfile.id}` : null;
+  const cacheKey =
+    selectedBrowser && selectedProfile ? `${selectedBrowser.id}::${selectedProfile.id}::${targetProfileId}` : null;
   const previewCounts = useMemo(() => {
     void previewVersion;
     return cacheKey ? (previewCacheRef.current.get(cacheKey) ?? null) : null;
   }, [cacheKey, previewVersion]);
 
-  // Fetch live item counts for the active (browser, profile) pair and update sensible category defaults
-  useEffect(() => {
-    if (!selectedBrowser || !selectedProfile) return;
-
-    const key = `${selectedBrowser.id}::${selectedProfile.id}`;
-    const applyDefaultCategories = (counts: ImportCategoryCounts | null) => {
+  const applyDefaultCategoriesForProfile = useCallback(
+    (profile: DetectedBrowser["profiles"][number], counts: ImportCategoryCounts | null) => {
       const next = new Set<ImportDataCategory>();
       for (const cat of ALL_CATEGORIES) {
-        if (!selectedProfile.available[cat]) continue;
+        if (!profile.available[cat]) continue;
         if (counts && counts[cat] === 0) continue;
         next.add(cat);
       }
       setSelectedCategories(next);
-    };
+    },
+    []
+  );
 
+  // Fetch live item counts for the active (browser, profile, targetProfileId) tuple and update category defaults
+  useEffect(() => {
+    if (!selectedBrowser || !selectedProfile) return;
+
+    const key = `${selectedBrowser.id}::${selectedProfile.id}::${targetProfileId}`;
     const cached = previewCacheRef.current.get(key);
     if (cached) {
-      applyDefaultCategories(cached);
+      applyDefaultCategoriesForProfile(selectedProfile, cached);
       return;
     }
 
-    applyDefaultCategories(null);
+    applyDefaultCategoriesForProfile(selectedProfile, null);
     let cancelled = false;
     setIsPreviewing(true);
 
     lumi.importer
-      .previewProfile(selectedBrowser.id, selectedProfile.id)
+      .previewProfile(selectedBrowser.id, selectedProfile.id, targetProfileId)
       .then((counts) => {
         if (cancelled) return;
         previewCacheRef.current.set(key, counts);
         setPreviewVersion((v) => v + 1);
-        applyDefaultCategories(counts);
+        applyDefaultCategoriesForProfile(selectedProfile, counts);
       })
       .catch(() => {})
       .finally(() => {
@@ -206,7 +210,7 @@ export function useBrowserImporter() {
     return () => {
       cancelled = true;
     };
-  }, [selectedBrowser, selectedProfile]);
+  }, [selectedBrowser, selectedProfile, targetProfileId, applyDefaultCategoriesForProfile]);
 
   const toggleCategory = useCallback((cat: ImportDataCategory) => {
     setSelectedCategories((prev) => {
@@ -230,11 +234,24 @@ export function useBrowserImporter() {
         categories: Array.from(selectedCategories)
       });
       setLastResult(result);
+
+      // Re-compute remaining unimported counts so imported categories immediately switch to "Already imported"
+      const key = `${selectedBrowser.id}::${selectedProfile.id}::${targetProfileId}`;
+      previewCacheRef.current.delete(key);
+      try {
+        const freshCounts = await lumi.importer.previewProfile(selectedBrowser.id, selectedProfile.id, targetProfileId);
+        previewCacheRef.current.set(key, freshCounts);
+        setPreviewVersion((v) => v + 1);
+        applyDefaultCategoriesForProfile(selectedProfile, freshCounts);
+      } catch {
+        // Ignore preview refresh error
+      }
+
       return result;
     } finally {
       setIsImporting(false);
     }
-  }, [selectedBrowser, selectedProfile, selectedCategories, targetProfileId]);
+  }, [selectedBrowser, selectedProfile, selectedCategories, targetProfileId, applyDefaultCategoriesForProfile]);
 
   const runHtmlImport = useCallback(async () => {
     setIsImportingHtml(true);

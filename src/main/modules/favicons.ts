@@ -38,6 +38,9 @@ const MAX_SESSION_FAVICON_CACHE = 500;
 
 // Maps normalized page URL -> last fetched favicon URL during this session
 const sessionFaviconUrlMap = new Map<string, string>();
+const inFlightOriginFaviconFetches = new Map<string, Promise<Buffer | null>>();
+const failedOriginFaviconTimestamps = new Map<string, number>();
+const FAILED_ORIGIN_RETRY_MS = 5 * 60 * 1000;
 let cleanupTimer: NodeJS.Timeout | null = null;
 
 function getDb(): Database.Database {
@@ -491,6 +494,89 @@ export function cacheFavicon(url: string, faviconURL: string, session?: Session)
   processQueue();
 }
 
+async function fetchAndStoreOriginFaviconFallback(url: string, normalizedURL: string): Promise<Buffer | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return null;
+  }
+
+  const origin = parsed.origin;
+  const originNormalizedUrl = normalizeURL(origin);
+
+  const lastFailed = failedOriginFaviconTimestamps.get(originNormalizedUrl);
+  if (lastFailed && Date.now() - lastFailed < FAILED_ORIGIN_RETRY_MS) {
+    return null;
+  }
+
+  const existingInFlight = inFlightOriginFaviconFetches.get(originNormalizedUrl);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  const fetchPromise = (async (): Promise<Buffer | null> => {
+    try {
+      const candidates = [`https://${parsed.hostname}/favicon.ico`, `${origin}/favicon.ico`];
+      let faviconData: Buffer | null = null;
+      for (const candidate of candidates) {
+        try {
+          const buf = await fetchFavicon(candidate);
+          if (buf && buf.length > 0) {
+            faviconData = buf;
+            break;
+          }
+        } catch {
+          // Try next candidate
+        }
+      }
+
+      if (!faviconData || faviconData.length === 0) {
+        failedOriginFaviconTimestamps.set(originNormalizedUrl, Date.now());
+        return null;
+      }
+
+      const { isIco, isValid } = await detectImageType(faviconData);
+      if (!isValid) {
+        failedOriginFaviconTimestamps.set(originNormalizedUrl, Date.now());
+        return null;
+      }
+
+      const sharpObj = await processIconImage(faviconData, originNormalizedUrl, isIco);
+      if (!sharpObj) {
+        failedOriginFaviconTimestamps.set(originNormalizedUrl, Date.now());
+        return null;
+      }
+
+      const resizedImageBuffer = await sharpObj
+        .resize(32, 32, {
+          fit: "contain",
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
+        .png()
+        .toBuffer();
+
+      const imageHash = createHash("md5").update(resizedImageBuffer).digest("hex");
+      storeFaviconInDb(imageHash, resizedImageBuffer, originNormalizedUrl);
+      if (normalizedURL !== originNormalizedUrl) {
+        storeFaviconInDb(imageHash, resizedImageBuffer, normalizedURL);
+      }
+      return resizedImageBuffer;
+    } catch {
+      failedOriginFaviconTimestamps.set(originNormalizedUrl, Date.now());
+      return null;
+    } finally {
+      inFlightOriginFaviconFetches.delete(originNormalizedUrl);
+    }
+  })();
+
+  inFlightOriginFaviconFetches.set(originNormalizedUrl, fetchPromise);
+  return fetchPromise;
+}
+
 /**
  * Retrieves a favicon for a given URL
  * @param url The URL to get the favicon for
@@ -503,7 +589,18 @@ export async function getFavicon(url: string): Promise<Buffer | null> {
 
   try {
     const stmts = getStatements();
-    const row = stmts.getFaviconByUrl.get(normalizedURL);
+    let row = stmts.getFaviconByUrl.get(normalizedURL);
+
+    if (!row?.favicon) {
+      try {
+        const originNormalized = normalizeURL(new URL(url).origin);
+        if (originNormalized !== normalizedURL) {
+          row = stmts.getFaviconByUrl.get(originNormalized);
+        }
+      } catch {
+        // Ignore malformed URL
+      }
+    }
 
     if (row && row.favicon) {
       // Throttle last_requested writes so reads don't write on every tab lookup
@@ -515,7 +612,7 @@ export async function getFavicon(url: string): Promise<Buffer | null> {
       return row.favicon;
     }
 
-    return null;
+    return await fetchAndStoreOriginFaviconFallback(url, normalizedURL);
   } catch (error) {
     debugError("FAVICONS", "Error getting favicon:", error);
     return null;

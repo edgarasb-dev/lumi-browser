@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
 import { useAddressUrl, useFocusedTab } from "@/components/providers/tabs-provider";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/popover";
@@ -38,6 +39,7 @@ const PERMISSION_CONTROLS: { key: SitePermissionKey; label: string; icon: React.
 export const SiteControlsButton = memo(function SiteControlsButton() {
   const addressUrl = useAddressUrl();
   const focusedTab = useFocusedTab();
+  const { hasSidebar } = useBrowserSidebar();
   const { isCurrentSpaceLight } = useSpaces();
 
   const [open, setOpen] = useState(false);
@@ -145,7 +147,8 @@ export const SiteControlsButton = memo(function SiteControlsButton() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          "h-6 px-1.5 flex items-center gap-1 rounded-md text-[11px] font-medium transition-colors relative shrink-0 select-none cursor-pointer",
+          hasSidebar ? "size-6 justify-center" : "h-6 px-1.5 gap-1",
+          "flex items-center rounded-md text-[11px] font-medium transition-colors relative shrink-0 select-none cursor-pointer",
           isWhitelisted
             ? "text-amber-600 dark:text-amber-400 bg-amber-500/12 hover:bg-amber-500/20"
             : blockedCount > 0
@@ -153,7 +156,11 @@ export const SiteControlsButton = memo(function SiteControlsButton() {
               : "text-black/65 dark:text-white/65 hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/12"
         )}
         onClick={(e) => e.stopPropagation()}
-        title="Site Controls, Shield & Permissions"
+        title={
+          blockedCount > 0 && !isWhitelisted
+            ? `Site Controls & Shield (${blockedCount} trackers/ads blocked)`
+            : "Site Controls, Shield & Permissions"
+        }
       >
         {isWhitelisted ? (
           <ShieldAlert className="size-3.5" />
@@ -162,7 +169,7 @@ export const SiteControlsButton = memo(function SiteControlsButton() {
         ) : (
           <Shield className="size-3.5" />
         )}
-        {blockedCount > 0 && !isWhitelisted && (
+        {!hasSidebar && blockedCount > 0 && !isWhitelisted && (
           <span className="tabular-nums font-semibold leading-none">{blockedCount > 99 ? "99+" : blockedCount}</span>
         )}
       </PopoverTrigger>

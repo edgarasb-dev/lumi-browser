@@ -15,6 +15,7 @@ export const PasswordToolbarButton = memo(function PasswordToolbarButton() {
   const [generated, setGenerated] = useState<string>("");
 
   const isWebUrl = Boolean(addressUrl && (addressUrl.startsWith("http://") || addressUrl.startsWith("https://")));
+  const focusedProfileId = focusedTab?.profileId;
 
   const refreshMatches = useCallback(async () => {
     if (!isWebUrl || !addressUrl) {
@@ -22,12 +23,12 @@ export const PasswordToolbarButton = memo(function PasswordToolbarButton() {
       return;
     }
     try {
-      const creds = await lumi.passwords.getForSite(addressUrl, focusedTab?.profileId);
+      const creds = await lumi.passwords.getForSite(addressUrl, focusedProfileId);
       setMatches(creds);
     } catch {
       setMatches([]);
     }
-  }, [isWebUrl, addressUrl, focusedTab?.profileId]);
+  }, [isWebUrl, addressUrl, focusedProfileId]);
 
   useEffect(() => {
     void refreshMatches();
@@ -43,9 +44,9 @@ export const PasswordToolbarButton = memo(function PasswordToolbarButton() {
     }
   }, [open, refreshMatches]);
 
-  if (!isWebUrl) return null;
-
   const hasSaved = matches.length > 0;
+  if (!isWebUrl || (!hasSaved && !open)) return null;
+
   const darkClass = isCurrentSpaceLight ? "" : "dark";
 
   return (

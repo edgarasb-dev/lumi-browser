@@ -415,3 +415,54 @@ export function importBrowsingHistoryEntries(
 
   return importedCount;
 }
+
+/**
+ * Counts how many external browsing history entries would be newly inserted vs skipped as already
+ * present in `profileId`, using the exact same URL + 1-second visit timestamp deduplication rule
+ * as `importBrowsingHistoryEntries`.
+ */
+export function countNewBrowsingHistoryEntries(
+  profileId: string,
+  entries: Array<{ url: string; title: string; visitTime: number; visitCount?: number }>
+): { newCount: number; alreadyImportedCount: number } {
+  if (entries.length === 0) return { newCount: 0, alreadyImportedCount: 0 };
+
+  const db = getDb();
+  const cutoff = Date.now() - RETENTION_MS;
+  const now = Date.now();
+
+  const existingRows = db
+    .select({ id: historyUrls.id, url: historyUrls.url })
+    .from(historyUrls)
+    .where(eq(historyUrls.profileId, profileId))
+    .all();
+  const urlToId = new Map<string, number>();
+  for (const r of existingRows) {
+    urlToId.set(r.url, r.id);
+  }
+
+  let newCount = 0;
+  let alreadyImportedCount = 0;
+
+  for (const entry of entries) {
+    if (!isHistoryRecordableUrl(entry.url)) continue;
+    const visitTime = Math.max(cutoff + 1, Math.min(entry.visitTime || now, now));
+    const urlId = urlToId.get(entry.url);
+
+    if (urlId !== undefined) {
+      const nearbyVisit = db
+        .select({ id: historyVisits.id })
+        .from(historyVisits)
+        .where(and(eq(historyVisits.urlId, urlId), sql`abs(${historyVisits.visitTime} - ${visitTime}) < 1000`))
+        .limit(1)
+        .get();
+      if (nearbyVisit) {
+        alreadyImportedCount++;
+        continue;
+      }
+    }
+    newCount++;
+  }
+
+  return { newCount, alreadyImportedCount };
+}

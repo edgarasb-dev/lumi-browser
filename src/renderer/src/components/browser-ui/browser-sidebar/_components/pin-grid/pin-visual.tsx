@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useFaviconColors, type FaviconColors, type RGB } from "@/hooks/use-favicon-color";
-import { useMemo } from "react";
+import { Globe } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * Convert RGB to rgba string
@@ -36,7 +37,13 @@ export function PinVisual({
   isDragging?: boolean;
   className?: string;
 }) {
-  const faviconColors = useFaviconColors(faviconUrl);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [faviconUrl]);
+
+  const effectiveUrl = !failed ? faviconUrl : null;
+  const faviconColors = useFaviconColors(effectiveUrl);
   const hasColors = faviconColors !== null;
 
   const activeBorderStyle = useMemo(() => {
@@ -70,14 +77,22 @@ export function PinVisual({
     >
       <div className={cn("size-full", isActive && "bg-white/80 dark:bg-white/30")}>
         <div className={cn("size-full", "flex items-center justify-center")} style={activeOverlayStyle}>
-          <div className="relative size-5">
-            <img
-              src={faviconUrl || undefined}
-              className="absolute rounded-sm user-drag-none object-contain overflow-hidden"
-            />
-            <div className="img-container">
-              <img src={faviconUrl || undefined} className="user-drag-none" />
-            </div>
+          <div className="relative size-5 flex items-center justify-center">
+            {effectiveUrl ? (
+              <>
+                <img
+                  src={effectiveUrl}
+                  alt=""
+                  onError={() => setFailed(true)}
+                  className="size-5 absolute rounded-sm user-drag-none object-contain overflow-hidden"
+                />
+                <div className="img-container">
+                  <img src={effectiveUrl} alt="" onError={() => setFailed(true)} className="user-drag-none" />
+                </div>
+              </>
+            ) : (
+              <Globe className="size-4.5 text-black/55 dark:text-white/75" />
+            )}
           </div>
         </div>
       </div>

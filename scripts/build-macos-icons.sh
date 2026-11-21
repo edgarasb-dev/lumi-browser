@@ -38,6 +38,7 @@ cat << 'EOF' > "$ICON_DIR/icon.json"
   "groups": [
     {
       "name": "Foreground",
+      "specular": false,
       "layers": [
         {
           "name": "Logo",
@@ -70,6 +71,7 @@ xcrun actool "$ICON_DIR" \
   --target-device mac \
   --output-partial-info-plist "$TMP_DIR/partial.plist" \
   --include-all-app-icons
+rm -f "$BUILD_DIR/AppIcon.icns"
 
 echo "✓ Compiled Assets.car into $BUILD_DIR/Assets.car"
 

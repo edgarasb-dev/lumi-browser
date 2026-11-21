@@ -27,9 +27,13 @@ ipcMain.handle("importer:scan-browsers", async () => {
   return scanInstalledBrowsers();
 });
 
-ipcMain.handle("importer:preview-profile", async (_event, browserId: string, profileId: string) => {
-  return previewBrowserProfile(browserId, profileId);
-});
+ipcMain.handle(
+  "importer:preview-profile",
+  async (event, browserId: string, profileId: string, targetProfileId?: string) => {
+    const effectiveTargetProfileId = targetProfileId || (await resolveDefaultProfileId(event.sender));
+    return previewBrowserProfile(browserId, profileId, effectiveTargetProfileId);
+  }
+);
 
 ipcMain.handle("importer:import-browser", async (event, request: BrowserImportRequest) => {
   const fallbackProfileId = await resolveDefaultProfileId(event.sender);

@@ -10,7 +10,7 @@ export type PrivacySettingsPane = "fullDisk" | "filesAndFolders";
 
 export interface LumiImporterAPI {
   scanBrowsers: () => Promise<DetectedBrowser[]>;
-  previewProfile: (browserId: string, profileId: string) => Promise<ImportCategoryCounts>;
+  previewProfile: (browserId: string, profileId: string, targetProfileId?: string) => Promise<ImportCategoryCounts>;
   importFromBrowser: (request: BrowserImportRequest) => Promise<BrowserImportResult>;
   importFromHtmlFile: () => Promise<HtmlBookmarkImportResult>;
   openPrivacySettings: (pane?: PrivacySettingsPane) => Promise<boolean>;

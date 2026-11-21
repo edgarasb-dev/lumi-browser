@@ -19,6 +19,7 @@
   "groups": [
     {
       "name": "Foreground",
+      "specular": false,
       "layers": [
         {
           "name": "Logo",

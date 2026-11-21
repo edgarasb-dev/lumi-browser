@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] — 2026-11-22
+
+### Codename: Prism
+
+### Fixed
+
+- **macOS Liquid Glass Tinted, Clear & Light Dock Icon Border (`Assets.car`)**: Decontaminated the 4-pixel dark background fringe (`rgb(17, 18, 22)`) and reconstructed a smooth sub-pixel anti-aliased alpha contour on `logo-mark.png`, disabled synthetic outer specular rim highlights (`"specular": false`) on the pre-shaded 3D ribbon group in `build/AppIcon.icon/icon.json`, and recompiled `Assets.car`, `icon.icns`, and `AppIcon.appiconset` so Tinted, Clear, and Light macOS Dock modes no longer render a jagged white/black border around the Lumi mark.
+- **Diff-Aware Browser Importer Preview & Post-Import State Refresh**: Updated `previewBrowserProfile()` to compare source bookmarks, browsing history, pinned tabs, search engines, saved passwords, and active sessions (cookie watermarks, `Local Storage/leveldb` origin hashes, and `IndexedDB` origin directories) against the target Lumi profile without triggering macOS Keychain prompts during preview. Imported categories now refresh automatically after import completion, uncheck and display `Already imported (<count>)` when up to date, and report `<N> new • <M> imported` when incremental items are added or modified in the source browser.
+- **Single-Prompt macOS Keychain Safe Storage Caching**: Added in-memory session caching and concurrent lookup deduplication per Keychain service name in `getChromiumSafeStorageAesKey()` along with a non-prompting service existence check (`security find-generic-password -s <service>` without `-w`) so importing Passwords and Active Sessions together never prompts for the same Keychain service twice.
+- **Vertical Sidebar Address Bar Decluttering**: Compacted the vertical sidebar address bar by removing the redundant left `<Lock />` icon (already represented by the Site Controls shield), rendering a compact icon-only Shield trigger at rest, showing the Password Key button only when saved logins exist for the current site, hiding the Extensions puzzle button when no extensions are installed, and revealing inactive Reader/Bookmark actions on address bar hover so the site domain is always readable.
+- **Imported & Unvisited Pinned Tab Favicon Auto-Resolution**: Updated pinned tab tiles (`PinnedTabButton` and `PinVisual`) to fall back to `lumi://favicon?url=<defaultUrl>` when `faviconUrl` is null or fails to load, added on-demand `${origin}/favicon.ico` fetching, `sharp` PNG normalization, and `favicons.db` persistence in `getFavicon()`, and added `Access-Control-Allow-Origin: *` on `lumi://favicon` so `useFaviconColors` extracts brand gradient rings without canvas CORS taint.
+
+---
+
 ## [0.4.0] — 2026-11-21
 
 ### Codename: Prism

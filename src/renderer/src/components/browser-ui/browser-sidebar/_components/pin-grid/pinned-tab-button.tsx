@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useFaviconColors } from "@/hooks/use-favicon-color";
+import { Globe } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
@@ -59,7 +60,43 @@ export function PinnedTabButton({
   layoutAnimationsEnabled = true
 }: PinnedTabButtonProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const faviconUrl = pinnedTab.faviconUrl;
+  const [primaryFailed, setPrimaryFailed] = useState(false);
+  const [fallbackFailed, setFallbackFailed] = useState(false);
+
+  useEffect(() => {
+    setPrimaryFailed(false);
+    setFallbackFailed(false);
+  }, [pinnedTab.faviconUrl, pinnedTab.defaultUrl]);
+
+  const fallbackLumiFaviconUrl = useMemo(() => {
+    if (!pinnedTab.defaultUrl) return null;
+    try {
+      const srcUrl = new URL("lumi://favicon");
+      srcUrl.searchParams.set("url", pinnedTab.defaultUrl);
+      return srcUrl.toString();
+    } catch {
+      return null;
+    }
+  }, [pinnedTab.defaultUrl]);
+
+  const faviconUrl = useMemo(() => {
+    if (pinnedTab.faviconUrl && !primaryFailed) {
+      return pinnedTab.faviconUrl;
+    }
+    if (!fallbackFailed) {
+      return fallbackLumiFaviconUrl;
+    }
+    return null;
+  }, [pinnedTab.faviconUrl, primaryFailed, fallbackFailed, fallbackLumiFaviconUrl]);
+
+  const handleImageError = useCallback(() => {
+    if (pinnedTab.faviconUrl && !primaryFailed) {
+      setPrimaryFailed(true);
+    } else {
+      setFallbackFailed(true);
+    }
+  }, [pinnedTab.faviconUrl, primaryFailed]);
+
   const faviconColors = useFaviconColors(faviconUrl);
   const hasColors = faviconColors !== null;
   const [isDragging, setIsDragging] = useState(false);
@@ -244,14 +281,22 @@ export function PinnedTabButton({
       >
         <div className={cn("size-full", isActive && "bg-white/80 dark:bg-white/30")}>
           <div className={cn("size-full", "flex items-center justify-center")} style={activeOverlayStyle}>
-            <div className="relative size-5">
-              <img
-                src={faviconUrl || undefined}
-                className="absolute rounded-sm user-drag-none object-contain overflow-hidden"
-              />
-              <div className="img-container">
-                <img src={faviconUrl || undefined} className="user-drag-none" />
-              </div>
+            <div className="relative size-5 flex items-center justify-center">
+              {faviconUrl ? (
+                <>
+                  <img
+                    src={faviconUrl}
+                    alt=""
+                    onError={handleImageError}
+                    className="size-5 absolute rounded-sm user-drag-none object-contain overflow-hidden"
+                  />
+                  <div className="img-container">
+                    <img src={faviconUrl} alt="" onError={handleImageError} className="user-drag-none" />
+                  </div>
+                </>
+              ) : (
+                <Globe className="size-4.5 text-black/55 dark:text-white/75" />
+              )}
             </div>
           </div>
         </div>

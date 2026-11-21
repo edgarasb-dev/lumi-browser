@@ -1,4 +1,5 @@
 import { type ActivateEventType, useBrowserAction } from "@/components/providers/browser-action-provider";
+import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
 import { useExtensions } from "@/components/providers/extensions-provider";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/popover";
@@ -149,8 +150,10 @@ function BrowserAction({
 // Main extensions popover for the new browser UI sidebar
 export function BrowserActionList() {
   const { isCurrentSpaceLight } = useSpaces();
+  const { hasSidebar } = useBrowserSidebar();
   const focusedTab = useFocusedTab();
   const { actions, activeTabId, partition } = useBrowserAction();
+  const { extensions } = useExtensions();
   const [open, setOpen] = useState(false);
 
   const alignment = useMemo(() => "right bottom", []);
@@ -161,16 +164,18 @@ export function BrowserActionList() {
   }, []);
 
   const noActions = actions.length === 0;
+  const noExtensions = extensions.length === 0 && noActions;
   const noActiveTab = typeof activeTabId !== "number";
 
   const spaceInjectedClasses = cn(isCurrentSpaceLight ? "" : "dark");
 
-  if (!focusedTab) return null;
+  if (!focusedTab || (noExtensions && !open)) return null;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          "size-6 flex items-center justify-center rounded-md",
+          "size-6 items-center justify-center rounded-md",
+          hasSidebar && !open ? "hidden group-hover/address:flex" : "flex",
           "hover:bg-black/15 dark:hover:bg-white/20",
           "transition-colors duration-150",
           "relative shrink-0"

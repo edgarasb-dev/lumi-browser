@@ -1,10 +1,15 @@
+import crypto from "crypto";
 import fs from "fs/promises";
-import { addFavouritesBatch } from "@/saving/favourites";
+import path from "path";
+import { addFavouritesBatch, getAllFavourites } from "@/saving/favourites";
+import { getDatastore } from "@/saving/datastore";
 import { isPasswordEncryptionAvailable } from "@/modules/passwords/crypto";
-import { importBrowsingHistoryEntries } from "@/saving/history/browsing-history";
-import { importCredentialsBatch } from "@/saving/passwords";
+import { normalizeCredentialOrigin } from "@/modules/passwords/utils";
+import { countNewBrowsingHistoryEntries, importBrowsingHistoryEntries } from "@/saving/history/browsing-history";
+import { importCredentialsBatch, listSavedPasswordsForProfile } from "@/saving/passwords";
 import { addSearchEngine, getAllSearchEngines, onSearchEnginesLoaded } from "@/saving/search-engines";
 import { pinnedTabsController } from "@/controllers/pinned-tabs-controller";
+import { profilesController } from "@/controllers/profiles-controller";
 import type {
   BrowserEngineFamily,
   BrowserImportRequest,
@@ -14,17 +19,44 @@ import type {
   ImportDataCategory,
   SessionImportBreakdown
 } from "~/types/importer";
-import { chromiumAdapter } from "./parsers/chromium";
+import {
+  chromiumAdapter,
+  readChromiumPasswordMetadataWithoutKeychain,
+  readChromiumSessionMetadataWithoutKeychain
+} from "./parsers/chromium";
 import { flowAdapter } from "./parsers/flow";
 import { geckoAdapter } from "./parsers/gecko";
 import { parseNetscapeBookmarksHtml } from "./parsers/html";
 import { safariFamilyAdapter } from "./parsers/safari";
 import { BROWSER_REGISTRY, resolveBrowserRootDirs } from "./registry";
 import { importSessionDataIntoProfile } from "./session-import";
-import type { BrowserDefinition, BrowserFamilyAdapter } from "./types";
+import type { BrowserDefinition, BrowserFamilyAdapter, ImportedLocalStorageOrigin } from "./types";
 import { emptyImportCounts, normalizeImportUrl } from "./utils";
 
 const MAX_PINNED_TABS_PER_IMPORT = 50;
+const ImporterStateStore = getDatastore("importer-state");
+
+interface StoredProfileImportLedger {
+  updatedAt: number;
+  passwordsProcessedKeys?: string[];
+  sessionsImportedAt?: number;
+  maxCookieTouchUtc?: number;
+  localStorageOriginHashes?: Record<string, string>;
+}
+
+function getLedgerKey(targetProfileId: string, browserId: string, sourceProfileId: string): string {
+  const hash = crypto.createHash("sha1").update(`${targetProfileId}::${browserId}::${sourceProfileId}`).digest("hex");
+  return `ledger_${hash}`;
+}
+
+function hashLocalStorageOrigins(origins: ImportedLocalStorageOrigin[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const item of origins) {
+    const sorted = [...item.entries].sort((a, b) => a[0].localeCompare(b[0]));
+    out[item.origin] = crypto.createHash("sha1").update(JSON.stringify(sorted)).digest("hex").slice(0, 16);
+  }
+  return out;
+}
 
 const ADAPTERS: Record<BrowserEngineFamily, BrowserFamilyAdapter> = {
   chromium: chromiumAdapter,
@@ -62,14 +94,191 @@ export async function scanInstalledBrowsers(): Promise<DetectedBrowser[]> {
 }
 
 /**
- * Counts importable items in a specific detected browser profile without writing any data.
+ * Counts importable (new or modified) items in a specific detected browser profile compared against
+ * what is already present in `targetProfileId`, without writing any data or triggering OS Keychain prompts.
  */
-export async function previewBrowserProfile(browserId: string, profileId: string): Promise<ImportCategoryCounts> {
+export async function previewBrowserProfile(
+  browserId: string,
+  profileId: string,
+  targetProfileId: string = "main"
+): Promise<ImportCategoryCounts> {
   const def = findBrowserDefinition(browserId);
   if (!def) return emptyImportCounts();
 
   const rootDirs = await resolveBrowserRootDirs(def);
-  return ADAPTERS[def.family].preview(def, rootDirs, profileId).catch(() => emptyImportCounts());
+  const rawCounts = await ADAPTERS[def.family].preview(def, rootDirs, profileId).catch(() => emptyImportCounts());
+
+  const newCounts = emptyImportCounts();
+  const alreadyImported = emptyImportCounts();
+
+  try {
+    const ledger = await ImporterStateStore.get<StoredProfileImportLedger>(
+      getLedgerKey(targetProfileId, browserId, profileId)
+    ).catch(() => null);
+
+    const nonKeychainCategories = new Set<ImportDataCategory>();
+    if (rawCounts.bookmarks > 0) nonKeychainCategories.add("bookmarks");
+    if (rawCounts.history > 0) nonKeychainCategories.add("history");
+    if (rawCounts.pinnedTabs > 0) nonKeychainCategories.add("pinnedTabs");
+    if (rawCounts.searchEngines > 0) nonKeychainCategories.add("searchEngines");
+    if (rawCounts.passwords > 0 && def.family !== "chromium") nonKeychainCategories.add("passwords");
+
+    const extracted =
+      nonKeychainCategories.size > 0
+        ? await ADAPTERS[def.family].extract(def, rootDirs, profileId, nonKeychainCategories).catch(() => null)
+        : null;
+
+    // 1. Bookmarks diff
+    if (rawCounts.bookmarks > 0) {
+      if (extracted && extracted.data.bookmarks.length > 0) {
+        const existingFavs = new Set((await getAllFavourites()).map((f) => normalizeImportUrl(f.url)));
+        const seenSource = new Set<string>();
+        for (const b of extracted.data.bookmarks) {
+          const key = normalizeImportUrl(b.url);
+          if (seenSource.has(key)) continue;
+          seenSource.add(key);
+          if (existingFavs.has(key)) {
+            alreadyImported.bookmarks++;
+          } else {
+            newCounts.bookmarks++;
+          }
+        }
+      } else {
+        newCounts.bookmarks = rawCounts.bookmarks;
+      }
+    }
+
+    // 2. Browsing History diff
+    if (rawCounts.history > 0) {
+      if (extracted && extracted.data.history.length > 0) {
+        const hStats = countNewBrowsingHistoryEntries(targetProfileId, extracted.data.history);
+        newCounts.history = hStats.newCount;
+        alreadyImported.history = hStats.alreadyImportedCount;
+      } else {
+        newCounts.history = rawCounts.history;
+      }
+    }
+
+    // 3. Pinned Tabs diff
+    if (rawCounts.pinnedTabs > 0) {
+      if (extracted && extracted.data.pinnedTabs.length > 0) {
+        const existingPinned = new Set(
+          pinnedTabsController.getByProfile(targetProfileId).map((pt) => normalizeImportUrl(pt.defaultUrl))
+        );
+        const seenSource = new Set<string>();
+        for (const item of extracted.data.pinnedTabs.slice(0, MAX_PINNED_TABS_PER_IMPORT)) {
+          const key = normalizeImportUrl(item.url);
+          if (seenSource.has(key)) continue;
+          seenSource.add(key);
+          if (existingPinned.has(key)) {
+            alreadyImported.pinnedTabs++;
+          } else {
+            newCounts.pinnedTabs++;
+          }
+        }
+      } else {
+        newCounts.pinnedTabs = rawCounts.pinnedTabs;
+      }
+    }
+
+    // 4. Search Engines diff
+    if (rawCounts.searchEngines > 0) {
+      if (extracted && extracted.data.searchEngines.length > 0) {
+        await onSearchEnginesLoaded();
+        const existingEngines = getAllSearchEngines();
+        const existingKeys = new Set(existingEngines.map((e) => normalizeSearchTemplate(e.searchUrl)));
+        const existingNames = new Set(existingEngines.map((e) => e.name.trim().toLowerCase()));
+
+        for (const engine of extracted.data.searchEngines) {
+          const templateKey = normalizeSearchTemplate(engine.searchUrl);
+          const nameKey = engine.name.trim().toLowerCase();
+          if (existingKeys.has(templateKey) || existingNames.has(nameKey)) {
+            alreadyImported.searchEngines++;
+          } else {
+            newCounts.searchEngines++;
+          }
+        }
+      } else {
+        newCounts.searchEngines = rawCounts.searchEngines;
+      }
+    }
+
+    // 5. Saved Passwords diff (zero Keychain prompts)
+    if (rawCounts.passwords > 0) {
+      const savedPasswords = listSavedPasswordsForProfile(targetProfileId);
+      const savedPwKeys = new Set(savedPasswords.map((p) => `${p.origin}\u0000${p.username}`));
+      const ledgerPwKeys = new Set(savedPwKeys.size > 0 ? (ledger?.passwordsProcessedKeys ?? []) : []);
+
+      const sourceItems =
+        def.family === "chromium"
+          ? await readChromiumPasswordMetadataWithoutKeychain(profileId)
+          : (extracted?.data.passwords ?? []);
+
+      if (sourceItems.length > 0) {
+        for (const item of sourceItems) {
+          const origin = normalizeCredentialOrigin(item.originUrl);
+          if (!origin) continue;
+          const key = `${origin}\u0000${item.username.trim()}`;
+          if (savedPwKeys.has(key) || ledgerPwKeys.has(key)) {
+            alreadyImported.passwords++;
+          } else {
+            newCounts.passwords++;
+          }
+        }
+      } else {
+        newCounts.passwords = rawCounts.passwords;
+      }
+    }
+
+    // 6. Cookies & Active Sessions diff (zero Keychain prompts)
+    if (rawCounts.sessions > 0) {
+      if (def.family === "chromium") {
+        const sessionMeta = await readChromiumSessionMetadataWithoutKeychain(profileId);
+        if (ledger?.sessionsImportedAt) {
+          const maxTouch = ledger.maxCookieTouchUtc ?? 0;
+          for (const c of sessionMeta.cookies) {
+            if (c.touchUtc > maxTouch) {
+              newCounts.sessions++;
+            } else {
+              alreadyImported.sessions++;
+            }
+          }
+
+          const currentLsHashes = hashLocalStorageOrigins(sessionMeta.localStorageOrigins);
+          const prevLsHashes = ledger.localStorageOriginHashes ?? {};
+          for (const [origin, hash] of Object.entries(currentLsHashes)) {
+            if (prevLsHashes[origin] === hash) {
+              alreadyImported.sessions++;
+            } else {
+              newCounts.sessions++;
+            }
+          }
+
+          const targetIdbRoot = path.join(profilesController.getProfilePath(targetProfileId), "IndexedDB");
+          const existingIdbNames = new Set(await fs.readdir(targetIdbRoot).catch(() => [] as string[]));
+          for (const dirName of sessionMeta.indexedDbDirNames) {
+            if (existingIdbNames.has(dirName)) {
+              alreadyImported.sessions++;
+            } else {
+              newCounts.sessions++;
+            }
+          }
+        } else {
+          newCounts.sessions =
+            sessionMeta.cookies.length + sessionMeta.localStorageOrigins.length + sessionMeta.indexedDbDirNames.length;
+        }
+      } else {
+        newCounts.sessions = rawCounts.sessions;
+      }
+    }
+  } catch {
+    return rawCounts;
+  }
+
+  return {
+    ...newCounts,
+    alreadyImported
+  };
 }
 
 /**
@@ -236,8 +445,48 @@ export async function executeBrowserImport(
     imported.sessions = sessionDetails.cookies + sessionDetails.localStorageOrigins + sessionDetails.indexedDbOrigins;
   }
 
+  // 7. Persist import ledger watermarks for password/session change detection
+  if (categories.has("passwords") || categories.has("sessions")) {
+    try {
+      const ledgerKey = getLedgerKey(targetProfileId, request.browserId, request.profileId);
+      const prevLedger = (await ImporterStateStore.get<StoredProfileImportLedger>(ledgerKey).catch(() => null)) ?? {
+        updatedAt: Date.now()
+      };
+      const nextLedger: StoredProfileImportLedger = {
+        ...prevLedger,
+        updatedAt: Date.now()
+      };
+
+      if (categories.has("passwords") && isPasswordEncryptionAvailable()) {
+        const metaItems =
+          def.family === "chromium"
+            ? await readChromiumPasswordMetadataWithoutKeychain(request.profileId)
+            : extracted.data.passwords;
+        const processedKeys = new Set<string>(prevLedger.passwordsProcessedKeys ?? []);
+        for (const item of metaItems) {
+          const origin = normalizeCredentialOrigin(item.originUrl);
+          if (origin) {
+            processedKeys.add(`${origin}\u0000${item.username.trim()}`);
+          }
+        }
+        nextLedger.passwordsProcessedKeys = Array.from(processedKeys);
+      }
+
+      if (categories.has("sessions") && def.family === "chromium") {
+        const sessionMeta = await readChromiumSessionMetadataWithoutKeychain(request.profileId);
+        nextLedger.sessionsImportedAt = Date.now();
+        nextLedger.maxCookieTouchUtc = sessionMeta.maxCookieTouchUtc;
+        nextLedger.localStorageOriginHashes = hashLocalStorageOrigins(sessionMeta.localStorageOrigins);
+      }
+
+      await ImporterStateStore.set(ledgerKey, nextLedger);
+    } catch {
+      // Non-fatal if watermark persistence fails
+    }
+  }
+
   return {
-    success: errors.length === 0 || Object.values(imported).some((count) => count > 0),
+    success: errors.length === 0 || Object.values(imported).some((count) => typeof count === "number" && count > 0),
     browserName: def.name,
     profileName: extracted.profileName,
     imported,

@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.1" date="2026-11-22">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.1</url>
+      <description>
+        <p>Fix macOS Liquid Glass Tinted, Clear, and Light Dock icon border artifacts in Assets.car, add diff-aware Browser Importer previews (Already imported vs. new deltas) and single-prompt Keychain caching, declutter the vertical sidebar address bar, and auto-fetch favicons for imported pinned tabs.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-21">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.0</url>
       <description>

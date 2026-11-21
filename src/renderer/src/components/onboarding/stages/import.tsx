@@ -238,6 +238,7 @@ export function OnboardingImport({
                   const Icon = cat.icon;
                   const supported = selectedProfile.available[cat.id];
                   const count = previewCounts ? previewCounts[cat.id] : null;
+                  const alreadyCount = previewCounts?.alreadyImported?.[cat.id] ?? 0;
                   const disabled = !supported || count === 0;
                   const checked = !disabled && selectedCategories.has(cat.id);
 
@@ -263,7 +264,11 @@ export function OnboardingImport({
                           {isPreviewing && supported ? (
                             <span className="text-[10px] text-slate-300/70 ml-1">…</span>
                           ) : count !== null && count > 0 ? (
-                            <span className="text-[10px] text-slate-300/80 ml-1">({count.toLocaleString()})</span>
+                            <span className="text-[10px] text-slate-300/80 ml-1">
+                              ({alreadyCount > 0 ? `${count.toLocaleString()} new` : count.toLocaleString()})
+                            </span>
+                          ) : count === 0 && alreadyCount > 0 ? (
+                            <span className="text-[10px] text-emerald-300/90 ml-1">(Imported)</span>
                           ) : null}
                         </span>
                       </span>
