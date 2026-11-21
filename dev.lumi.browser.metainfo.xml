@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.3.1" date="2026-11-21">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.1</url>
+      <description>
+        <p>Add cross-platform Browser Importer in Settings and Onboarding supporting 37 browsers (Chrome, Safari, Firefox, Zen, Arc, Dia, Comet, Brave, Edge, Opera, Flow, and more) plus HTML bookmarks, and drastically speed up GitHub Actions CI checks and multi-OS builds.</p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-21">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.0</url>
       <description>

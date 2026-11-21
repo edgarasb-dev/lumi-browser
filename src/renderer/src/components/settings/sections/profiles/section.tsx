@@ -1,7 +1,19 @@
 import { Button } from "@/components/ui/button";
 import type { Profile } from "~/lumi/interfaces/sessions/profiles";
 import type { Space } from "~/lumi/interfaces/sessions/spaces";
-import { Trash2, ArrowLeft, Settings, Globe, Save, Loader2, Plus, Box, UsersIcon, ChevronRight } from "lucide-react";
+import {
+  Trash2,
+  ArrowLeft,
+  Settings,
+  Globe,
+  Save,
+  Loader2,
+  Plus,
+  Box,
+  UsersIcon,
+  ChevronRight,
+  Download
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { SearchEnginesSettings } from "@/components/settings/sections/search/section";
 import { SettingsGroup, SettingsRow, SettingsSectionHeader } from "@/components/settings/components/setting-row";
+import { useSettingsNavigation } from "@/components/settings/settings-layout";
 
 function ProfileRow({ profile, activateEdit }: { profile: Profile; activateEdit: () => void }) {
   return (
@@ -395,6 +408,7 @@ export interface ProfilesSettingsProps {
 }
 
 export function ProfilesSettings({ navigateToSpace }: ProfilesSettingsProps) {
+  const { jumpToSetting } = useSettingsNavigation();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
@@ -452,10 +466,16 @@ export function ProfilesSettings({ navigateToSpace }: ProfilesSettingsProps) {
         description="Separate work, personal, and sandbox browsing sessions with isolated storage."
         icon={<UsersIcon className="size-4" />}
         actions={
-          <Button onClick={() => setCreateDialogOpen(true)} size="sm">
-            <Plus className="size-3.5" />
-            New Profile
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={() => jumpToSetting("import")} className="gap-1.5">
+              <Download className="size-3.5" />
+              Import Data
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+              <Plus className="size-3.5" />
+              New Profile
+            </Button>
+          </>
         }
       />
 

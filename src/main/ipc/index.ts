@@ -37,6 +37,7 @@ import "@/ipc/window/settings";
 import "@/ipc/app/open-external";
 import "@/ipc/app/onboarding";
 import "@/ipc/settings/search-engines";
+import "@/ipc/settings/importer";
 
 // Special
 import "@/ipc/listeners-manager";

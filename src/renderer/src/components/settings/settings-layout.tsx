@@ -8,6 +8,7 @@ import { SpacesSettings } from "@/components/settings/sections/spaces/section";
 import { PrivacySettings } from "@/components/settings/sections/privacy/section";
 import { ShortcutsSettings } from "@/components/settings/sections/shortcuts/section";
 import { SearchEnginesSettings } from "@/components/settings/sections/search/section";
+import { ImportDataSettings } from "@/components/settings/sections/import/section";
 import { SettingsProvider } from "@/components/providers/settings-provider";
 import { AppUpdatesProvider } from "@/components/providers/app-updates-provider";
 import {
@@ -19,7 +20,8 @@ import {
   KeyboardIcon,
   Search,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  Download
 } from "lucide-react";
 import { ShortcutsProvider, useShortcuts } from "@/components/providers/shortcuts-provider";
 import { SearchEnginesProvider, useSearchEngines } from "@/components/providers/search-engines-provider";
@@ -54,6 +56,7 @@ const SECTIONS: Section[] = [
   { id: "privacy", label: "Privacy & Apps", icon: <ShieldCheck className="size-4" />, category: "preferences" },
   { id: "spaces", label: "Spaces", icon: <OrbitIcon className="size-4" />, category: "workspace" },
   { id: "profiles", label: "Profiles", icon: <UsersIcon className="size-4" />, category: "workspace" },
+  { id: "import", label: "Import Data", icon: <Download className="size-4" />, category: "workspace" },
   { id: "shortcuts", label: "Shortcuts", icon: <KeyboardIcon className="size-4" />, category: "workspace" },
   { id: "about", label: "About Lumi", icon: <Sparkles className="size-4 text-primary" />, category: "system" }
 ];
@@ -284,6 +287,8 @@ function SettingsWorkspace() {
         return <ProfilesSettings navigateToSpaces={navigateToSpaces} navigateToSpace={navigateToSpace} />;
       case "spaces":
         return <SpacesSettings initialSelectedProfile={selectedProfileId} initialSelectedSpace={selectedSpaceId} />;
+      case "import":
+        return <ImportDataSettings />;
       case "shortcuts":
         return <ShortcutsSettings />;
       default:

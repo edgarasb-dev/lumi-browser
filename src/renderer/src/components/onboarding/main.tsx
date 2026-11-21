@@ -1,5 +1,6 @@
 import { OnboardingScreen } from "@/components/onboarding/screen";
 import { OnboardingFinish } from "@/components/onboarding/stages/finish";
+import { OnboardingImport } from "@/components/onboarding/stages/import";
 import { OnboardingNewTab } from "@/components/onboarding/stages/new-tab";
 import { OnboardingInitialSpace } from "@/components/onboarding/stages/initial-space/main";
 import { OnboardingWelcome } from "@/components/onboarding/stages/welcome";
@@ -8,7 +9,7 @@ import { useState } from "react";
 
 export type OnboardingAdvanceCallback = () => void;
 
-const stages = [OnboardingWelcome, OnboardingInitialSpace, OnboardingNewTab, OnboardingFinish];
+const stages = [OnboardingWelcome, OnboardingInitialSpace, OnboardingNewTab, OnboardingImport, OnboardingFinish];
 
 export function OnboardingMain() {
   const [stage, setStage] = useState<number>(0);

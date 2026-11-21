@@ -30,6 +30,7 @@ import { LumiNewTabAPI } from "~/lumi/interfaces/browser/newTab";
 import { LumiOpenExternalAPI } from "~/lumi/interfaces/settings/openExternal";
 import { LumiOnboardingAPI } from "~/lumi/interfaces/settings/onboarding";
 import { LumiSearchEnginesAPI } from "~/lumi/interfaces/settings/search-engines";
+import { LumiImporterAPI } from "~/lumi/interfaces/settings/importer";
 import type { SearchEngine, SearchEngineInput } from "~/types/search-engines";
 import type { LumiOmniboxAPI, OmniboxOpenParams } from "~/lumi/interfaces/browser/omnibox";
 import { LumiSettingsAPI } from "~/lumi/interfaces/settings/settings";
@@ -663,6 +664,22 @@ const onboardingAPI: LumiOnboardingAPI = {
   }
 };
 
+// IMPORTER API //
+const importerAPI: LumiImporterAPI = {
+  scanBrowsers: async () => {
+    return ipcRenderer.invoke("importer:scan-browsers");
+  },
+  previewProfile: async (browserId: string, profileId: string) => {
+    return ipcRenderer.invoke("importer:preview-profile", browserId, profileId);
+  },
+  importFromBrowser: async (request) => {
+    return ipcRenderer.invoke("importer:import-browser", request);
+  },
+  importFromHtmlFile: async () => {
+    return ipcRenderer.invoke("importer:import-html");
+  }
+};
+
 // OMNIBOX API //
 const omniboxAPI: LumiOmniboxAPI = {
   show: (bounds: Electron.Rectangle | null, params: OmniboxOpenParams | null) => {
@@ -1132,6 +1149,7 @@ const lumiAPI: typeof lumi = {
   settings: wrapAPI(settingsAPI, "settings"),
   searchEngines: wrapAPI(searchEnginesAPI, "settings"),
   openExternal: wrapAPI(openExternalAPI, "settings"),
-  onboarding: wrapAPI(onboardingAPI, "settings")
+  onboarding: wrapAPI(onboardingAPI, "settings"),
+  importer: wrapAPI(importerAPI, "settings")
 };
 contextBridge.exposeInMainWorld("lumi", lumiAPI);

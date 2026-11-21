@@ -1,4 +1,5 @@
 import { useSettings } from "@/components/providers/settings-provider";
+import { useSettingsNavigation } from "@/components/settings/settings-layout";
 import { BasicSettingCard } from "~/types/settings";
 import { SettingsInput } from "@/components/settings/components/setting-input";
 import { ResetOnboardingCard } from "@/components/settings/sections/general/reset-onboarding-card";
@@ -6,7 +7,7 @@ import { UpdateCard } from "@/components/settings/sections/general/update-card";
 import { SetAsDefaultBrowserSetting } from "@/components/settings/sections/general/set-as-default-browser-setting";
 import { SettingsGroup, SettingsRow } from "@/components/settings/components/setting-row";
 import { cn } from "@/lib/utils";
-import { Archive, Cpu, FileText, FlaskConical, RefreshCw, Layers } from "lucide-react";
+import { Archive, ChevronRight, Cpu, Download, FileText, FlaskConical, RefreshCw, Layers } from "lucide-react";
 
 export { SettingsInput };
 
@@ -65,6 +66,8 @@ function BasicSettingRowItem({
 }
 
 export function BasicSettingsCards({ highlightedRowId }: { highlightedRowId?: string | null }) {
+  const { jumpToSetting } = useSettingsNavigation();
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       <SettingsGroup title="Application & Updates">
@@ -75,6 +78,17 @@ export function BasicSettingsCards({ highlightedRowId }: { highlightedRowId?: st
           highlightedRowId={highlightedRowId}
         />
         <SetAsDefaultBrowserSetting highlighted={highlightedRowId === "internal_setAsDefaultBrowser"} />
+        <SettingsRow
+          icon={<Download className="size-4" />}
+          label="Import from Another Browser"
+          description="Bring bookmarks, history, pinned tabs, and search engines from Chrome, Safari, Firefox, Arc, Zen, and more."
+          onClick={() => jumpToSetting("import")}
+        >
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            Open Importer
+            <ChevronRight className="size-3.5" />
+          </span>
+        </SettingsRow>
         <BasicSettingRowItem
           settingId="syncTabsAcrossWindows"
           icon={<Layers className="size-4" />}

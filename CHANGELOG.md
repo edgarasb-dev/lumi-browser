@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] — 2026-11-21
+
+### Codename: Prism
+
+### Added
+
+- **Import from Other Browsers**: Added automatic cross-platform scanning across 37 browsers (`Safari`, `Chrome`, `Firefox`, `Zen Browser`, `Arc`, `Dia`, `Perplexity Comet`, `ChatGPT Atlas`, `Brave`, `Edge`, `Vivaldi`, `Opera`, `Helium`, `Orion`, `Flow Browser`, and more) plus Netscape Bookmarks HTML file import, bringing bookmarks, Reading List, browsing history, pinned tabs (including Arc `StorableSidebar.json`, Zen `zen-sessions.jsonlz4` / `zen_pins`, and Firefox `sessionstore.jsonlz4`), and custom search engines into Lumi via both `lumi://settings?section=import` and the first-run Onboarding flow.
+
+### Changed
+
+- **GitHub Actions CI & Multi-Platform Packaging Speedups**: Parallelized `tsc`, `eslint`, and `prettier --cache` on `checks`, switched CI runners to preinstalled toolcache Node 22+, added Windows Defender + same-drive `D:` caching with `7z`-packed `node_modules`, added macOS `node_modules` caching, configured `gz` `.deb` packaging compression and faster archive compression levels, and gated PR Flatpak runs to relevant packaging/dependency changes.
+
+---
+
 ## [0.3.0] — 2026-11-21
 
 ### Codename: Prism

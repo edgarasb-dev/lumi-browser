@@ -1,5 +1,5 @@
 export type SettingsSectionId =
-  "general" | "appearance" | "search" | "privacy" | "spaces" | "profiles" | "shortcuts" | "about";
+  "general" | "appearance" | "search" | "privacy" | "spaces" | "profiles" | "import" | "shortcuts" | "about";
 
 export interface SettingsSearchEntry {
   id: string;
@@ -18,6 +18,7 @@ export const SECTION_LABELS: Record<SettingsSectionId, string> = {
   privacy: "Privacy & Apps",
   spaces: "Spaces",
   profiles: "Profiles",
+  import: "Import Data",
   shortcuts: "Shortcuts",
   about: "About Lumi"
 };
@@ -200,6 +201,36 @@ export const STATIC_SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     title: "Browser Profiles",
     description: "Separate cookies, extensions, history, and spaces across isolated profiles.",
     keywords: ["profiles", "work", "personal", "cookies"]
+  },
+  {
+    id: "browserImporter",
+    sectionId: "import",
+    sectionLabel: "Import Data",
+    title: "Import Bookmarks, History & Data from Other Browsers",
+    description: "Auto-detect Chrome, Safari, Firefox, Zen, Arc, Brave, Edge, Opera, Comet, Dia, Flow, or HTML files.",
+    keywords: [
+      "import",
+      "migration",
+      "bookmarks",
+      "favourites",
+      "history",
+      "pinned tabs",
+      "search engines",
+      "chrome",
+      "safari",
+      "firefox",
+      "zen",
+      "arc",
+      "brave",
+      "edge",
+      "vivaldi",
+      "opera",
+      "comet",
+      "dia",
+      "flow",
+      "html"
+    ],
+    targetRowId: "browserImporter"
   },
 
   // About
