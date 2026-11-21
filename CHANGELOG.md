@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.5] — 2026-11-21
+
+### Codename: Prism
+
+### Fixed
+
+- **macOS Browser Importer Detection & Permission Handling**: Stopped swallowing `EPERM`/`EACCES` errors inside the Chromium, Gecko/Firefox, Safari, and Flow importer scanners (`utils.ts`, `chromium.ts`, `gecko.ts`, `safari.ts`, `flow.ts`) and updated `isFileReadable()` to verify real read access via `fs.open(..., "r")` instead of `fs.stat()` alone so macOS privacy-protected browsers (such as Chrome, Firefox, and Safari) remain visible with an accurate `Locked` state instead of disappearing or reporting `0` items.
+
+### Added
+
+- **One-Click Privacy Settings & Auto-Rescan in Browser Importer**: Added direct macOS System Settings links (`Open Full Disk Access` and `Files & Folders`), automatic silent rescan on window focus when any detected browser needs permission, and permission-aware Onboarding and Settings Import guidance.
+
+---
+
 ## [0.3.4] — 2026-11-21
 
 ### Codename: Prism

@@ -3,9 +3,11 @@ import {
   Bookmark,
   CheckCircle2,
   Download,
+  ExternalLink,
   FileCode2,
   History,
   Loader2,
+  Lock,
   Pin,
   RefreshCw,
   Search
@@ -75,8 +77,11 @@ export function ImportDataSettings() {
     toggleCategory,
     runImport,
     runHtmlImport,
-    rescan
+    rescan,
+    openPrivacySettings
   } = useBrowserImporter();
+
+  const isMacOS = navigator.platform.toUpperCase().includes("MAC");
 
   const handleImport = async () => {
     const result = await runImport();
@@ -175,7 +180,9 @@ export function ImportDataSettings() {
                 const isSelected = browser.id === selectedBrowser?.id;
                 const defaultProf = browser.profiles.find((p) => p.isDefault) ?? browser.profiles[0];
                 const subtitle = browser.permissionRequired
-                  ? "Full Disk Access required in System Settings"
+                  ? isMacOS
+                    ? "Permission required in System Settings"
+                    : "Permission required to read profile"
                   : browser.profiles.length > 1
                     ? `${browser.profiles.length} profiles • ${defaultProf?.name ?? "Default"}`
                     : defaultProf?.name || "Detected";
@@ -185,8 +192,14 @@ export function ImportDataSettings() {
                     key={browser.id}
                     icon={<BrowserBadge browserId={browser.id} name={browser.name} family={browser.family} />}
                     label={
-                      <span className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center gap-2 flex-wrap">
                         <span>{browser.name}</span>
+                        {browser.permissionRequired && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                            <Lock className="size-2.5" />
+                            Locked
+                          </span>
+                        )}
                         {isSelected && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/15 text-primary">
                             Selected
@@ -238,18 +251,67 @@ export function ImportDataSettings() {
           <div className="lg:col-span-7 space-y-5">
             {selectedBrowser?.permissionRequired ? (
               <SettingsGroup title={`${selectedBrowser.name} Access Needed`}>
-                <div className="p-5 space-y-3 text-sm">
+                <div className="p-5 space-y-4 text-sm">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="size-5 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <p className="font-medium text-foreground">
-                        macOS prevented direct access to {selectedBrowser.name} data
+                        {isMacOS
+                          ? `macOS prevented direct access to ${selectedBrowser.name} data`
+                          : `Lumi could not read ${selectedBrowser.name} profile data`}
                       </p>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Grant Full Disk Access to Lumi in System Settings → Privacy &amp; Security, or export your{" "}
-                        {selectedBrowser.name} bookmarks as an HTML file and use &ldquo;Import HTML...&rdquo; above.
+                        {isMacOS
+                          ? selectedBrowser.family === "safari"
+                            ? "Safari bookmarks and history are protected by macOS. Enable Lumi in System Settings → Privacy & Security → Full Disk Access (or use Import HTML below)."
+                            : `macOS protects ${selectedBrowser.name} app data. Enable Lumi in System Settings → Privacy & Security → Full Disk Access (recommended) or Files & Folders, then click Rescan — or export bookmarks as HTML.`
+                          : `Check filesystem permissions for your ${selectedBrowser.name} profile directory and click Rescan, or import a Bookmarks HTML export below.`}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pl-8">
+                    {isMacOS && (
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => void openPrivacySettings("fullDisk")}
+                      >
+                        <ExternalLink className="size-3.5" />
+                        Open Full Disk Access
+                      </Button>
+                    )}
+                    {isMacOS && selectedBrowser.family !== "safari" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => void openPrivacySettings("filesAndFolders")}
+                      >
+                        <ExternalLink className="size-3.5" />
+                        Files &amp; Folders
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                      onClick={() => void rescan()}
+                      disabled={isScanning}
+                    >
+                      <RefreshCw className={cn("size-3.5", isScanning && "animate-spin")} />
+                      Rescan
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                      onClick={() => void handleHtmlImport()}
+                      disabled={isImportingHtml}
+                    >
+                      <FileCode2 className="size-3.5" />
+                      {isImportingHtml ? "Importing..." : "Import HTML..."}
+                    </Button>
                   </div>
                 </div>
               </SettingsGroup>

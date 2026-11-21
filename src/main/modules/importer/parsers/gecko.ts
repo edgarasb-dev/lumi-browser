@@ -1,4 +1,3 @@
-import fs from "fs/promises";
 import path from "path";
 import type {
   DetectedBrowser,
@@ -17,14 +16,18 @@ import type {
 } from "../types";
 import {
   convertSearchUrlTemplate,
+  createPermissionRequiredBrowser,
   emptyImportCounts,
+  type FsReadOptions,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
   isPermissionError,
   normalizeImportUrl,
   prTimeToUnixMs,
+  readDirEntries,
   readMozLz4Json,
+  readTextSafe,
   sanitizeShortcut,
   withTempSqliteCopy
 } from "../utils";
@@ -94,58 +97,78 @@ function parseProfilesIni(content: string, rootDir: string): Array<{ name: strin
   return profiles;
 }
 
-async function discoverGeckoProfiles(rootDirs: string[]): Promise<GeckoProfileCandidate[]> {
+interface GeckoDiscoveryResult {
+  profiles: GeckoProfileCandidate[];
+  encounteredPermissionError: boolean;
+}
+
+async function discoverGeckoProfiles(rootDirs: string[], options?: FsReadOptions): Promise<GeckoDiscoveryResult> {
   const candidates: GeckoProfileCandidate[] = [];
   const seenDirs = new Set<string>();
+  let encounteredPermissionError = false;
 
   for (const rootDir of rootDirs) {
-    if (!(await isDirectory(rootDir))) continue;
+    try {
+      if (!(await isDirectory(rootDir, options))) continue;
 
-    const parsedFromIni: Array<{ name: string; dir: string; isDefault: boolean }> = [];
-    const iniPath = path.join(rootDir, "profiles.ini");
-    if (await isFileReadable(iniPath)) {
-      const content = await fs.readFile(iniPath, "utf8").catch(() => "");
-      if (content) {
-        parsedFromIni.push(...parseProfilesIni(content, rootDir));
+      const parsedFromIni: Array<{ name: string; dir: string; isDefault: boolean }> = [];
+      const iniContent = await readTextSafe(path.join(rootDir, "profiles.ini"), options);
+      if (iniContent) {
+        parsedFromIni.push(...parseProfilesIni(iniContent, rootDir));
       }
-    }
 
-    // Fallback scan for Profiles/* or root profile folders
-    const profilesFolder = path.join(rootDir, "Profiles");
-    if (await isDirectory(profilesFolder)) {
-      const entries = await fs.readdir(profilesFolder, { withFileTypes: true }).catch(() => []);
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const dir = path.join(profilesFolder, entry.name);
-        if (!parsedFromIni.some((p) => p.dir === dir)) {
-          parsedFromIni.push({
-            name: entry.name.split(".").slice(1).join(".") || entry.name,
-            dir,
-            isDefault: /default-release/i.test(entry.name)
-          });
+      // Fallback scan for Profiles/* or root profile folders
+      const profilesFolder = path.join(rootDir, "Profiles");
+      if (await isDirectory(profilesFolder, options)) {
+        const entries = await readDirEntries(profilesFolder, options);
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          const dir = path.join(profilesFolder, entry.name);
+          if (!parsedFromIni.some((p) => p.dir === dir)) {
+            parsedFromIni.push({
+              name: entry.name.split(".").slice(1).join(".") || entry.name,
+              dir,
+              isDefault: /default-release/i.test(entry.name)
+            });
+          }
         }
       }
-    }
 
-    for (const item of parsedFromIni) {
-      if (seenDirs.has(item.dir)) continue;
-      const placesPath = path.join(item.dir, "places.sqlite");
-      const hasPlaces = await isFileReadable(placesPath);
-      if (!hasPlaces) continue;
+      for (const item of parsedFromIni) {
+        if (seenDirs.has(item.dir)) continue;
 
-      seenDirs.add(item.dir);
-      candidates.push({
-        id: item.dir,
-        name: item.name,
-        dir: item.dir,
-        isDefault: item.isDefault,
-        hasPlaces
-      });
+        try {
+          const placesPath = path.join(item.dir, "places.sqlite");
+          const hasPlaces = await isFileReadable(placesPath, options);
+          if (!hasPlaces) continue;
+
+          seenDirs.add(item.dir);
+          candidates.push({
+            id: item.dir,
+            name: item.name,
+            dir: item.dir,
+            isDefault: item.isDefault,
+            hasPlaces
+          });
+        } catch (error) {
+          if (isPermissionError(error)) {
+            encounteredPermissionError = true;
+            continue;
+          }
+          throw error;
+        }
+      }
+    } catch (error) {
+      if (isPermissionError(error)) {
+        encounteredPermissionError = true;
+        continue;
+      }
+      throw error;
     }
   }
 
   candidates.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
-  return candidates;
+  return { profiles: candidates, encounteredPermissionError };
 }
 
 function readGeckoBookmarks(placesPath: string): Promise<ImportedBookmarkItem[]> {
@@ -386,8 +409,12 @@ function countGeckoPlaces(placesPath: string): Promise<ImportCategoryCounts> {
 export const geckoAdapter: BrowserFamilyAdapter = {
   async scan(def: BrowserDefinition, rootDirs: string[]): Promise<DetectedBrowser | null> {
     try {
-      const profiles = await discoverGeckoProfiles(rootDirs);
-      if (profiles.length === 0) return null;
+      const { profiles, encounteredPermissionError } = await discoverGeckoProfiles(rootDirs, {
+        throwOnPermissionError: true
+      });
+      if (profiles.length === 0) {
+        return encounteredPermissionError ? createPermissionRequiredBrowser(def) : null;
+      }
 
       const mapped: DetectedBrowserProfile[] = await Promise.all(
         profiles.map(async (p) => {
@@ -418,13 +445,7 @@ export const geckoAdapter: BrowserFamilyAdapter = {
       };
     } catch (error) {
       if (isPermissionError(error)) {
-        return {
-          id: def.id,
-          name: def.name,
-          family: def.family,
-          profiles: [],
-          permissionRequired: true
-        };
+        return createPermissionRequiredBrowser(def);
       }
       return null;
     }
@@ -443,7 +464,7 @@ export const geckoAdapter: BrowserFamilyAdapter = {
   },
 
   async extract(_def: BrowserDefinition, rootDirs: string[], profileId: string, categories: Set<ImportDataCategory>) {
-    const profiles = await discoverGeckoProfiles(rootDirs);
+    const { profiles } = await discoverGeckoProfiles(rootDirs);
     const matched = profiles.find((p) => p.id === profileId);
     const placesPath = path.join(profileId, "places.sqlite");
 

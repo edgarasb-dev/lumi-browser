@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Profile } from "~/lumi/interfaces/sessions/profiles";
+import type { PrivacySettingsPane } from "~/lumi/interfaces/settings/importer";
 import type {
   BrowserImportResult,
   DetectedBrowser,
@@ -49,10 +50,17 @@ export function useBrowserImporter() {
   const [lastHtmlResult, setLastHtmlResult] = useState<HtmlBookmarkImportResult | null>(null);
 
   const previewCacheRef = useRef(new Map<string, ImportCategoryCounts>());
+  const selectedBrowserIdRef = useRef<string | null>(null);
   const [previewVersion, setPreviewVersion] = useState(0);
 
-  const loadInitial = useCallback(async () => {
-    setIsScanning(true);
+  useEffect(() => {
+    selectedBrowserIdRef.current = selectedBrowserId;
+  }, [selectedBrowserId]);
+
+  const loadInitial = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) {
+      setIsScanning(true);
+    }
     try {
       const [detected, profiles] = await Promise.all([
         lumi.importer.scanBrowsers(),
@@ -67,25 +75,40 @@ export function useBrowserImporter() {
       }
 
       const firstUsable = detected.find((b) => b.profiles.length > 0) ?? detected[0] ?? null;
-      if (firstUsable) {
-        setSelectedBrowserId((prev) => (prev && detected.some((b) => b.id === prev) ? prev : firstUsable.id));
-        const firstProfile = firstUsable.profiles.find((p) => p.isDefault) ?? firstUsable.profiles[0] ?? null;
-        setSelectedProfileId((prev) => {
-          const browser = detected.find((b) => b.id === firstUsable.id);
-          if (prev && browser?.profiles.some((p) => p.id === prev)) return prev;
-          return firstProfile?.id ?? null;
-        });
-      }
+      const activeBrowser = detected.find((b) => b.id === selectedBrowserIdRef.current) ?? firstUsable;
+      setSelectedBrowserId(activeBrowser?.id ?? null);
+      const defaultProfile = activeBrowser?.profiles.find((p) => p.isDefault) ?? activeBrowser?.profiles[0] ?? null;
+      setSelectedProfileId((prev) => {
+        if (prev && activeBrowser?.profiles.some((p) => p.id === prev)) return prev;
+        return defaultProfile?.id ?? null;
+      });
     } catch (error) {
       console.error("Failed scanning installed browsers:", error);
     } finally {
-      setIsScanning(false);
+      if (!silent) {
+        setIsScanning(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     void loadInitial();
   }, [loadInitial]);
+
+  const hasPermissionBlocked = useMemo(() => browsers.some((b) => Boolean(b.permissionRequired)), [browsers]);
+
+  // Automatically re-check access when user returns from System Settings
+  useEffect(() => {
+    if (!hasPermissionBlocked) return;
+    const handleFocus = () => {
+      previewCacheRef.current.clear();
+      void loadInitial({ silent: true });
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [hasPermissionBlocked, loadInitial]);
 
   const selectedBrowser = useMemo(
     () => browsers.find((b) => b.id === selectedBrowserId) ?? null,
@@ -210,6 +233,10 @@ export function useBrowserImporter() {
     await loadInitial();
   }, [loadInitial]);
 
+  const openPrivacySettings = useCallback((pane?: PrivacySettingsPane) => {
+    return lumi.importer.openPrivacySettings(pane);
+  }, []);
+
   return {
     browsers,
     lumiProfiles,
@@ -230,6 +257,7 @@ export function useBrowserImporter() {
     toggleCategory,
     runImport,
     runHtmlImport,
-    rescan
+    rescan,
+    openPrivacySettings
   };
 }

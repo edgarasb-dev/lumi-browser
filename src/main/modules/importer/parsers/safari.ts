@@ -12,7 +12,9 @@ import type {
 } from "../types";
 import {
   cocoaTimeToUnixMs,
+  createPermissionRequiredBrowser,
   emptyImportCounts,
+  type FsReadOptions,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
@@ -173,7 +175,7 @@ function collectSafariBookmarks(node: unknown, out: ImportedBookmarkItem[]): voi
   }
 }
 
-async function resolveSafariDataFiles(def: BrowserDefinition, rootDir: string) {
+async function resolveSafariDataFiles(def: BrowserDefinition, rootDir: string, options?: FsReadOptions) {
   if (def.family === "orion") {
     const plistCandidates = ["Bookmarks.plist", "bookmarks.plist", "favourites.plist", "Favourites.plist"];
     const dbCandidates = ["history.db", "History.db", "history.sqlite", "history"];
@@ -182,14 +184,14 @@ async function resolveSafariDataFiles(def: BrowserDefinition, rootDir: string) {
 
     for (const name of plistCandidates) {
       const candidate = path.join(rootDir, name);
-      if (await isFileReadable(candidate)) {
+      if (await isFileReadable(candidate, options)) {
         bookmarksFile = candidate;
         break;
       }
     }
     for (const name of dbCandidates) {
       const candidate = path.join(rootDir, name);
-      if (await isFileReadable(candidate)) {
+      if (await isFileReadable(candidate, options)) {
         historyFile = candidate;
         break;
       }
@@ -201,7 +203,7 @@ async function resolveSafariDataFiles(def: BrowserDefinition, rootDir: string) {
     const sqliteFiles = ["DuckDuckGo.sqlite", "Bookmarks.sqlite", "History.db"];
     for (const name of sqliteFiles) {
       const candidate = path.join(rootDir, name);
-      if (await isFileReadable(candidate)) {
+      if (await isFileReadable(candidate, options)) {
         return { bookmarksFile: candidate, historyFile: candidate, coreDataSqlite: candidate };
       }
     }
@@ -211,9 +213,13 @@ async function resolveSafariDataFiles(def: BrowserDefinition, rootDir: string) {
   // Standard Apple Safari / Safari Technology Preview
   const bookmarksFile = path.join(rootDir, "Bookmarks.plist");
   const historyFile = path.join(rootDir, "History.db");
+  const [hasBookmarks, hasHistory] = await Promise.all([
+    isFileReadable(bookmarksFile, options),
+    isFileReadable(historyFile, options)
+  ]);
   return {
-    bookmarksFile: (await isFileReadable(bookmarksFile)) ? bookmarksFile : null,
-    historyFile: (await isFileReadable(historyFile)) ? historyFile : null
+    bookmarksFile: hasBookmarks ? bookmarksFile : null,
+    historyFile: hasHistory ? historyFile : null
   };
 }
 
@@ -362,8 +368,9 @@ export const safariFamilyAdapter: BrowserFamilyAdapter = {
 
     for (const rootDir of rootDirs) {
       try {
-        if (!(await isDirectory(rootDir))) continue;
-        const files = await resolveSafariDataFiles(def, rootDir);
+        const readOpts: FsReadOptions = { throwOnPermissionError: true };
+        if (!(await isDirectory(rootDir, readOpts))) continue;
+        const files = await resolveSafariDataFiles(def, rootDir, readOpts);
         const hasBookmarks = Boolean(files.bookmarksFile);
         const hasHistory = Boolean(files.historyFile);
         if (!hasBookmarks && !hasHistory) continue;
@@ -394,13 +401,7 @@ export const safariFamilyAdapter: BrowserFamilyAdapter = {
     }
 
     if (encounteredPermissionError) {
-      return {
-        id: def.id,
-        name: def.name,
-        family: def.family,
-        profiles: [],
-        permissionRequired: true
-      };
+      return createPermissionRequiredBrowser(def);
     }
 
     return null;

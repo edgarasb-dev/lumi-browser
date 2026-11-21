@@ -679,6 +679,9 @@ const importerAPI: LumiImporterAPI = {
   },
   importFromHtmlFile: async () => {
     return ipcRenderer.invoke("importer:import-html");
+  },
+  openPrivacySettings: async (pane) => {
+    return ipcRenderer.invoke("importer:open-privacy-settings", pane);
   }
 };
 

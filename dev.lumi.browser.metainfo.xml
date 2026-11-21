@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.3.5" date="2026-11-21">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.5</url>
+      <description>
+        <p>Fix macOS Browser Importer hiding privacy-blocked Chrome/Firefox profiles and misreporting Safari unreadability, and add one-click System Settings links, Locked badges, and automatic focus rescan across Settings and Onboarding.</p>
+      </description>
+    </release>
     <release version="0.3.4" date="2026-11-21">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.4</url>
       <description>

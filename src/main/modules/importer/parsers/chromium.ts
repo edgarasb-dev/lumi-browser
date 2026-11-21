@@ -1,4 +1,3 @@
-import fs from "fs/promises";
 import path from "path";
 import type { DetectedBrowser, DetectedBrowserProfile, ImportCategoryCounts } from "~/types/importer";
 import type {
@@ -13,12 +12,15 @@ import type {
 import {
   chromeTimeToUnixMs,
   convertSearchUrlTemplate,
+  createPermissionRequiredBrowser,
   emptyImportCounts,
+  type FsReadOptions,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
   isPermissionError,
   normalizeImportUrl,
+  readDirEntries,
   readJsonSafe,
   sanitizeShortcut,
   withTempSqliteCopy
@@ -79,82 +81,113 @@ interface ArcSidebarShape {
   };
 }
 
-async function resolveArcSidebarPath(def: BrowserDefinition, profileDir: string): Promise<string | null> {
+interface ChromiumDiscoveryResult {
+  profiles: ChromiumProfileCandidate[];
+  encounteredPermissionError: boolean;
+}
+
+async function resolveArcSidebarPath(
+  def: BrowserDefinition,
+  profileDir: string,
+  options?: FsReadOptions
+): Promise<string | null> {
   if (def.id !== "arc") return null;
   const candidates = [
     path.join(path.dirname(path.dirname(profileDir)), "StorableSidebar.json"),
     path.join(path.dirname(profileDir), "StorableSidebar.json")
   ];
   for (const candidate of candidates) {
-    if (await isFileReadable(candidate)) return candidate;
+    if (await isFileReadable(candidate, options)) return candidate;
   }
   return null;
 }
 
 async function discoverChromiumProfiles(
   def: BrowserDefinition,
-  rootDirs: string[]
-): Promise<ChromiumProfileCandidate[]> {
+  rootDirs: string[],
+  options?: FsReadOptions
+): Promise<ChromiumDiscoveryResult> {
   const candidates: ChromiumProfileCandidate[] = [];
   const seenDirs = new Set<string>();
+  let encounteredPermissionError = false;
 
   for (const rootDir of rootDirs) {
-    if (!(await isDirectory(rootDir))) continue;
+    try {
+      if (!(await isDirectory(rootDir, options))) continue;
 
-    const localState = await readJsonSafe<LocalStateShape>(path.join(rootDir, "Local State"));
-    const infoCache = localState?.profile?.info_cache ?? {};
-    const lastUsed = localState?.profile?.last_used || "Default";
+      const localState = await readJsonSafe<LocalStateShape>(path.join(rootDir, "Local State"), options);
+      const infoCache = localState?.profile?.info_cache ?? {};
+      const lastUsed = localState?.profile?.last_used || "Default";
 
-    // Collect potential profile subdirs + flat root (used by older Opera/custom installs)
-    const dirEntries = await fs.readdir(rootDir, { withFileTypes: true }).catch(() => []);
-    const subdirs = dirEntries
-      .filter(
-        (entry) =>
-          entry.isDirectory() &&
-          (entry.name === "Default" || /^Profile \d+$/i.test(entry.name) || entry.name in infoCache)
-      )
-      .map((entry) => ({
-        dir: path.join(rootDir, entry.name),
-        folderName: entry.name
-      }));
+      // Collect potential profile subdirs + flat root (used by older Opera/custom installs)
+      const dirEntries = await readDirEntries(rootDir, options);
+      const subdirs = dirEntries
+        .filter(
+          (entry) =>
+            entry.isDirectory() &&
+            (entry.name === "Default" || /^Profile \d+$/i.test(entry.name) || entry.name in infoCache)
+        )
+        .map((entry) => ({
+          dir: path.join(rootDir, entry.name),
+          folderName: entry.name
+        }));
 
-    if (subdirs.length === 0) {
-      subdirs.push({ dir: rootDir, folderName: "Default" });
-    }
+      if (subdirs.length === 0) {
+        subdirs.push({ dir: rootDir, folderName: "Default" });
+      }
 
-    for (const sub of subdirs) {
-      if (seenDirs.has(sub.dir)) continue;
+      for (const sub of subdirs) {
+        if (seenDirs.has(sub.dir)) continue;
 
-      const hasBookmarks = await isFileReadable(path.join(sub.dir, "Bookmarks"));
-      const hasHistory = await isFileReadable(path.join(sub.dir, "History"));
-      const hasWebData = await isFileReadable(path.join(sub.dir, "Web Data"));
-      const hasPrefs = await isFileReadable(path.join(sub.dir, "Preferences"));
-      const arcSidebarPath = await resolveArcSidebarPath(def, sub.dir);
-      const hasArcSidebar = Boolean(arcSidebarPath);
+        try {
+          const [hasBookmarks, hasHistory, hasWebData, hasPrefs, arcSidebarPath] = await Promise.all([
+            isFileReadable(path.join(sub.dir, "Bookmarks"), options),
+            isFileReadable(path.join(sub.dir, "History"), options),
+            isFileReadable(path.join(sub.dir, "Web Data"), options),
+            isFileReadable(path.join(sub.dir, "Preferences"), options),
+            resolveArcSidebarPath(def, sub.dir, options)
+          ]);
+          const hasArcSidebar = Boolean(arcSidebarPath);
 
-      if (!hasBookmarks && !hasHistory && !hasWebData && !hasArcSidebar) continue;
-      seenDirs.add(sub.dir);
+          if (!hasBookmarks && !hasHistory && !hasWebData && !hasArcSidebar) continue;
+          seenDirs.add(sub.dir);
 
-      const meta = infoCache[sub.folderName];
-      const displayName =
-        meta?.name?.trim() || meta?.gaia_name?.trim() || (sub.folderName === "Default" ? "Default" : sub.folderName);
+          const meta = infoCache[sub.folderName];
+          const displayName =
+            meta?.name?.trim() ||
+            meta?.gaia_name?.trim() ||
+            (sub.folderName === "Default" ? "Default" : sub.folderName);
 
-      candidates.push({
-        id: sub.dir,
-        name: displayName,
-        dir: sub.dir,
-        isDefault: sub.folderName === lastUsed || (sub.folderName === "Default" && candidates.length === 0),
-        hasBookmarks: hasBookmarks || hasArcSidebar,
-        hasHistory,
-        hasSearchEngines: hasWebData || hasPrefs,
-        hasPinnedTabs: hasArcSidebar
-      });
+          candidates.push({
+            id: sub.dir,
+            name: displayName,
+            dir: sub.dir,
+            isDefault: sub.folderName === lastUsed || (sub.folderName === "Default" && candidates.length === 0),
+            hasBookmarks: hasBookmarks || hasArcSidebar,
+            hasHistory,
+            hasSearchEngines: hasWebData || hasPrefs,
+            hasPinnedTabs: hasArcSidebar
+          });
+        } catch (error) {
+          if (isPermissionError(error)) {
+            encounteredPermissionError = true;
+            continue;
+          }
+          throw error;
+        }
+      }
+    } catch (error) {
+      if (isPermissionError(error)) {
+        encounteredPermissionError = true;
+        continue;
+      }
+      throw error;
     }
   }
 
   // Ensure default profile appears first
   candidates.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
-  return candidates;
+  return { profiles: candidates, encounteredPermissionError };
 }
 
 function collectChromiumBookmarks(node: ChromiumBookmarkNode | undefined, out: ImportedBookmarkItem[]): void {
@@ -352,8 +385,12 @@ async function readChromiumSearchEngines(profileDir: string): Promise<ImportedSe
 export const chromiumAdapter: BrowserFamilyAdapter = {
   async scan(def, rootDirs): Promise<DetectedBrowser | null> {
     try {
-      const profiles = await discoverChromiumProfiles(def, rootDirs);
-      if (profiles.length === 0) return null;
+      const { profiles, encounteredPermissionError } = await discoverChromiumProfiles(def, rootDirs, {
+        throwOnPermissionError: true
+      });
+      if (profiles.length === 0) {
+        return encounteredPermissionError ? createPermissionRequiredBrowser(def) : null;
+      }
 
       const mapped: DetectedBrowserProfile[] = profiles.map((p) => ({
         id: p.id,
@@ -375,13 +412,7 @@ export const chromiumAdapter: BrowserFamilyAdapter = {
       };
     } catch (error) {
       if (isPermissionError(error)) {
-        return {
-          id: def.id,
-          name: def.name,
-          family: def.family,
-          profiles: [],
-          permissionRequired: true
-        };
+        return createPermissionRequiredBrowser(def);
       }
       return null;
     }
@@ -418,7 +449,7 @@ export const chromiumAdapter: BrowserFamilyAdapter = {
   },
 
   async extract(def, rootDirs, profileId, categories) {
-    const profiles = await discoverChromiumProfiles(def, rootDirs);
+    const { profiles } = await discoverChromiumProfiles(def, rootDirs);
     const matched = profiles.find((p) => p.id === profileId);
     const data: ExtractedBrowserData = {
       bookmarks: [],

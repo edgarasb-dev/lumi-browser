@@ -1,4 +1,3 @@
-import fs from "fs/promises";
 import path from "path";
 import type {
   DetectedBrowser,
@@ -16,10 +15,14 @@ import type {
   ImportedSearchEngineItem
 } from "../types";
 import {
+  createPermissionRequiredBrowser,
   emptyImportCounts,
+  type FsReadOptions,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
+  isPermissionError,
+  readDirEntries,
   readJsonSafe,
   withTempSqliteCopy
 } from "../utils";
@@ -49,48 +52,63 @@ function decodeProfileKey(key: string): { rootDir: string; flowProfileId: string
   return { rootDir: key, flowProfileId: "main" };
 }
 
-async function discoverFlowProfiles(rootDirs: string[]): Promise<FlowProfileMeta[]> {
+interface FlowDiscoveryResult {
+  profiles: FlowProfileMeta[];
+  encounteredPermissionError: boolean;
+}
+
+async function discoverFlowProfiles(rootDirs: string[], options?: FsReadOptions): Promise<FlowDiscoveryResult> {
   const results: FlowProfileMeta[] = [];
   const seen = new Set<string>();
+  let encounteredPermissionError = false;
 
   for (const rootDir of rootDirs) {
-    if (!(await isDirectory(rootDir))) continue;
+    try {
+      if (!(await isDirectory(rootDir, options))) continue;
 
-    const profilesDir = path.join(rootDir, "datastore", "profiles");
-    const entries = await fs.readdir(profilesDir, { withFileTypes: true }).catch(() => []);
-    const foundIds = new Set<string>();
+      const profilesDir = path.join(rootDir, "datastore", "profiles");
+      const entries = await readDirEntries(profilesDir, options);
+      const foundIds = new Set<string>();
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const meta = await readJsonSafe<{ name?: string; internal?: boolean }>(
-        path.join(profilesDir, entry.name, "main.json")
-      );
-      if (meta?.internal) continue;
-      foundIds.add(entry.name);
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const meta = await readJsonSafe<{ name?: string; internal?: boolean }>(
+          path.join(profilesDir, entry.name, "main.json"),
+          options
+        );
+        if (meta?.internal) continue;
+        foundIds.add(entry.name);
 
-      const id = encodeProfileKey(rootDir, entry.name);
-      if (seen.has(id)) continue;
-      seen.add(id);
-
-      results.push({
-        id,
-        name: meta?.name?.trim() || (entry.name === "main" ? "Main" : entry.name),
-        rootDir,
-        isDefault: entry.name === "main"
-      });
-    }
-
-    if (foundIds.size === 0 && (await isFileReadable(path.join(rootDir, "flow.db")))) {
-      const id = encodeProfileKey(rootDir, "main");
-      if (!seen.has(id)) {
+        const id = encodeProfileKey(rootDir, entry.name);
+        if (seen.has(id)) continue;
         seen.add(id);
-        results.push({ id, name: "Main", rootDir, isDefault: true });
+
+        results.push({
+          id,
+          name: meta?.name?.trim() || (entry.name === "main" ? "Main" : entry.name),
+          rootDir,
+          isDefault: entry.name === "main"
+        });
       }
+
+      if (foundIds.size === 0 && (await isFileReadable(path.join(rootDir, "flow.db"), options))) {
+        const id = encodeProfileKey(rootDir, "main");
+        if (!seen.has(id)) {
+          seen.add(id);
+          results.push({ id, name: "Main", rootDir, isDefault: true });
+        }
+      }
+    } catch (error) {
+      if (isPermissionError(error)) {
+        encounteredPermissionError = true;
+        continue;
+      }
+      throw error;
     }
   }
 
   results.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
-  return results;
+  return { profiles: results, encounteredPermissionError };
 }
 
 async function readFlowFavourites(rootDir: string): Promise<ImportedBookmarkItem[]> {
@@ -204,36 +222,61 @@ async function readFlowDbData(
 
 export const flowAdapter: BrowserFamilyAdapter = {
   async scan(def: BrowserDefinition, rootDirs: string[]): Promise<DetectedBrowser | null> {
-    const profiles = await discoverFlowProfiles(rootDirs);
-    if (profiles.length === 0) return null;
+    let encounteredPermissionError = false;
+    const readOpts: FsReadOptions = { throwOnPermissionError: true };
 
-    const mapped: DetectedBrowserProfile[] = [];
-    for (const p of profiles) {
-      const hasDb = await isFileReadable(path.join(p.rootDir, "flow.db"));
-      const hasFavs = await isFileReadable(path.join(p.rootDir, "datastore", "favourites.json"));
-      const hasEngines = await isFileReadable(path.join(p.rootDir, "datastore", "search_engines.json"));
+    try {
+      const discovery = await discoverFlowProfiles(rootDirs, readOpts);
+      encounteredPermissionError = discovery.encounteredPermissionError;
+      if (discovery.profiles.length === 0) {
+        return encounteredPermissionError ? createPermissionRequiredBrowser(def) : null;
+      }
 
-      if (!hasDb && !hasFavs && !hasEngines) continue;
-      mapped.push({
-        id: p.id,
-        name: p.name,
-        isDefault: p.isDefault,
-        available: {
-          bookmarks: hasFavs,
-          history: hasDb,
-          pinnedTabs: hasDb,
-          searchEngines: hasEngines
+      const mapped: DetectedBrowserProfile[] = [];
+      for (const p of discovery.profiles) {
+        try {
+          const [hasDb, hasFavs, hasEngines] = await Promise.all([
+            isFileReadable(path.join(p.rootDir, "flow.db"), readOpts),
+            isFileReadable(path.join(p.rootDir, "datastore", "favourites.json"), readOpts),
+            isFileReadable(path.join(p.rootDir, "datastore", "search_engines.json"), readOpts)
+          ]);
+
+          if (!hasDb && !hasFavs && !hasEngines) continue;
+          mapped.push({
+            id: p.id,
+            name: p.name,
+            isDefault: p.isDefault,
+            available: {
+              bookmarks: hasFavs,
+              history: hasDb,
+              pinnedTabs: hasDb,
+              searchEngines: hasEngines
+            }
+          });
+        } catch (error) {
+          if (isPermissionError(error)) {
+            encounteredPermissionError = true;
+            continue;
+          }
+          throw error;
         }
-      });
-    }
+      }
 
-    if (mapped.length === 0) return null;
-    return {
-      id: def.id,
-      name: def.name,
-      family: def.family,
-      profiles: mapped
-    };
+      if (mapped.length === 0) {
+        return encounteredPermissionError ? createPermissionRequiredBrowser(def) : null;
+      }
+      return {
+        id: def.id,
+        name: def.name,
+        family: def.family,
+        profiles: mapped
+      };
+    } catch (error) {
+      if (isPermissionError(error)) {
+        return createPermissionRequiredBrowser(def);
+      }
+      return null;
+    }
   },
 
   async preview(_def, _rootDirs, profileId): Promise<ImportCategoryCounts> {
@@ -259,7 +302,7 @@ export const flowAdapter: BrowserFamilyAdapter = {
   },
 
   async extract(_def, rootDirs, profileId, categories: Set<ImportDataCategory>) {
-    const profiles = await discoverFlowProfiles(rootDirs);
+    const { profiles } = await discoverFlowProfiles(rootDirs);
     const matched = profiles.find((p) => p.id === profileId);
     const { rootDir, flowProfileId } = decodeProfileKey(profileId);
 

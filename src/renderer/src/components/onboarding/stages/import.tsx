@@ -4,7 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BrowserBadge } from "@/components/importer/browser-badge";
 import { formatImportSummary, useBrowserImporter } from "@/components/importer/use-browser-importer";
-import { ArrowRight, Bookmark, CheckCircle2, FileCode2, History, Loader2, Pin, Search } from "lucide-react";
+import {
+  ArrowRight,
+  Bookmark,
+  CheckCircle2,
+  ExternalLink,
+  FileCode2,
+  History,
+  Loader2,
+  Lock,
+  Pin,
+  RefreshCw,
+  Search
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ImportDataCategory } from "~/types/importer";
 
@@ -38,10 +50,14 @@ export function OnboardingImport({
     selectProfile,
     toggleCategory,
     runImport,
-    runHtmlImport
+    runHtmlImport,
+    rescan,
+    openPrivacySettings
   } = useBrowserImporter();
 
   const usableBrowsers = browsers.filter((b) => !b.permissionRequired && b.profiles.length > 0);
+  const permissionBlockedBrowsers = browsers.filter((b) => b.permissionRequired);
+  const isMacOS = navigator.platform.toUpperCase().includes("MAC");
   const selectedActionableCount = Array.from(selectedCategories).reduce((sum, cat) => {
     if (!selectedProfile?.available[cat]) return sum;
     if (!previewCounts) return sum + 1;
@@ -89,22 +105,70 @@ export function OnboardingImport({
           </div>
         ) : usableBrowsers.length === 0 ? (
           <div className="rounded-2xl border border-white/14 bg-white/7 p-6 backdrop-blur-xl text-center space-y-3">
-            <p className="text-sm font-medium text-white">No direct browser profiles detected automatically</p>
-            <p className="text-xs text-slate-300/80">
-              You can import a Bookmarks HTML export now, or configure imports anytime in Lumi Settings.
-            </p>
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void runHtmlImport()}
-                disabled={isImportingHtml}
-                className="border-white/20 bg-white/10 text-white hover:bg-white/20 gap-1.5"
-              >
-                <FileCode2 className="size-3.5" />
-                {isImportingHtml ? "Importing..." : "Import Bookmarks HTML..."}
-              </Button>
-            </div>
+            {permissionBlockedBrowsers.length > 0 ? (
+              <>
+                <p className="text-sm font-medium text-white">
+                  {permissionBlockedBrowsers.map((b) => b.name).join(", ")} need
+                  {permissionBlockedBrowsers.length === 1 ? "s" : ""}{" "}
+                  {isMacOS ? "macOS privacy permission" : "filesystem permission"}
+                </p>
+                <p className="text-xs text-slate-300/80 leading-relaxed">
+                  {isMacOS
+                    ? "Grant Full Disk Access in System Settings → Privacy & Security to import directly, or import a Bookmarks HTML export now."
+                    : "Check filesystem permissions for the browser profile directory and click Rescan, or import a Bookmarks HTML export now."}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  {isMacOS && (
+                    <Button
+                      size="sm"
+                      onClick={() => void openPrivacySettings("fullDisk")}
+                      className="bg-blue-500/85 text-white hover:bg-blue-500 gap-1.5"
+                    >
+                      <ExternalLink className="size-3.5" />
+                      Open Privacy Settings
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void rescan()}
+                    className="border-white/20 bg-white/10 text-white hover:bg-white/20 gap-1.5"
+                  >
+                    <RefreshCw className="size-3.5" />
+                    Rescan
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void runHtmlImport()}
+                    disabled={isImportingHtml}
+                    className="border-white/20 bg-white/10 text-white hover:bg-white/20 gap-1.5"
+                  >
+                    <FileCode2 className="size-3.5" />
+                    {isImportingHtml ? "Importing..." : "Import Bookmarks HTML..."}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-white">No direct browser profiles detected automatically</p>
+                <p className="text-xs text-slate-300/80">
+                  You can import a Bookmarks HTML export now, or configure imports anytime in Lumi Settings.
+                </p>
+                <div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void runHtmlImport()}
+                    disabled={isImportingHtml}
+                    className="border-white/20 bg-white/10 text-white hover:bg-white/20 gap-1.5"
+                  >
+                    <FileCode2 className="size-3.5" />
+                    {isImportingHtml ? "Importing..." : "Import Bookmarks HTML..."}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border border-white/14 bg-white/7 p-4 backdrop-blur-xl space-y-3.5">
@@ -203,6 +267,37 @@ export function OnboardingImport({
                     </button>
                   );
                 })}
+              </div>
+            )}
+
+            {permissionBlockedBrowsers.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+                <span className="inline-flex items-center gap-1.5 min-w-0">
+                  <Lock className="size-3.5 text-amber-300 shrink-0" />
+                  <span className="truncate">
+                    {permissionBlockedBrowsers.map((b) => b.name).join(", ")}{" "}
+                    {permissionBlockedBrowsers.length === 1 ? "needs" : "need"}{" "}
+                    {isMacOS ? "macOS permission" : "access"}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-2 shrink-0">
+                  {isMacOS && (
+                    <button
+                      type="button"
+                      onClick={() => void openPrivacySettings("fullDisk")}
+                      className="font-medium underline underline-offset-2 hover:text-white cursor-pointer"
+                    >
+                      Privacy Settings
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void rescan()}
+                    className="font-medium underline underline-offset-2 hover:text-white cursor-pointer"
+                  >
+                    Rescan
+                  </button>
+                </span>
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 import { spacesController } from "@/controllers/spaces-controller";
 import { profilesController } from "@/controllers/profiles-controller";
@@ -8,6 +8,7 @@ import {
   previewBrowserProfile,
   scanInstalledBrowsers
 } from "@/modules/importer";
+import type { PrivacySettingsPane } from "~/lumi/interfaces/settings/importer";
 import type { BrowserImportRequest } from "~/types/importer";
 
 async function resolveDefaultProfileId(sender: Electron.WebContents): Promise<string> {
@@ -63,4 +64,16 @@ ipcMain.handle("importer:import-html", async (event) => {
       error: error instanceof Error ? error.message : String(error)
     };
   }
+});
+
+ipcMain.handle("importer:open-privacy-settings", async (_event, pane: PrivacySettingsPane = "fullDisk") => {
+  if (process.platform !== "darwin") {
+    return false;
+  }
+
+  const query = pane === "filesAndFolders" ? "Privacy_FilesAndFolders" : "Privacy_AllFiles";
+  await shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${query}`, {
+    activate: true
+  });
+  return true;
 });

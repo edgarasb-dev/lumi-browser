@@ -1,8 +1,14 @@
+import type { Dirent } from "fs";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
-import type { ImportCategoryCounts } from "~/types/importer";
+import type { DetectedBrowser, ImportCategoryCounts } from "~/types/importer";
+import type { BrowserDefinition } from "./types";
+
+export interface FsReadOptions {
+  throwOnPermissionError?: boolean;
+}
 
 const CHROME_EPOCH_OFFSET_MS = 11_644_473_600_000;
 const COCOA_EPOCH_OFFSET_SEC = 978_307_200;
@@ -29,6 +35,22 @@ export function isPermissionError(error: unknown): boolean {
   return false;
 }
 
+function rethrowPermissionErrorIfRequested(error: unknown, options?: FsReadOptions): void {
+  if (options?.throwOnPermissionError && isPermissionError(error)) {
+    throw error;
+  }
+}
+
+export function createPermissionRequiredBrowser(def: BrowserDefinition): DetectedBrowser {
+  return {
+    id: def.id,
+    name: def.name,
+    family: def.family,
+    profiles: [],
+    permissionRequired: true
+  };
+}
+
 export async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await fs.access(targetPath);
@@ -38,27 +60,59 @@ export async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-export async function isDirectory(targetPath: string): Promise<boolean> {
+export async function isDirectory(targetPath: string, options?: FsReadOptions): Promise<boolean> {
   try {
     const stat = await fs.stat(targetPath);
     return stat.isDirectory();
-  } catch {
+  } catch (error) {
+    rethrowPermissionErrorIfRequested(error, options);
     return false;
   }
 }
 
-export async function isFileReadable(targetPath: string): Promise<boolean> {
+/**
+ * Verifies both existence as a regular file and actual read permission via `fs.open("r")`.
+ * On macOS, `fs.stat()` alone succeeds inside TCC-protected folders (e.g. Safari/Chrome/Firefox)
+ * even when reading the file contents is denied with `EPERM`.
+ */
+export async function isFileReadable(targetPath: string, options?: FsReadOptions): Promise<boolean> {
   try {
     const stat = await fs.stat(targetPath);
-    return stat.isFile();
-  } catch {
+    if (!stat.isFile()) return false;
+    const handle = await fs.open(targetPath, "r");
+    await handle.close().catch(() => {});
+    return true;
+  } catch (error) {
+    rethrowPermissionErrorIfRequested(error, options);
     return false;
   }
 }
 
-export async function readJsonSafe<T = Record<string, unknown>>(filePath: string): Promise<T | null> {
+export async function readDirEntries(dirPath: string, options?: FsReadOptions): Promise<Dirent[]> {
   try {
-    const raw = await fs.readFile(filePath, "utf8");
+    return await fs.readdir(dirPath, { withFileTypes: true });
+  } catch (error) {
+    rethrowPermissionErrorIfRequested(error, options);
+    return [];
+  }
+}
+
+export async function readTextSafe(filePath: string, options?: FsReadOptions): Promise<string | null> {
+  try {
+    return await fs.readFile(filePath, "utf8");
+  } catch (error) {
+    rethrowPermissionErrorIfRequested(error, options);
+    return null;
+  }
+}
+
+export async function readJsonSafe<T = Record<string, unknown>>(
+  filePath: string,
+  options?: FsReadOptions
+): Promise<T | null> {
+  const raw = await readTextSafe(filePath, options);
+  if (raw === null) return null;
+  try {
     return JSON.parse(raw) as T;
   } catch {
     return null;
@@ -225,13 +279,17 @@ export function decompressMozLz4(buf: Buffer): string | null {
   return out.subarray(0, o).toString("utf8");
 }
 
-export async function readMozLz4Json<T = Record<string, unknown>>(filePath: string): Promise<T | null> {
+export async function readMozLz4Json<T = Record<string, unknown>>(
+  filePath: string,
+  options?: FsReadOptions
+): Promise<T | null> {
   try {
     const raw = await fs.readFile(filePath);
     const decoded = decompressMozLz4(raw);
     if (!decoded) return null;
     return JSON.parse(decoded) as T;
-  } catch {
+  } catch (error) {
+    rethrowPermissionErrorIfRequested(error, options);
     return null;
   }
 }
