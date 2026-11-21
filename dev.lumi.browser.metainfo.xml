@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.0" date="2026-11-21">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.0</url>
+      <description>
+        <p>Add built-in per-profile OS Keychain-encrypted Password Manager (lumi://passwords) with macOS Touch ID protection, closed-Shadow-DOM in-page autofill and strong password generator, Save/Update prompts, zero-plaintext enforcement, Chrome/Firefox password decryption, active session migration (cookies, localStorage, and IndexedDB), 50,000-entry history import limit, and Firestore Shield keepalive fixes.</p>
+      </description>
+    </release>
     <release version="0.3.5" date="2026-11-21">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.5</url>
       <description>

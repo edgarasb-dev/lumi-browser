@@ -36,11 +36,48 @@ export interface ImportedSearchEngineItem {
   shortcut: string;
 }
 
+export interface ImportedPasswordItem {
+  originUrl: string;
+  actionUrl?: string;
+  username: string;
+  password: string;
+  title?: string;
+  createdAt?: number;
+  lastUsedAt?: number;
+}
+
+export interface ImportedCookieItem {
+  hostKey: string;
+  name: string;
+  value: string;
+  path: string;
+  secure: boolean;
+  httpOnly: boolean;
+  sameSite: number;
+  expirationDate?: number;
+}
+
+export interface ImportedLocalStorageOrigin {
+  origin: string;
+  entries: Array<[string, string]>;
+}
+
+export interface ImportedIndexedDbDir {
+  dirName: string;
+  sourcePath: string;
+  blobDirName?: string;
+  blobSourcePath?: string;
+}
+
 export interface ExtractedBrowserData {
   bookmarks: ImportedBookmarkItem[];
   history: ImportedHistoryItem[];
   pinnedTabs: ImportedPinnedTabItem[];
   searchEngines: ImportedSearchEngineItem[];
+  passwords: ImportedPasswordItem[];
+  cookies: ImportedCookieItem[];
+  localStorage: ImportedLocalStorageOrigin[];
+  indexedDbDirs: ImportedIndexedDbDir[];
 }
 
 export interface BrowserFamilyAdapter {

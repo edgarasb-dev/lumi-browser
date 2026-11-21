@@ -39,8 +39,10 @@ import BrowserContent from "@/components/browser-ui/browser-content";
 import { TargetUrlIndicator } from "@/components/browser-ui/target-url-indicator";
 import { FindInPage } from "@/components/browser-ui/find-in-page";
 import { PasskeyConditionalUI } from "@/components/browser-ui/passkey-conditional-ui";
+import { SavePasswordPrompt } from "@/components/browser-ui/save-password-prompt";
 import { WebPrompts } from "@/components/browser-ui/web-prompts";
 import { PasskeysRequestProvider } from "@/components/providers/passkeys-request-provider";
+import { PasswordsPromptProvider } from "@/components/providers/passwords-prompt-provider";
 import { ActivePromptsProvider } from "@/components/providers/active-prompts-provider";
 import { NavigationControls } from "@/components/browser-ui/browser-sidebar/_components/navigation-controls";
 import { AddressBar } from "@/components/browser-ui/browser-sidebar/_components/address-bar";
@@ -282,6 +284,7 @@ function InternalBrowserUI({ type }: { type: BrowserUIType }) {
                       <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
                       <WebPrompts anchorRef={browserContentAnchorRef} />
                       <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
+                      <SavePasswordPrompt anchorRef={browserContentAnchorRef} />
                       <FindInPage anchorRef={browserContentAnchorRef} />
                       <BrowserContent />
                       <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
@@ -325,6 +328,7 @@ function InternalBrowserUI({ type }: { type: BrowserUIType }) {
                             <div ref={browserContentAnchorRef} className="absolute inset-0 pointer-events-none" />
                             <WebPrompts anchorRef={browserContentAnchorRef} />
                             <PasskeyConditionalUI anchorRef={browserContentAnchorRef} />
+                            <SavePasswordPrompt anchorRef={browserContentAnchorRef} />
                             <FindInPage anchorRef={browserContentAnchorRef} />
                             <BrowserContent />
                             <TargetUrlIndicator anchorRef={browserContentAnchorRef} />
@@ -389,18 +393,22 @@ function BrowserUIWithSettings({ type }: { type: BrowserUIType }) {
                 <BrowserActionProvider>
                   <ExtensionsProviderWithSpaces>
                     <PasskeysRequestProvider>
-                      <ActivePromptsProvider>
-                        <FocusModeProvider>
-                          <SidePanelProvider>{content}</SidePanelProvider>
-                        </FocusModeProvider>
-                      </ActivePromptsProvider>
+                      <PasswordsPromptProvider>
+                        <ActivePromptsProvider>
+                          <FocusModeProvider>
+                            <SidePanelProvider>{content}</SidePanelProvider>
+                          </FocusModeProvider>
+                        </ActivePromptsProvider>
+                      </PasswordsPromptProvider>
                     </PasskeysRequestProvider>
                   </ExtensionsProviderWithSpaces>
                 </BrowserActionProvider>
               </PinnedTabsProvider>
             ) : (
               <PasskeysRequestProvider>
-                <ActivePromptsProvider>{content}</ActivePromptsProvider>
+                <PasswordsPromptProvider>
+                  <ActivePromptsProvider>{content}</ActivePromptsProvider>
+                </PasswordsPromptProvider>
               </PasskeysRequestProvider>
             )}
           </TabsProvider>

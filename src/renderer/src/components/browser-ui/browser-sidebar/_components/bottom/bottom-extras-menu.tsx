@@ -10,6 +10,7 @@ import {
   DownloadIcon,
   FocusIcon,
   HistoryIcon,
+  KeyRound,
   LucideIcon,
   PanelRightIcon,
   SettingsIcon,
@@ -117,6 +118,13 @@ export function BottomExtrasMenu({ size = "default" }: { size?: DockButtonSize }
               Icon={DownloadIcon}
               label="Downloads"
               url="lumi://downloads"
+              onItemSelected={onItemSelected}
+            />
+            <BottomExtrasMenuItem
+              id="passwords"
+              Icon={KeyRound}
+              label="Passwords"
+              url="lumi://passwords"
               onItemSelected={onItemSelected}
             />
             <BottomExtrasMenuItem

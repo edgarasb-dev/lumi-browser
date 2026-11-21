@@ -21,6 +21,13 @@ export const createAppMenu = (): MenuItemConstructorOptions => ({
       }
     },
     {
+      label: "Passwords",
+      accelerator: getCurrentShortcut("browser.openPasswords"),
+      click: () => {
+        void settings.show("passwords");
+      }
+    },
+    {
       type: "checkbox",
       label: "Set as Default Browser",
       click: () => {

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { NavigationEntry, SplitDirection, TabGroupMode } from "~/types/tabs";
 import { DownloadState } from "~/types/downloads";
 import { SnapshotGroupEntry, SnapshotTabEntry } from "~/types/snapshots";
@@ -162,3 +162,45 @@ export const workspaceSnapshots = sqliteTable(
 
 export type WorkspaceSnapshotRow = typeof workspaceSnapshots.$inferSelect;
 export type WorkspaceSnapshotInsert = typeof workspaceSnapshots.$inferInsert;
+
+// --- Saved Passwords Tables ---
+
+export const savedPasswords = sqliteTable(
+  "saved_passwords",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id").notNull(),
+    origin: text("origin").notNull(),
+    host: text("host").notNull(),
+    actionUrl: text("action_url"),
+    username: text("username").notNull(),
+    encryptedPassword: blob("encrypted_password", { mode: "buffer" }).notNull(),
+    title: text("title"),
+    note: text("note"),
+    timesUsed: integer("times_used").notNull().default(0),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    lastUsedAt: integer("last_used_at")
+  },
+  (table) => [
+    uniqueIndex("idx_saved_passwords_profile_origin_user").on(table.profileId, table.origin, table.username),
+    index("idx_saved_passwords_profile_host").on(table.profileId, table.host)
+  ]
+);
+
+export type SavedPasswordRow = typeof savedPasswords.$inferSelect;
+export type SavedPasswordInsert = typeof savedPasswords.$inferInsert;
+
+export const passwordNeverSaveSites = sqliteTable(
+  "password_never_save_sites",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id").notNull(),
+    host: text("host").notNull(),
+    createdAt: integer("created_at").notNull()
+  },
+  (table) => [uniqueIndex("idx_password_never_save_profile_host").on(table.profileId, table.host)]
+);
+
+export type PasswordNeverSaveSiteRow = typeof passwordNeverSaveSites.$inferSelect;
+export type PasswordNeverSaveSiteInsert = typeof passwordNeverSaveSites.$inferInsert;

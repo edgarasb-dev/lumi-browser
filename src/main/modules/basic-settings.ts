@@ -291,6 +291,26 @@ export const BasicSettings: BasicSetting[] = [
     showName: true,
     type: "boolean",
     defaultValue: false
+  },
+
+  // Passwords: Offer to save passwords
+  {
+    id: "passwordsOfferSave",
+    name: "Offer to Save Passwords",
+    description: "Prompt to save or update credentials when signing into websites.",
+    showName: true,
+    type: "boolean",
+    defaultValue: true
+  },
+
+  // Passwords: Autofill saved logins
+  {
+    id: "passwordsAutofill",
+    name: "Autofill Saved Passwords",
+    description: "Show saved accounts and strong password suggestions in sign-in forms.",
+    showName: true,
+    type: "boolean",
+    defaultValue: true
   }
 ];
 

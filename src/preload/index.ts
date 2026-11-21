@@ -6,6 +6,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import { injectBrowserAction } from "electron-chrome-extensions/browser-action";
 import { tryPatchPasskeys } from "./webauthn";
 import { tryPatchPrompts } from "./prompts";
+import { tryPatchPasswords } from "./passwords";
 
 // TYPE IMPORTS //
 import type { ProfileData } from "@/controllers/profiles-controller";
@@ -32,7 +33,9 @@ import { LumiOnboardingAPI } from "~/lumi/interfaces/settings/onboarding";
 import { LumiSearchEnginesAPI } from "~/lumi/interfaces/settings/search-engines";
 import { LumiImporterAPI } from "~/lumi/interfaces/settings/importer";
 import { LumiMcpAPI } from "~/lumi/interfaces/settings/mcp";
+import { LumiPasswordsAPI } from "~/lumi/interfaces/app/passwords";
 import type { McpConfigUpdate, McpServerStatus } from "~/types/mcp";
+import type { PasswordGeneratorOptions, PendingPasswordSavePrompt, SavePasswordInput } from "~/types/passwords";
 import type { SearchEngine, SearchEngineInput } from "~/types/search-engines";
 import type { LumiOmniboxAPI, OmniboxOpenParams } from "~/lumi/interfaces/browser/omnibox";
 import { LumiSettingsAPI } from "~/lumi/interfaces/settings/settings";
@@ -97,6 +100,7 @@ function hasPermission(permission: Permission) {
   const isExtensions = isLocation("lumi:", "extensions");
   const isHistoryPage = isLocation("lumi:", "history");
   const isDownloadsPage = isLocation("lumi:", "downloads");
+  const isPasswordsPage = isLocation("lumi:", "passwords");
   const isSettingsPage = isLocation("lumi:", "settings");
 
   switch (permission) {
@@ -107,7 +111,7 @@ function hasPermission(permission: Permission) {
     case "browser":
       return isBrowserUI || isOmnibox || isHistoryPage || isDownloadsPage;
     case "session":
-      return isLumiInternalProtocol || isOmnibox || isBrowserUI || isSettingsPage;
+      return isLumiInternalProtocol || isOmnibox || isBrowserUI || isSettingsPage || isPasswordsPage;
     case "settings":
       return isInternalProtocols;
     default:
@@ -124,6 +128,7 @@ if (hasPermission("browser")) {
 // API PATCHES //
 tryPatchPasskeys();
 tryPatchPrompts();
+tryPatchPasswords();
 
 // INTERNAL FUNCTIONS //
 function getOSFromPlatform(platform: NodeJS.Platform) {
@@ -1120,6 +1125,34 @@ const captureAPI: LumiCaptureAPI = {
   }
 };
 
+// PASSWORDS API //
+const passwordsAPI: LumiPasswordsAPI = {
+  getStatus: async () => ipcRenderer.invoke("passwords:get-status"),
+  list: async (profileId?: string) => ipcRenderer.invoke("passwords:list", profileId),
+  getForSite: async (url: string, profileId?: string) => ipcRenderer.invoke("passwords:get-for-site", url, profileId),
+  reveal: async (id: string, profileId?: string) => ipcRenderer.invoke("passwords:reveal", id, profileId),
+  copyPassword: async (id: string, profileId?: string) => ipcRenderer.invoke("passwords:copy", id, profileId),
+  save: async (input: SavePasswordInput, profileId?: string) => ipcRenderer.invoke("passwords:save", input, profileId),
+  delete: async (id: string, profileId?: string) => ipcRenderer.invoke("passwords:delete", id, profileId),
+  generate: async (options?: PasswordGeneratorOptions) => ipcRenderer.invoke("passwords:generate", options),
+  importCsv: async (profileId?: string) => ipcRenderer.invoke("passwords:import-csv", profileId),
+  exportCsv: async (profileId?: string) => ipcRenderer.invoke("passwords:export-csv", profileId),
+  listNeverSaveSites: async (profileId?: string) => ipcRenderer.invoke("passwords:list-never-save", profileId),
+  removeNeverSaveSite: async (id: string, profileId?: string) =>
+    ipcRenderer.invoke("passwords:remove-never-save", id, profileId),
+  getPendingSavePrompts: async () => ipcRenderer.invoke("passwords:get-pending-save-prompts"),
+  onPendingSavePromptsUpdated: (callback: (prompts: PendingPasswordSavePrompt[]) => void) =>
+    listenOnIPCChannel("passwords:on-pending-save-prompts-updated", callback),
+  acceptSavePrompt: async (promptId: string, username: string, password: string) =>
+    ipcRenderer.invoke("passwords:accept-save-prompt", promptId, username, password),
+  dismissSavePrompt: async (promptId: string, neverForSite: boolean) =>
+    ipcRenderer.invoke("passwords:dismiss-save-prompt", promptId, neverForSite),
+  fillCredentialInTab: async (tabId: number, credentialId: string) =>
+    ipcRenderer.invoke("passwords:fill-in-tab", tabId, credentialId),
+  fillGeneratedPasswordInTab: async (tabId: number, password: string) =>
+    ipcRenderer.invoke("passwords:fill-generated-in-tab", tabId, password)
+};
+
 // EXPOSE LUMI API //
 const lumiAPI: typeof lumi = {
   // App APIs
@@ -1131,6 +1164,7 @@ const lumiAPI: typeof lumi = {
   updates: wrapAPI(updatesAPI, "app"),
   actions: wrapAPI(actionsAPI, "app"),
   shortcuts: wrapAPI(shortcutsAPI, "app"),
+  passwords: wrapAPI(passwordsAPI, "app"),
 
   // Browser APIs
   browser: wrapAPI(browserAPI, "browser"),

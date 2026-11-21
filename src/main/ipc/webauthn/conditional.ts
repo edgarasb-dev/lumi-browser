@@ -27,6 +27,8 @@ interface PendingConditionalMediation {
 }
 
 const pendingConditionalMediations = new Map<string, PendingConditionalMediation>();
+const activatingOperations = new Set<string>();
+const preCancelledOperations = new Set<string>();
 
 function serializeConditionalRequestState(
   state: PendingConditionalMediation["state"]
@@ -149,42 +151,65 @@ ipcMain.on(
   "webauthn:start-conditional-mediation",
   (event, operationId: string, publicKeyRequestOptions: PublicKeyCredentialRequestOptions) => {
     const webContents = event.sender;
+    const senderFrame = event.senderFrame;
 
     // The sender frame already cleaned up, it won't be expecting a result, so early-exit.
-    if (!event.senderFrame) {
+    if (!senderFrame) {
       return;
     }
 
-    const cancelDueToContextLoss = () => {
-      const mediation = pendingConditionalMediations.get(operationId);
-      if (mediation) {
-        mediation.state = "cancelled";
-        progressConditionalMediation(operationId);
+    activatingOperations.add(operationId);
+    void (async () => {
+      const webauthn = await getWebauthnAddon();
+      activatingOperations.delete(operationId);
+      if (!webauthn) {
+        preCancelledOperations.delete(operationId);
+        try {
+          event.reply("webauthn:conditional-mediation-result", operationId, "NotSupportedError");
+        } catch {
+          // Ignore if frame already destroyed
+        }
+        return;
       }
-    };
 
-    // Cancel whenever the originating frame is considered gone (navigation,
-    // crash, WebContents destruction, or top-level navigation wiping child frames).
-    const cancelSubscription = onWebFrameDestroyed(webContents, event.senderFrame, cancelDueToContextLoss);
+      if (preCancelledOperations.delete(operationId) || webContents.isDestroyed()) {
+        return;
+      }
 
-    const tabId = tabsController.getTabByWebContents(webContents)?.id ?? null;
+      const cancelDueToContextLoss = () => {
+        const mediation = pendingConditionalMediations.get(operationId);
+        if (mediation) {
+          mediation.state = "cancelled";
+          progressConditionalMediation(operationId);
+        }
+      };
 
-    pendingConditionalMediations.set(operationId, {
-      publicKeyRequestOptions,
-      event,
-      tabId,
-      selectedPasskey: null,
-      result: null,
-      state: "starting",
-      cleanup: cancelSubscription
-    });
-    progressConditionalMediation(operationId);
+      // Cancel whenever the originating frame is considered gone (navigation,
+      // crash, WebContents destruction, or top-level navigation wiping child frames).
+      const cancelSubscription = onWebFrameDestroyed(webContents, senderFrame, cancelDueToContextLoss);
+
+      const tabId = tabsController.getTabByWebContents(webContents)?.id ?? null;
+
+      pendingConditionalMediations.set(operationId, {
+        publicKeyRequestOptions,
+        event,
+        tabId,
+        selectedPasskey: null,
+        result: null,
+        state: "starting",
+        cleanup: cancelSubscription
+      });
+      progressConditionalMediation(operationId);
+    })();
   }
 );
 
 ipcMain.on("webauthn:cancel-conditional-mediation", (_event, operationId: string) => {
   const pendingConditionalMediation = pendingConditionalMediations.get(operationId);
   if (!pendingConditionalMediation) {
+    if (activatingOperations.has(operationId)) {
+      preCancelledOperations.add(operationId);
+    }
     return;
   }
   pendingConditionalMediation.state = "cancelled";

@@ -8,9 +8,11 @@ import {
   ArrowRight,
   Bookmark,
   CheckCircle2,
+  Cookie,
   ExternalLink,
   FileCode2,
   History,
+  KeyRound,
   Loader2,
   Lock,
   Pin,
@@ -24,7 +26,9 @@ const CATEGORY_OPTIONS: Array<{ id: ImportDataCategory; label: string; icon: typ
   { id: "bookmarks", label: "Bookmarks", icon: Bookmark },
   { id: "history", label: "History", icon: History },
   { id: "pinnedTabs", label: "Pinned Tabs", icon: Pin },
-  { id: "searchEngines", label: "Search Engines", icon: Search }
+  { id: "searchEngines", label: "Search Engines", icon: Search },
+  { id: "passwords", label: "Passwords", icon: KeyRound },
+  { id: "sessions", label: "Cookies & Logins", icon: Cookie }
 ];
 
 export function OnboardingImport({

@@ -1,5 +1,15 @@
 export type SettingsSectionId =
-  "general" | "appearance" | "search" | "privacy" | "spaces" | "profiles" | "import" | "mcp" | "shortcuts" | "about";
+  | "general"
+  | "appearance"
+  | "search"
+  | "privacy"
+  | "passwords"
+  | "spaces"
+  | "profiles"
+  | "import"
+  | "mcp"
+  | "shortcuts"
+  | "about";
 
 export interface SettingsSearchEntry {
   id: string;
@@ -16,6 +26,7 @@ export const SECTION_LABELS: Record<SettingsSectionId, string> = {
   appearance: "Appearance & Layout",
   search: "Search Engines",
   privacy: "Privacy & Apps",
+  passwords: "Passwords",
   spaces: "Spaces",
   profiles: "Profiles",
   import: "Import Data",
@@ -232,6 +243,17 @@ export const STATIC_SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
       "html"
     ],
     targetRowId: "browserImporter"
+  },
+
+  // Passwords
+  {
+    id: "openPasswordVault",
+    sectionId: "passwords",
+    sectionLabel: "Passwords",
+    title: "Password Manager & Autofill",
+    description: "Manage saved logins, Touch ID reveal/export, password generation, and Chrome/CSV import.",
+    keywords: ["password", "passwords", "autofill", "vault", "touch id", "csv", "credentials", "cookies", "login"],
+    targetRowId: "openPasswordVault"
   },
 
   // MCP Server

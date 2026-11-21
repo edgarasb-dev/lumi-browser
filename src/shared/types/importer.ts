@@ -1,10 +1,16 @@
 export type BrowserEngineFamily = "chromium" | "gecko" | "safari" | "orion" | "duckduckgo" | "flow";
 
-export type ImportDataCategory = "bookmarks" | "history" | "pinnedTabs" | "searchEngines";
+export type ImportDataCategory = "bookmarks" | "history" | "pinnedTabs" | "searchEngines" | "passwords" | "sessions";
 
 export type ImportCategoryAvailability = Record<ImportDataCategory, boolean>;
 
 export type ImportCategoryCounts = Record<ImportDataCategory, number>;
+
+export interface SessionImportBreakdown {
+  cookies: number;
+  localStorageOrigins: number;
+  indexedDbOrigins: number;
+}
 
 export interface DetectedBrowserProfile {
   id: string;
@@ -36,6 +42,8 @@ export interface BrowserImportResult {
   profileName: string;
   imported: ImportCategoryCounts;
   skippedDuplicates: ImportCategoryCounts;
+  sessionDetails?: SessionImportBreakdown;
+  warnings?: string[];
   errors: string[];
 }
 

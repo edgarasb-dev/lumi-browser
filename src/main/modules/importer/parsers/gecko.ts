@@ -14,11 +14,14 @@ import type {
   ImportedPinnedTabItem,
   ImportedSearchEngineItem
 } from "../types";
+import { buildFirefoxProfileFiles, countFirefoxLogins, decryptFirefoxLogins } from "../crypto/safe-storage";
 import {
   convertSearchUrlTemplate,
+  createEmptyExtractedData,
   createPermissionRequiredBrowser,
   emptyImportCounts,
   type FsReadOptions,
+  HISTORY_IMPORT_LIMIT,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
@@ -31,8 +34,6 @@ import {
   sanitizeShortcut,
   withTempSqliteCopy
 } from "../utils";
-
-const HISTORY_IMPORT_LIMIT = 8000;
 
 interface GeckoProfileCandidate {
   id: string;
@@ -418,10 +419,14 @@ export const geckoAdapter: BrowserFamilyAdapter = {
 
       const mapped: DetectedBrowserProfile[] = await Promise.all(
         profiles.map(async (p) => {
-          const hasSessionPinned =
+          const { key4DbPath, loginsJsonPath } = buildFirefoxProfileFiles(p.dir);
+          const [hasSessionPinned, hasKey4, hasLogins] = await Promise.all([
             (await isFileReadable(path.join(p.dir, "zen-sessions.jsonlz4"))) ||
-            (await isFileReadable(path.join(p.dir, "sessionstore.jsonlz4"))) ||
-            (await isFileReadable(path.join(p.dir, "sessionstore-backups", "recovery.jsonlz4")));
+              (await isFileReadable(path.join(p.dir, "sessionstore.jsonlz4"))) ||
+              (await isFileReadable(path.join(p.dir, "sessionstore-backups", "recovery.jsonlz4"))),
+            isFileReadable(key4DbPath),
+            isFileReadable(loginsJsonPath)
+          ]);
 
           return {
             id: p.id,
@@ -431,7 +436,9 @@ export const geckoAdapter: BrowserFamilyAdapter = {
               bookmarks: p.hasPlaces,
               history: p.hasPlaces,
               pinnedTabs: hasSessionPinned || def.id === "zen",
-              searchEngines: p.hasPlaces
+              searchEngines: p.hasPlaces,
+              passwords: hasKey4 && hasLogins,
+              sessions: false
             }
           };
         })
@@ -453,13 +460,16 @@ export const geckoAdapter: BrowserFamilyAdapter = {
 
   async preview(_def: BrowserDefinition, _rootDirs: string[], profileId: string): Promise<ImportCategoryCounts> {
     const placesPath = path.join(profileId, "places.sqlite");
-    const [counts, pinned] = await Promise.all([
+    const { loginsJsonPath } = buildFirefoxProfileFiles(profileId);
+    const [counts, pinned, passwordsCount] = await Promise.all([
       (await isFileReadable(placesPath))
         ? countGeckoPlaces(placesPath).catch(() => emptyImportCounts())
         : Promise.resolve(emptyImportCounts()),
-      readGeckoPinnedTabs(profileId, placesPath).catch(() => [])
+      readGeckoPinnedTabs(profileId, placesPath).catch(() => []),
+      countFirefoxLogins(loginsJsonPath).catch(() => 0)
     ]);
     counts.pinnedTabs = pinned.length;
+    counts.passwords = passwordsCount;
     return counts;
   },
 
@@ -468,12 +478,7 @@ export const geckoAdapter: BrowserFamilyAdapter = {
     const matched = profiles.find((p) => p.id === profileId);
     const placesPath = path.join(profileId, "places.sqlite");
 
-    const data: ExtractedBrowserData = {
-      bookmarks: [],
-      history: [],
-      pinnedTabs: [],
-      searchEngines: []
-    };
+    const data: ExtractedBrowserData = createEmptyExtractedData();
     const errors: string[] = [];
 
     if (categories.has("bookmarks")) {
@@ -505,6 +510,22 @@ export const geckoAdapter: BrowserFamilyAdapter = {
         data.searchEngines = await readGeckoKeywordEngines(placesPath);
       } catch (err) {
         errors.push(`Failed reading search keywords: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    if (categories.has("passwords")) {
+      const { key4DbPath, loginsJsonPath } = buildFirefoxProfileFiles(profileId);
+      try {
+        if ((await isFileReadable(key4DbPath)) && (await isFileReadable(loginsJsonPath))) {
+          const ffLogins = await decryptFirefoxLogins(key4DbPath, loginsJsonPath);
+          if (ffLogins.primaryPasswordProtected) {
+            errors.push("Firefox profile is locked by a Primary Password and could not be decrypted automatically.");
+          } else {
+            data.passwords = ffLogins.logins;
+          }
+        }
+      } catch (err) {
+        errors.push(`Failed reading Firefox passwords: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 

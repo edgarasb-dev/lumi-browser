@@ -8,6 +8,7 @@ import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provi
 import { BrowserActionList } from "@/components/browser-ui/browser-sidebar/_components/browser-action-list";
 import { SiteControlsButton } from "./site-controls-popover";
 import { FavouriteButton } from "./favourite-button";
+import { PasswordToolbarButton } from "./password-button";
 import { ReaderButton } from "./reader-button";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { useWindowDrag } from "@/hooks/use-window-drag";
@@ -98,6 +99,7 @@ export const AddressBar = memo(function AddressBar() {
       </p>
       <div className="ml-auto flex items-center gap-0.5 shrink-0 remove-app-drag address-bar-actions">
         <ReaderButton />
+        <PasswordToolbarButton />
         <FavouriteButton />
         <SiteControlsButton />
         <PinnedBrowserActions />

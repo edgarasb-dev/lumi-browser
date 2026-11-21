@@ -12,9 +12,11 @@ import type {
 } from "../types";
 import {
   cocoaTimeToUnixMs,
+  createEmptyExtractedData,
   createPermissionRequiredBrowser,
   emptyImportCounts,
   type FsReadOptions,
+  HISTORY_IMPORT_LIMIT,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
@@ -24,7 +26,6 @@ import {
 import { chromiumAdapter } from "./chromium";
 
 const execFileAsync = promisify(execFile);
-const HISTORY_IMPORT_LIMIT = 8000;
 
 interface PlistNode {
   [key: string]: unknown;
@@ -388,7 +389,9 @@ export const safariFamilyAdapter: BrowserFamilyAdapter = {
                 bookmarks: hasBookmarks,
                 history: hasHistory,
                 pinnedTabs: false,
-                searchEngines: false
+                searchEngines: false,
+                passwords: false,
+                sessions: false
               }
             }
           ]
@@ -432,12 +435,7 @@ export const safariFamilyAdapter: BrowserFamilyAdapter = {
       return chromiumAdapter.extract(def, rootDirs, profileId, categories);
     }
 
-    const data: ExtractedBrowserData = {
-      bookmarks: [],
-      history: [],
-      pinnedTabs: [],
-      searchEngines: []
-    };
+    const data: ExtractedBrowserData = createEmptyExtractedData();
     const errors: string[] = [];
 
     const files = await resolveSafariDataFiles(def, profileId);

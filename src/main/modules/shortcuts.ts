@@ -106,6 +106,12 @@ const typedShortcuts = [
     category: "Browser"
   },
   {
+    id: "browser.openPasswords",
+    name: "Open Password Manager",
+    shortcut: "CommandOrControl+Alt+P",
+    category: "Browser"
+  },
+  {
     id: "browser.newWindow",
     name: "New Window",
     shortcut: "CommandOrControl+N",

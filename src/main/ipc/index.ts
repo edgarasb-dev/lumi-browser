@@ -43,3 +43,4 @@ import "@/ipc/settings/mcp";
 // Special
 import "@/ipc/listeners-manager";
 import "@/ipc/webauthn";
+import "@/ipc/passwords";

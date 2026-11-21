@@ -57,6 +57,13 @@
       "when": 1795262696331,
       "tag": "0007_history_composite_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1795294767334,
+      "tag": "0008_huge_black_knight",
+      "breakpoints": true
     }
   ]
 }

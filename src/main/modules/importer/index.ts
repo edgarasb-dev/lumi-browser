@@ -1,6 +1,8 @@
 import fs from "fs/promises";
 import { addFavouritesBatch } from "@/saving/favourites";
+import { isPasswordEncryptionAvailable } from "@/modules/passwords/crypto";
 import { importBrowsingHistoryEntries } from "@/saving/history/browsing-history";
+import { importCredentialsBatch } from "@/saving/passwords";
 import { addSearchEngine, getAllSearchEngines, onSearchEnginesLoaded } from "@/saving/search-engines";
 import { pinnedTabsController } from "@/controllers/pinned-tabs-controller";
 import type {
@@ -9,7 +11,8 @@ import type {
   BrowserImportResult,
   DetectedBrowser,
   ImportCategoryCounts,
-  ImportDataCategory
+  ImportDataCategory,
+  SessionImportBreakdown
 } from "~/types/importer";
 import { chromiumAdapter } from "./parsers/chromium";
 import { flowAdapter } from "./parsers/flow";
@@ -17,6 +20,7 @@ import { geckoAdapter } from "./parsers/gecko";
 import { parseNetscapeBookmarksHtml } from "./parsers/html";
 import { safariFamilyAdapter } from "./parsers/safari";
 import { BROWSER_REGISTRY, resolveBrowserRootDirs } from "./registry";
+import { importSessionDataIntoProfile } from "./session-import";
 import type { BrowserDefinition, BrowserFamilyAdapter } from "./types";
 import { emptyImportCounts, normalizeImportUrl } from "./utils";
 
@@ -189,12 +193,56 @@ export async function executeBrowserImport(
     skippedDuplicates.searchEngines = skipped;
   }
 
+  // 5. Saved Passwords -> Lumi per-profile Password Manager
+  if (categories.has("passwords") && extracted.data.passwords.length > 0) {
+    if (!isPasswordEncryptionAvailable()) {
+      errors.push(
+        "Skipped importing passwords: OS Keychain / Keyring encryption is unavailable (plaintext storage is disabled)."
+      );
+      skippedDuplicates.passwords = extracted.data.passwords.length;
+    } else {
+      const pwStats = importCredentialsBatch(
+        targetProfileId,
+        extracted.data.passwords.map((item) => ({
+          originUrl: item.originUrl,
+          actionUrl: item.actionUrl,
+          username: item.username,
+          password: item.password,
+          title: item.title,
+          createdAt: item.createdAt,
+          lastUsedAt: item.lastUsedAt
+        })),
+        { overwriteExisting: false }
+      );
+      imported.passwords = pwStats.imported;
+      skippedDuplicates.passwords = pwStats.skipped;
+    }
+  }
+
+  // 6. Sessions (Cookies + localStorage + IndexedDB) -> Lumi Chromium profile partition
+  let sessionDetails: SessionImportBreakdown | undefined;
+  if (
+    categories.has("sessions") &&
+    (extracted.data.cookies.length > 0 ||
+      extracted.data.localStorage.length > 0 ||
+      extracted.data.indexedDbDirs.length > 0)
+  ) {
+    sessionDetails = await importSessionDataIntoProfile(
+      targetProfileId,
+      extracted.data.cookies,
+      extracted.data.localStorage,
+      extracted.data.indexedDbDirs
+    );
+    imported.sessions = sessionDetails.cookies + sessionDetails.localStorageOrigins + sessionDetails.indexedDbOrigins;
+  }
+
   return {
     success: errors.length === 0 || Object.values(imported).some((count) => count > 0),
     browserName: def.name,
     profileName: extracted.profileName,
     imported,
     skippedDuplicates,
+    ...(sessionDetails ? { sessionDetails } : {}),
     errors
   };
 }

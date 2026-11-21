@@ -15,9 +15,11 @@ import type {
   ImportedSearchEngineItem
 } from "../types";
 import {
+  createEmptyExtractedData,
   createPermissionRequiredBrowser,
   emptyImportCounts,
   type FsReadOptions,
+  HISTORY_IMPORT_LIMIT,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
@@ -26,8 +28,6 @@ import {
   readJsonSafe,
   withTempSqliteCopy
 } from "../utils";
-
-const HISTORY_IMPORT_LIMIT = 8000;
 
 interface FlowProfileMeta {
   id: string;
@@ -250,7 +250,9 @@ export const flowAdapter: BrowserFamilyAdapter = {
               bookmarks: hasFavs,
               history: hasDb,
               pinnedTabs: hasDb,
-              searchEngines: hasEngines
+              searchEngines: hasEngines,
+              passwords: false,
+              sessions: false
             }
           });
         } catch (error) {
@@ -306,12 +308,7 @@ export const flowAdapter: BrowserFamilyAdapter = {
     const matched = profiles.find((p) => p.id === profileId);
     const { rootDir, flowProfileId } = decodeProfileKey(profileId);
 
-    const data: ExtractedBrowserData = {
-      bookmarks: [],
-      history: [],
-      pinnedTabs: [],
-      searchEngines: []
-    };
+    const data: ExtractedBrowserData = createEmptyExtractedData();
     const errors: string[] = [];
 
     if (categories.has("bookmarks")) {

@@ -349,7 +349,13 @@ class ContentBlocker {
         break;
     }
 
-    this.blockerInstancePromise.then((blocker) => {
+    this.blockerInstancePromise = this.blockerInstancePromise.then((blocker) => {
+      // Ghostery's blanket `$ping,3p` rule catches Chromium/Electron `fetch(..., { keepalive: true })`
+      // requests (which Electron classifies as `resourceType: "ping"`), breaking backends like
+      // Firebase Firestore WebChannel (`firestore.googleapis.com`). Remove that catch-all rule and
+      // fall back to evaluating unmatched `ping` requests as `xhr` so tracker URL/$xhr rules still apply.
+      blocker.updateFromDiff({ removed: ["$ping,3p"] });
+
       // Wrap onBeforeRequest to bypass blocking for whitelisted domains
       const originalOnBeforeRequest = blocker.onBeforeRequest.bind(blocker);
       blocker.onBeforeRequest = (details, callback) => {
@@ -376,6 +382,17 @@ class ContentBlocker {
           }
         }
 
+        if (details.resourceType === "ping") {
+          originalOnBeforeRequest(details, (response) => {
+            if (response.cancel || response.redirectURL) {
+              callback(response);
+              return;
+            }
+            originalOnBeforeRequest({ ...details, resourceType: "xhr" }, callback);
+          });
+          return;
+        }
+
         originalOnBeforeRequest(details, callback);
       };
 
@@ -397,6 +414,8 @@ class ContentBlocker {
         debugPrint("CONTENT_BLOCKER", "Request redirected:", request.url);
         this.recordBlockedRequest(request.tabId, request.url, request.hostname || "", request.type || "other");
       });
+
+      return blocker;
     });
 
     this.blockerInstanceType = type;

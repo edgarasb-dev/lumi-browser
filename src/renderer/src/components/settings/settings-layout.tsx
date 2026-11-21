@@ -6,6 +6,7 @@ import { AboutSettings } from "@/components/settings/sections/about/section";
 import { ProfilesSettings } from "@/components/settings/sections/profiles/section";
 import { SpacesSettings } from "@/components/settings/sections/spaces/section";
 import { PrivacySettings } from "@/components/settings/sections/privacy/section";
+import { PasswordsSettings } from "@/components/settings/sections/passwords/section";
 import { ShortcutsSettings } from "@/components/settings/sections/shortcuts/section";
 import { SearchEnginesSettings } from "@/components/settings/sections/search/section";
 import { ImportDataSettings } from "@/components/settings/sections/import/section";
@@ -18,6 +19,7 @@ import {
   UsersIcon,
   OrbitIcon,
   ShieldCheck,
+  KeyRound,
   KeyboardIcon,
   Search,
   Sparkles,
@@ -56,6 +58,7 @@ const SECTIONS: Section[] = [
   { id: "appearance", label: "Appearance & Layout", icon: <Palette className="size-4" />, category: "preferences" },
   { id: "search", label: "Search Engines", icon: <Search className="size-4" />, category: "preferences" },
   { id: "privacy", label: "Privacy & Apps", icon: <ShieldCheck className="size-4" />, category: "preferences" },
+  { id: "passwords", label: "Passwords", icon: <KeyRound className="size-4" />, category: "preferences" },
   { id: "spaces", label: "Spaces", icon: <OrbitIcon className="size-4" />, category: "workspace" },
   { id: "profiles", label: "Profiles", icon: <UsersIcon className="size-4" />, category: "workspace" },
   { id: "import", label: "Import Data", icon: <Download className="size-4" />, category: "workspace" },
@@ -284,6 +287,8 @@ function SettingsWorkspace() {
         return <SearchEnginesSettings />;
       case "privacy":
         return <PrivacySettings />;
+      case "passwords":
+        return <PasswordsSettings />;
       case "about":
         return <AboutSettings />;
       case "profiles":

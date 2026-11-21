@@ -36,6 +36,7 @@ import { LumiMcpAPI } from "~/lumi/interfaces/settings/mcp";
 import { LumiUpdatesAPI } from "~/lumi/interfaces/app/updates";
 import { LumiActionsAPI } from "~/lumi/interfaces/app/actions";
 import { LumiShortcutsAPI } from "~/lumi/interfaces/app/shortcuts";
+import { LumiPasswordsAPI } from "~/lumi/interfaces/app/passwords";
 
 export type LumiAPI = {
   // App APIs
@@ -45,6 +46,7 @@ export type LumiAPI = {
   updates: LumiUpdatesAPI;
   actions: LumiActionsAPI;
   shortcuts: LumiShortcutsAPI;
+  passwords: LumiPasswordsAPI;
 
   // Browser APIs
   browser: LumiBrowserAPI;

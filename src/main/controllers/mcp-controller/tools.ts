@@ -26,6 +26,7 @@ const SAFE_LUMI_HOSTS = new Set([
   "new-tab",
   "history",
   "downloads",
+  "passwords",
   "extensions",
   "bangs",
   "settings",

@@ -9,7 +9,14 @@ import type {
   ImportDataCategory
 } from "~/types/importer";
 
-const ALL_CATEGORIES: ImportDataCategory[] = ["bookmarks", "history", "pinnedTabs", "searchEngines"];
+const ALL_CATEGORIES: ImportDataCategory[] = [
+  "bookmarks",
+  "history",
+  "pinnedTabs",
+  "searchEngines",
+  "passwords",
+  "sessions"
+];
 
 export function formatImportSummary(result: BrowserImportResult): string {
   const parts: string[] = [];
@@ -24,6 +31,21 @@ export function formatImportSummary(result: BrowserImportResult): string {
   }
   if (result.imported.searchEngines > 0) {
     parts.push(`${result.imported.searchEngines.toLocaleString()} search engines`);
+  }
+  if (result.imported.passwords > 0) {
+    parts.push(`${result.imported.passwords.toLocaleString()} passwords`);
+  }
+  if (result.imported.sessions > 0) {
+    if (result.sessionDetails) {
+      const s = result.sessionDetails;
+      const storageCount = s.localStorageOrigins + s.indexedDbOrigins;
+      const segs: string[] = [];
+      if (s.cookies > 0) segs.push(`${s.cookies.toLocaleString()} cookies`);
+      if (storageCount > 0) segs.push(`${storageCount.toLocaleString()} site storage entries`);
+      if (segs.length > 0) parts.push(segs.join(" & "));
+    } else {
+      parts.push(`${result.imported.sessions.toLocaleString()} session items`);
+    }
   }
 
   if (parts.length === 0) {

@@ -6,11 +6,11 @@
 
   <p>
     <strong>Cleaner browsing, sharper focus.</strong><br />
-    <em>A privacy-first desktop browser with a Native Liquid Glass workspace, Spaces, Split View, Focus Mode, and Chrome extension support.</em>
+    <em>A privacy-first desktop browser with a Native Liquid Glass workspace, Spaces, Split View, OS-Encrypted Password Vault, Focus Mode, and Chrome extension support.</em>
   </p>
 
   <p>
-    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.3.5-2563EB?style=flat-square&logo=github" alt="Release v0.3.5" /></a>
+    <a href="https://github.com/edgarasb-dev/lumi-browser/releases"><img src="https://img.shields.io/badge/Release-v0.4.0-2563EB?style=flat-square&logo=github" alt="Release v0.4.0" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-10B981?style=flat-square" alt="License GPL-3.0" /></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-6366F1?style=flat-square" alt="Platforms" />
     <img src="https://img.shields.io/badge/Electron-45+-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 45+" />
@@ -48,7 +48,8 @@ Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, f
 - **Unified Site Control Center:** Click the address bar shield to inspect Ghostery blocker telemetry, step per-origin page zoom, toggle **Smart Night Shade**, manage persisted `Ask / Allow / Block` permissions (Camera, Microphone, Location, Notifications, Clipboard), and clear site storage.
 - **Focus Mode, Split Side Panel & Page Capture:** Press `⌘⇧Z` for distraction-free Focus Mode with an integrated Pomodoro timer and optional focus blocklist. Press `⌘⇧.` to open the persistent right **Side Panel** (Markdown checklist Scratchpad v2 + live Companion Web View), or `⌘⇧2` for Area, Visible, or Full Scroll screenshots with built-in Canvas annotation.
 - **Media Mini-Player, Reader Mode & DRM:** Control background audio playback & Picture-in-Picture from any tab, switch articles into double-sanitized Reader View (`⌘⌥R`), install Chrome Web Store extensions, and stream Netflix, Spotify, and YouTube out of the box via bundled Widevine DRM.
-- **Cross-Browser Importer & Onboarding Migration:** Automatically scans 37 installed desktop browsers (Arc, Dia, Zen, Firefox, Safari, Orion, DuckDuckGo, Chrome, Brave, Edge, Vivaldi, Opera, Flow, Perplexity Comet, and more) plus universal Netscape HTML bookmark exports to bring over bookmarks, history, pinned tabs, and custom `@shortcut` search engines right from first-run Onboarding or `lumi://settings?section=import`.
+- **OS-Encrypted Password Vault & Touch ID Autofill (`lumi://passwords`):** Per-profile isolated password vaults encrypted with OS Keychain / Keyring (`safeStorage` on macOS Keychain, Windows DPAPI, and GNOME Keyring / KWallet—with **zero plaintext fallback**, refusing writes if no OS keyring is available). Protected by **macOS Touch ID** before revealing, copying, or exporting secrets, with a closed-Shadow-DOM in-page autofill & strong password generator dropdown, non-intrusive Save/Update prompts, and RFC-4180 CSV import/export.
+- **Cross-Browser Importer & Active Session Migration:** Automatically scans 37 installed desktop browsers (Arc, Dia, Zen, Firefox, Safari, Orion, DuckDuckGo, Chrome, Brave, Edge, Vivaldi, Opera, Flow, Perplexity Comet, and more) plus universal Netscape HTML bookmark exports to bring over **saved passwords, active logged-in sessions (cookies, `localStorage`, and `IndexedDB`)**, bookmarks, history (up to 50,000 entries), pinned tabs, and custom `@shortcut` search engines right from first-run Onboarding or `lumi://settings?section=import`.
 - **Native Local MCP Server:** Opt-in Model Context Protocol server (`127.0.0.1` loopback Streamable HTTP + stdio bridge) allowing external agents (Antigravity, Claude Code, Claude Desktop, Cursor) to inspect tabs and Spaces, extract clean Reader Mode articles, capture screenshots, and automate pages with tiered permissions (`Read Only` / `Interactive` / `Full`), profile scoping, Bearer auth, and web origin CSRF blocking.
 
 ---
@@ -111,13 +112,9 @@ Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, f
 | :---------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------: |
 | <img src="./docs/assets/screenshots/showcase-browser-import.png" width="460" alt="Cross-Browser Importer in Lumi Settings" /> | <img src="./docs/assets/screenshots/showcase-onboarding-import.png" width="460" alt="Onboarding Browser Migration Step" /> |
 
-</div>
-
-### Local MCP Server & Agent Control (`lumi://settings?section=mcp`)
-
-<div align="center">
-
-<img src="./docs/assets/screenshots/showcase-mcp-settings.png" width="840" alt="Lumi Local MCP Server Settings and Live Activity Log" />
+|                    **OS-Encrypted Password Vault & Touch ID Protection (`lumi://passwords`)**                     |                                   **Local MCP Server & Agent Control (`lumi://settings?section=mcp`)**                                   |
+| :---------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------: |
+| <img src="./docs/assets/screenshots/showcase-passwords.png" width="460" alt="Lumi OS-Encrypted Password Vault" /> | <img src="./docs/assets/screenshots/showcase-mcp-settings.png" width="460" alt="Lumi Local MCP Server Settings and Live Activity Log" /> |
 
 </div>
 
@@ -135,6 +132,7 @@ Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, f
 | **Toggle Split Side Panel**       | `⌘ + ⇧ + .`       | `Ctrl + Shift + .`      |
 | **Capture Page Screenshot**       | `⌘ + ⇧ + 2`       | `Ctrl + Shift + 2`      |
 | **Toggle Reader Mode**            | `⌘ + ⌥ + R`       | `Ctrl + Alt + R`        |
+| **Open Password Manager**         | `⌘ + ⌥ + P`       | `Ctrl + Alt + P`        |
 | **Find in Page**                  | `⌘ + F`           | `Ctrl + F`              |
 | **Open Settings**                 | `⌘ + ,`           | `Ctrl + ,`              |
 
@@ -146,16 +144,17 @@ Lumi combines Chromium's speed and Chrome Web Store compatibility with a calm, f
 
 Lumi provides fast, offline-ready internal routes via the `lumi://` protocol:
 
-| Protocol            | Description                                                                                                                        |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------- |
-| `lumi://new-tab`    | Customizable start page with omnibox search, Studio Wallpapers, Speed Dial, Recently Closed, and Space Scratchpad                  |
-| `lumi://settings`   | Unified browser settings workspace for General, Appearance, Search, Privacy, Spaces, Profiles, Import Data, MCP Server & Shortcuts |
-| `lumi://history`    | Infinite-scroll browsing timeline grouped by day with instant search and site-wide cleanup                                         |
-| `lumi://downloads`  | Native download manager with filter pills, live transfer speed, pause/resume, and Reveal in Finder                                 |
-| `lumi://bangs`      | Filterable directory of `!` quick search shortcuts (`!gh`, `!mdn`, `!yt`, and 13,500+ more)                                        |
-| `lumi://extensions` | Chrome Web Store extension manager and per-extension permissions inspector                                                         |
-| `lumi://games`      | Lightweight offline casual games library                                                                                           |
-| `lumi://about`      | Directory of all available internal `lumi://` URLs                                                                                 |
+| Protocol            | Description                                                                                                                                   |
+| :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lumi://new-tab`    | Customizable start page with omnibox search, Studio Wallpapers, Speed Dial, Recently Closed, and Space Scratchpad                             |
+| `lumi://settings`   | Unified browser settings workspace for General, Appearance, Search, Privacy, Passwords, Spaces, Profiles, Import Data, MCP Server & Shortcuts |
+| `lumi://passwords`  | Per-profile OS Keychain-encrypted password vault with Touch ID reveal/export, strong password generator, and CSV/browser import               |
+| `lumi://history`    | Infinite-scroll browsing timeline grouped by day with instant search and site-wide cleanup                                                    |
+| `lumi://downloads`  | Native download manager with filter pills, live transfer speed, pause/resume, and Reveal in Finder                                            |
+| `lumi://bangs`      | Filterable directory of `!` quick search shortcuts (`!gh`, `!mdn`, `!yt`, and 13,500+ more)                                                   |
+| `lumi://extensions` | Chrome Web Store extension manager and per-extension permissions inspector                                                                    |
+| `lumi://games`      | Lightweight offline casual games library                                                                                                      |
+| `lumi://about`      | Directory of all available internal `lumi://` URLs                                                                                            |
 
 ---
 

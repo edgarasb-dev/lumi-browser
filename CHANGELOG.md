@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] — 2026-11-21
+
+### Codename: Prism
+
+### Added
+
+- **OS-Encrypted Password Manager & Touch ID Vault (`lumi://passwords`)**: Built-in per-profile password manager backed by SQLite (`saved_passwords` and `password_never_save_sites`) and Electron OS Keychain / Keyring encryption (`safeStorage` on macOS Keychain, Windows DPAPI, and GNOME Keyring / KWallet—with zero plaintext fallback, refusing writes if no OS keyring is active). Includes macOS Touch ID verification (`systemPreferences.promptTouchID`) before revealing, copying, or exporting passwords, a closed-Shadow-DOM in-page autofill and CSPRNG strong password generator dropdown, a non-intrusive top-right Save/Update prompt, an Address Bar Key popover, `CommandOrControl+Alt+P` shortcut, Settings → Passwords controls, and Chrome-compatible RFC-4180 CSV import/export.
+- **Cross-Browser Password & Active Session Migration (Cookies, `localStorage` & `IndexedDB`)**: Extended the Browser Importer in Onboarding and `lumi://settings?section=import` with **Saved Passwords** (decrypting Chromium `v10`/`v11` Safe Storage logins and Firefox/Zen/Waterfox/LibreWolf/Floorp NSS `key4.db` PBES2 AES-256-CBC & 3DES `logins.json` credentials) and **Cookies & Active Sessions** (decrypting Chromium cookies including DB `version >= 24` 32-byte `SHA256(host_key)` prefixes, decoding Chromium `Local Storage/leveldb` Snappy `.ldb` SSTables and `.log` WAL write batches via a pure-TypeScript LevelDB reader, injecting `localStorage` offline via parallel hidden CDP workers without overwriting existing Lumi keys, and copying missing origin `IndexedDB` directories).
+
+### Changed
+
+- **Browsing History Import Limit**: Raised `HISTORY_IMPORT_LIMIT` from `8,000` to `50,000` entries across Chromium, Gecko/Firefox, Safari, and Flow importers.
+
+### Fixed
+
+- **Shield Content Blocker Firestore & Firebase Keepalive Exceptions**: Added `$ping,3p` (`ping`, `beacon`, `xhr`, `subdocument`) exception rules for `firestore.googleapis.com`, `firebase.googleapis.com`, `firebaseio.com`, `identitytoolkit.googleapis.com`, and `securetoken.googleapis.com` so EasyPrivacy's generic third-party `$ping,3p` rule no longer terminates Firestore WebChannel streams while keeping analytics/tracker blocking intact.
+- **macOS Passkey Access Entitlement Guard**: Added `hasWebBrowserPasskeyEntitlement()` to check whether the running macOS binary holds Apple's restricted `com.apple.developer.web-browser.public-key-credential` entitlement before loading `electron-webauthn`, avoiding permanent `Passkey access was not allowed` errors on builds without Apple's restricted web-browser entitlement.
+
+---
+
 ## [0.3.5] — 2026-11-21
 
 ### Codename: Prism

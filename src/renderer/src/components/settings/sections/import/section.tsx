@@ -2,10 +2,12 @@ import {
   AlertTriangle,
   Bookmark,
   CheckCircle2,
+  Cookie,
   Download,
   ExternalLink,
   FileCode2,
   History,
+  KeyRound,
   Loader2,
   Lock,
   Pin,
@@ -52,6 +54,18 @@ const CATEGORY_META: Array<{
     label: "Search Engines",
     description: "Import custom @shortcut search engines you use in your current browser.",
     icon: Search
+  },
+  {
+    id: "passwords",
+    label: "Saved Passwords",
+    description: "Encrypt and import saved logins into your profile's Lumi Password Manager (prompts Keychain once).",
+    icon: KeyRound
+  },
+  {
+    id: "sessions",
+    label: "Cookies & Site Sessions",
+    description: "Carry over cookies, localStorage, and IndexedDB sessions so you stay signed in across websites.",
+    icon: Cookie
   }
 ];
 
@@ -344,7 +358,7 @@ export function ImportDataSettings() {
                   {lumiProfiles.length > 0 && (
                     <SettingsRow
                       label="Destination Lumi Profile"
-                      description="History and pinned tabs are scoped to this profile."
+                      description="History, pinned tabs, saved passwords, and site sessions are scoped to this profile."
                     >
                       <Select value={targetProfileId} onValueChange={setTargetProfileId}>
                         <SelectTrigger className="w-52 h-8 text-xs">

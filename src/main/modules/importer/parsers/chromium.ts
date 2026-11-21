@@ -5,16 +5,24 @@ import type {
   BrowserFamilyAdapter,
   ExtractedBrowserData,
   ImportedBookmarkItem,
+  ImportedCookieItem,
   ImportedHistoryItem,
+  ImportedIndexedDbDir,
+  ImportedLocalStorageOrigin,
+  ImportedPasswordItem,
   ImportedPinnedTabItem,
   ImportedSearchEngineItem
 } from "../types";
+import { decryptChromiumEncryptedValue, getChromiumSafeStorageAesKey } from "../crypto/safe-storage";
+import { countChromiumStorageOrigins, readChromiumLocalStorage } from "../leveldb";
 import {
   chromeTimeToUnixMs,
   convertSearchUrlTemplate,
+  createEmptyExtractedData,
   createPermissionRequiredBrowser,
   emptyImportCounts,
   type FsReadOptions,
+  HISTORY_IMPORT_LIMIT,
   isDirectory,
   isFileReadable,
   isImportableHttpUrl,
@@ -25,8 +33,6 @@ import {
   sanitizeShortcut,
   withTempSqliteCopy
 } from "../utils";
-
-const HISTORY_IMPORT_LIMIT = 8000;
 
 interface ChromiumBookmarkNode {
   type?: string;
@@ -45,6 +51,8 @@ interface ChromiumProfileCandidate {
   hasHistory: boolean;
   hasSearchEngines: boolean;
   hasPinnedTabs: boolean;
+  hasPasswords: boolean;
+  hasSessions: boolean;
 }
 
 interface LocalStateShape {
@@ -79,6 +87,14 @@ interface ArcSidebarShape {
       global?: { items?: Array<string | ArcSidebarItem> };
     }>;
   };
+}
+
+async function resolveChromiumCookiesPath(profileDir: string, options?: FsReadOptions): Promise<string | null> {
+  const candidates = [path.join(profileDir, "Cookies"), path.join(profileDir, "Network", "Cookies")];
+  for (const candidate of candidates) {
+    if (await isFileReadable(candidate, options)) return candidate;
+  }
+  return null;
 }
 
 interface ChromiumDiscoveryResult {
@@ -140,16 +156,31 @@ async function discoverChromiumProfiles(
         if (seenDirs.has(sub.dir)) continue;
 
         try {
-          const [hasBookmarks, hasHistory, hasWebData, hasPrefs, arcSidebarPath] = await Promise.all([
+          const [
+            hasBookmarks,
+            hasHistory,
+            hasWebData,
+            hasPrefs,
+            arcSidebarPath,
+            hasLoginData,
+            cookiesPath,
+            hasLocalStorageDir,
+            hasIdbDir
+          ] = await Promise.all([
             isFileReadable(path.join(sub.dir, "Bookmarks"), options),
             isFileReadable(path.join(sub.dir, "History"), options),
             isFileReadable(path.join(sub.dir, "Web Data"), options),
             isFileReadable(path.join(sub.dir, "Preferences"), options),
-            resolveArcSidebarPath(def, sub.dir, options)
+            resolveArcSidebarPath(def, sub.dir, options),
+            isFileReadable(path.join(sub.dir, "Login Data"), options),
+            resolveChromiumCookiesPath(sub.dir, options),
+            isDirectory(path.join(sub.dir, "Local Storage", "leveldb"), options),
+            isDirectory(path.join(sub.dir, "IndexedDB"), options)
           ]);
           const hasArcSidebar = Boolean(arcSidebarPath);
+          const hasSessions = Boolean(cookiesPath) || hasLocalStorageDir || hasIdbDir;
 
-          if (!hasBookmarks && !hasHistory && !hasWebData && !hasArcSidebar) continue;
+          if (!hasBookmarks && !hasHistory && !hasWebData && !hasArcSidebar && !hasLoginData && !hasSessions) continue;
           seenDirs.add(sub.dir);
 
           const meta = infoCache[sub.folderName];
@@ -166,7 +197,9 @@ async function discoverChromiumProfiles(
             hasBookmarks: hasBookmarks || hasArcSidebar,
             hasHistory,
             hasSearchEngines: hasWebData || hasPrefs,
-            hasPinnedTabs: hasArcSidebar
+            hasPinnedTabs: hasArcSidebar,
+            hasPasswords: hasLoginData,
+            hasSessions
           });
         } catch (error) {
           if (isPermissionError(error)) {
@@ -382,6 +415,210 @@ async function readChromiumSearchEngines(profileDir: string): Promise<ImportedSe
   return engines;
 }
 
+async function countChromiumPasswords(profileDir: string): Promise<number> {
+  const loginDbPath = path.join(profileDir, "Login Data");
+  if (!(await isFileReadable(loginDbPath))) return 0;
+
+  return withTempSqliteCopy(loginDbPath, (db) => {
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) AS cnt FROM logins
+         WHERE blacklisted_by_user = 0
+           AND origin_url IS NOT NULL
+           AND password_value IS NOT NULL
+           AND length(password_value) > 0`
+      )
+      .get() as { cnt?: number } | undefined;
+    return row?.cnt ?? 0;
+  });
+}
+
+async function readChromiumPasswords(
+  profileDir: string,
+  aesKey: Buffer | null
+): Promise<{ passwords: ImportedPasswordItem[]; undecryptableCount: number }> {
+  const loginDbPath = path.join(profileDir, "Login Data");
+  if (!(await isFileReadable(loginDbPath))) {
+    return { passwords: [], undecryptableCount: 0 };
+  }
+
+  return withTempSqliteCopy(loginDbPath, (db) => {
+    const cols = new Set((db.pragma("table_info(logins)") as Array<{ name: string }>).map((c) => c.name));
+    const titleSel = cols.has("display_name") ? "display_name" : "NULL";
+    const lastUsedSel = cols.has("date_last_used") ? "date_last_used" : "0";
+
+    const rows = db
+      .prepare(
+        `SELECT origin_url, action_url, username_value, password_value, date_created,
+                ${titleSel} AS display_name, ${lastUsedSel} AS date_last_used
+         FROM logins
+         WHERE blacklisted_by_user = 0
+           AND origin_url IS NOT NULL
+           AND password_value IS NOT NULL
+           AND length(password_value) > 0`
+      )
+      .all() as Array<{
+      origin_url: string;
+      action_url: string | null;
+      username_value: string | null;
+      password_value: Buffer;
+      date_created: number;
+      display_name: string | null;
+      date_last_used: number;
+    }>;
+
+    const passwords: ImportedPasswordItem[] = [];
+    let undecryptableCount = 0;
+
+    for (const row of rows) {
+      if (!isImportableHttpUrl(row.origin_url)) continue;
+      const buf = Buffer.isBuffer(row.password_value) ? row.password_value : Buffer.from(row.password_value);
+      const decrypted = decryptChromiumEncryptedValue(buf, aesKey);
+      if (decrypted === null) {
+        undecryptableCount++;
+        continue;
+      }
+      if (!decrypted) continue;
+
+      passwords.push({
+        originUrl: row.origin_url,
+        actionUrl: row.action_url ?? undefined,
+        username: (row.username_value ?? "").trim(),
+        password: decrypted,
+        title: row.display_name?.trim() || undefined,
+        createdAt: chromeTimeToUnixMs(row.date_created),
+        lastUsedAt: chromeTimeToUnixMs(row.date_last_used)
+      });
+    }
+
+    return { passwords, undecryptableCount };
+  });
+}
+
+async function countChromiumCookies(profileDir: string): Promise<number> {
+  const cookiesPath = await resolveChromiumCookiesPath(profileDir);
+  if (!cookiesPath) return 0;
+
+  return withTempSqliteCopy(cookiesPath, (db) => {
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) AS cnt FROM cookies
+         WHERE host_key IS NOT NULL AND host_key != ''
+           AND name IS NOT NULL AND name != ''`
+      )
+      .get() as { cnt?: number } | undefined;
+    return row?.cnt ?? 0;
+  });
+}
+
+async function readChromiumCookies(
+  profileDir: string,
+  aesKey: Buffer | null
+): Promise<{ cookies: ImportedCookieItem[]; undecryptableCount: number }> {
+  const cookiesPath = await resolveChromiumCookiesPath(profileDir);
+  if (!cookiesPath) return { cookies: [], undecryptableCount: 0 };
+
+  return withTempSqliteCopy(cookiesPath, (db) => {
+    let schemaVersion = 0;
+    try {
+      const metaRow = db.prepare("SELECT value FROM meta WHERE key = 'version'").get() as
+        { value?: string } | undefined;
+      schemaVersion = Number.parseInt(metaRow?.value ?? "0", 10) || 0;
+    } catch {
+      schemaVersion = 0;
+    }
+
+    const cols = new Set((db.pragma("table_info(cookies)") as Array<{ name: string }>).map((c) => c.name));
+    const hasHasExpires = cols.has("has_expires");
+
+    const rows = db
+      .prepare(
+        `SELECT host_key, name, value, encrypted_value, path, expires_utc,
+                is_secure, is_httponly, samesite${hasHasExpires ? ", has_expires" : ""}
+         FROM cookies
+         WHERE host_key IS NOT NULL AND host_key != ''
+           AND name IS NOT NULL AND name != ''`
+      )
+      .all() as Array<{
+      host_key: string;
+      name: string;
+      value: string | null;
+      encrypted_value: Buffer | null;
+      path: string | null;
+      expires_utc: number;
+      is_secure: number;
+      is_httponly: number;
+      samesite: number;
+      has_expires?: number;
+    }>;
+
+    const cookies: ImportedCookieItem[] = [];
+    let undecryptableCount = 0;
+    const nowUnixSec = Math.floor(Date.now() / 1000);
+
+    for (const row of rows) {
+      let value = row.value ?? "";
+      if (!value && row.encrypted_value && row.encrypted_value.length > 0) {
+        const enc = Buffer.isBuffer(row.encrypted_value) ? row.encrypted_value : Buffer.from(row.encrypted_value);
+        const decrypted = decryptChromiumEncryptedValue(enc, aesKey, schemaVersion >= 24 ? row.host_key : undefined);
+        if (decrypted === null) {
+          undecryptableCount++;
+          continue;
+        }
+        value = decrypted;
+      }
+
+      let expirationDate: number | undefined;
+      const shouldExpire = hasHasExpires ? row.has_expires !== 0 : row.expires_utc > 0;
+      if (shouldExpire && row.expires_utc > 0) {
+        const expMs = chromeTimeToUnixMs(row.expires_utc);
+        if (expMs) {
+          const expSec = Math.floor(expMs / 1000);
+          if (expSec <= nowUnixSec) continue; // Skip already-expired cookies
+          expirationDate = expSec;
+        }
+      }
+
+      cookies.push({
+        hostKey: row.host_key,
+        name: row.name,
+        value,
+        path: row.path || "/",
+        secure: row.is_secure !== 0,
+        httpOnly: row.is_httponly !== 0,
+        sameSite: row.samesite,
+        expirationDate
+      });
+    }
+
+    return { cookies, undecryptableCount };
+  });
+}
+
+async function readChromiumIndexedDbDirs(profileDir: string): Promise<ImportedIndexedDbDir[]> {
+  const idbRoot = path.join(profileDir, "IndexedDB");
+  const result: ImportedIndexedDbDir[] = [];
+  const entries = await readDirEntries(idbRoot);
+  const entryNames = new Set(entries.map((e) => e.name));
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.endsWith(".indexeddb.leveldb")) continue;
+    // Skip extension IDB directories; only import http(s) web origins
+    if (!entry.name.startsWith("http_") && !entry.name.startsWith("https_")) continue;
+
+    const blobDirName = entry.name.replace(/\.indexeddb\.leveldb$/, ".indexeddb.blob");
+    const hasBlob = entryNames.has(blobDirName);
+
+    result.push({
+      dirName: entry.name,
+      sourcePath: path.join(idbRoot, entry.name),
+      ...(hasBlob ? { blobDirName, blobSourcePath: path.join(idbRoot, blobDirName) } : {})
+    });
+  }
+
+  return result;
+}
+
 export const chromiumAdapter: BrowserFamilyAdapter = {
   async scan(def, rootDirs): Promise<DetectedBrowser | null> {
     try {
@@ -400,7 +637,9 @@ export const chromiumAdapter: BrowserFamilyAdapter = {
           bookmarks: p.hasBookmarks,
           history: p.hasHistory,
           pinnedTabs: p.hasPinnedTabs,
-          searchEngines: p.hasSearchEngines
+          searchEngines: p.hasSearchEngines,
+          passwords: p.hasPasswords,
+          sessions: p.hasSessions
         }
       }));
 
@@ -422,12 +661,16 @@ export const chromiumAdapter: BrowserFamilyAdapter = {
     const counts = emptyImportCounts();
     const arcSidebarPath = await resolveArcSidebarPath(def, profileId);
 
-    const [bookmarks, arcData, historyCount, engines] = await Promise.all([
-      readChromiumBookmarks(profileId).catch(() => []),
-      arcSidebarPath ? readArcSidebarItems(arcSidebarPath).catch(() => ({ bookmarks: [], pinnedTabs: [] })) : null,
-      countChromiumHistory(profileId).catch(() => 0),
-      readChromiumSearchEngines(profileId).catch(() => [])
-    ]);
+    const [bookmarks, arcData, historyCount, engines, passwordsCount, cookiesCount, storageOriginsCount] =
+      await Promise.all([
+        readChromiumBookmarks(profileId).catch(() => []),
+        arcSidebarPath ? readArcSidebarItems(arcSidebarPath).catch(() => ({ bookmarks: [], pinnedTabs: [] })) : null,
+        countChromiumHistory(profileId).catch(() => 0),
+        readChromiumSearchEngines(profileId).catch(() => []),
+        countChromiumPasswords(profileId).catch(() => 0),
+        countChromiumCookies(profileId).catch(() => 0),
+        countChromiumStorageOrigins(profileId).catch(() => 0)
+      ]);
 
     const seenBookmarks = new Set(bookmarks.map((b) => normalizeImportUrl(b.url)));
     let extraArcBookmarks = 0;
@@ -445,18 +688,15 @@ export const chromiumAdapter: BrowserFamilyAdapter = {
     counts.bookmarks = bookmarks.length + extraArcBookmarks;
     counts.history = historyCount;
     counts.searchEngines = engines.length;
+    counts.passwords = passwordsCount;
+    counts.sessions = cookiesCount + storageOriginsCount;
     return counts;
   },
 
   async extract(def, rootDirs, profileId, categories) {
     const { profiles } = await discoverChromiumProfiles(def, rootDirs);
     const matched = profiles.find((p) => p.id === profileId);
-    const data: ExtractedBrowserData = {
-      bookmarks: [],
-      history: [],
-      pinnedTabs: [],
-      searchEngines: []
-    };
+    const data: ExtractedBrowserData = createEmptyExtractedData();
     const errors: string[] = [];
 
     const arcSidebarPath = await resolveArcSidebarPath(def, profileId);
@@ -464,6 +704,10 @@ export const chromiumAdapter: BrowserFamilyAdapter = {
       arcSidebarPath && (categories.has("bookmarks") || categories.has("pinnedTabs"))
         ? readArcSidebarItems(arcSidebarPath).catch(() => ({ bookmarks: [], pinnedTabs: [] }))
         : Promise.resolve({ bookmarks: [], pinnedTabs: [] });
+
+    // Derive Safe Storage AES key once per import so macOS Keychain prompts only once.
+    const needsSafeStorage = categories.has("passwords") || categories.has("sessions");
+    const aesKey = needsSafeStorage ? await getChromiumSafeStorageAesKey(def.id) : null;
 
     if (categories.has("bookmarks")) {
       try {
@@ -497,6 +741,50 @@ export const chromiumAdapter: BrowserFamilyAdapter = {
         data.searchEngines = await readChromiumSearchEngines(profileId);
       } catch (err) {
         errors.push(`Failed reading search engines: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    if (categories.has("passwords")) {
+      try {
+        const pwRes = await readChromiumPasswords(profileId, aesKey);
+        data.passwords = pwRes.passwords;
+        if (pwRes.undecryptableCount > 0) {
+          errors.push(
+            `Skipped ${pwRes.undecryptableCount} ${def.name} password(s) because Safe Storage decryption key access was unavailable or denied.`
+          );
+        }
+      } catch (err) {
+        errors.push(`Failed reading passwords: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    if (categories.has("sessions")) {
+      try {
+        const cookieRes = await readChromiumCookies(profileId, aesKey);
+        data.cookies = cookieRes.cookies;
+        if (cookieRes.undecryptableCount > 0) {
+          errors.push(
+            `Skipped ${cookieRes.undecryptableCount} encrypted ${def.name} cookie(s) because Safe Storage Keychain access was unavailable or denied.`
+          );
+        }
+      } catch (err) {
+        errors.push(`Failed reading cookies: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      try {
+        const lsDir = path.join(profileId, "Local Storage", "leveldb");
+        if (await isDirectory(lsDir)) {
+          const decoded: ImportedLocalStorageOrigin[] = await readChromiumLocalStorage(lsDir);
+          data.localStorage = decoded;
+        }
+      } catch (err) {
+        errors.push(`Failed reading localStorage: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      try {
+        data.indexedDbDirs = await readChromiumIndexedDbDirs(profileId);
+      } catch {
+        // Non-fatal
       }
     }
 

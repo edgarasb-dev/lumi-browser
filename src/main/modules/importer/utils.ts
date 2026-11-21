@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 import type { DetectedBrowser, ImportCategoryCounts } from "~/types/importer";
-import type { BrowserDefinition } from "./types";
+import type { BrowserDefinition, ExtractedBrowserData } from "./types";
 
 export interface FsReadOptions {
   throwOnPermissionError?: boolean;
@@ -13,12 +13,30 @@ export interface FsReadOptions {
 const CHROME_EPOCH_OFFSET_MS = 11_644_473_600_000;
 const COCOA_EPOCH_OFFSET_SEC = 978_307_200;
 
+/** Max history rows imported per source profile to keep SQLite transactions fast and memory bounded. */
+export const HISTORY_IMPORT_LIMIT = 50_000;
+
 export function emptyImportCounts(): ImportCategoryCounts {
   return {
     bookmarks: 0,
     history: 0,
     pinnedTabs: 0,
-    searchEngines: 0
+    searchEngines: 0,
+    passwords: 0,
+    sessions: 0
+  };
+}
+
+export function createEmptyExtractedData(): ExtractedBrowserData {
+  return {
+    bookmarks: [],
+    history: [],
+    pinnedTabs: [],
+    searchEngines: [],
+    passwords: [],
+    cookies: [],
+    localStorage: [],
+    indexedDbDirs: []
   };
 }
 
