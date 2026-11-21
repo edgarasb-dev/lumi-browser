@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.3.2" date="2026-11-21">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.2</url>
+      <description>
+        <p>Add an opt-in Native Local MCP Server (Streamable HTTP + stdio bridge with tiered permissions, Bearer auth, profile scoping, and live activity log), upgrade the first-run Onboarding Studio with interactive Space and Layout previews plus spring animations across Omnibox, New Tab, and Side Panel, and add motion GIF previews to the README.</p>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-11-21">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.3.1</url>
       <description>

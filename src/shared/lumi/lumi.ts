@@ -32,6 +32,7 @@ import { LumiOpenExternalAPI } from "~/lumi/interfaces/settings/openExternal";
 import { LumiOnboardingAPI } from "~/lumi/interfaces/settings/onboarding";
 import { LumiSearchEnginesAPI } from "~/lumi/interfaces/settings/search-engines";
 import { LumiImporterAPI } from "~/lumi/interfaces/settings/importer";
+import { LumiMcpAPI } from "~/lumi/interfaces/settings/mcp";
 import { LumiUpdatesAPI } from "~/lumi/interfaces/app/updates";
 import { LumiActionsAPI } from "~/lumi/interfaces/app/actions";
 import { LumiShortcutsAPI } from "~/lumi/interfaces/app/shortcuts";
@@ -78,6 +79,7 @@ export type LumiAPI = {
   openExternal: LumiOpenExternalAPI;
   onboarding: LumiOnboardingAPI;
   importer: LumiImporterAPI;
+  mcp: LumiMcpAPI;
 };
 
 declare global {

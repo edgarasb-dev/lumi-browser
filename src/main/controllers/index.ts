@@ -23,3 +23,4 @@ import "./pinned-tabs-controller";
 import "./downloads-controller";
 import "./handoff-controller";
 import "./sessions-controller";
+import "./mcp-controller";

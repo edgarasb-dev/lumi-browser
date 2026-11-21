@@ -1,9 +1,10 @@
-import { copyFileSync, mkdirSync } from "fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { createRequire } from "module";
 import { basename, resolve } from "path";
 import { defineConfig } from "electron-vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import ts from "typescript";
 import { generateRoutes } from "./scripts/frontend-routes-generator/generator";
 
 const require = createRequire(import.meta.url);
@@ -24,6 +25,18 @@ function copyExtensionPreloadsPlugin() {
         const src = require.resolve(id);
         copyFileSync(src, resolve(outDir, basename(src)));
       }
+
+      // Emit standalone CommonJS stdio bridge beside out/main/index.js without disturbing electron-vite entry naming
+      const mcpBridgeSrc = readFileSync(resolve("src/main/mcp-stdio.ts"), "utf8");
+      const transpiled = ts.transpileModule(mcpBridgeSrc, {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+          esModuleInterop: true,
+          removeComments: true
+        }
+      });
+      writeFileSync(resolve(outDir, "mcp-stdio.js"), transpiled.outputText, "utf8");
     }
   };
 }

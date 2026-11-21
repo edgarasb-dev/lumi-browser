@@ -1,5 +1,5 @@
 export type SettingsSectionId =
-  "general" | "appearance" | "search" | "privacy" | "spaces" | "profiles" | "import" | "shortcuts" | "about";
+  "general" | "appearance" | "search" | "privacy" | "spaces" | "profiles" | "import" | "mcp" | "shortcuts" | "about";
 
 export interface SettingsSearchEntry {
   id: string;
@@ -19,6 +19,7 @@ export const SECTION_LABELS: Record<SettingsSectionId, string> = {
   spaces: "Spaces",
   profiles: "Profiles",
   import: "Import Data",
+  mcp: "MCP Server",
   shortcuts: "Shortcuts",
   about: "About Lumi"
 };
@@ -231,6 +232,28 @@ export const STATIC_SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
       "html"
     ],
     targetRowId: "browserImporter"
+  },
+
+  // MCP Server
+  {
+    id: "mcpEnabled",
+    sectionId: "mcp",
+    sectionLabel: "MCP Server",
+    title: "Local MCP Server (Model Context Protocol)",
+    description:
+      "Allow external AI agents like Antigravity, Claude Code, Claude Desktop, or Cursor to inspect tabs and automate Lumi securely.",
+    keywords: [
+      "mcp",
+      "agent",
+      "claude",
+      "cursor",
+      "antigravity",
+      "model context protocol",
+      "automation",
+      "token",
+      "server"
+    ],
+    targetRowId: "mcpPort"
   },
 
   // About

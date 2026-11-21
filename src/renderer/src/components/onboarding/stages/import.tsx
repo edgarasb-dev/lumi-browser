@@ -15,7 +15,13 @@ const CATEGORY_OPTIONS: Array<{ id: ImportDataCategory; label: string; icon: typ
   { id: "searchEngines", label: "Search Engines", icon: Search }
 ];
 
-export function OnboardingImport({ advance }: { advance: OnboardingAdvanceCallback }) {
+export function OnboardingImport({
+  advance,
+  onImportedSummary
+}: {
+  advance: OnboardingAdvanceCallback;
+  onImportedSummary?: (summary: string) => void;
+}) {
   const {
     browsers,
     selectedBrowser,
@@ -49,6 +55,7 @@ export function OnboardingImport({ advance }: { advance: OnboardingAdvanceCallba
     }
     const result = await runImport();
     if (result?.success) {
+      onImportedSummary?.(formatImportSummary(result));
       window.setTimeout(advance, 450);
     }
   };
@@ -103,15 +110,20 @@ export function OnboardingImport({ advance }: { advance: OnboardingAdvanceCallba
           <div className="rounded-2xl border border-white/14 bg-white/7 p-4 backdrop-blur-xl space-y-3.5">
             {/* Detected browser grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {usableBrowsers.slice(0, 9).map((browser) => {
+              {usableBrowsers.slice(0, 9).map((browser, idx) => {
                 const active = browser.id === selectedBrowser?.id;
                 return (
-                  <button
+                  <motion.button
                     key={browser.id}
                     type="button"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03, type: "spring", stiffness: 380, damping: 28 }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => selectBrowser(browser.id)}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-all cursor-pointer",
+                      "flex items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-colors cursor-pointer",
                       active
                         ? "border-blue-400/75 bg-blue-500/22 ring-2 ring-blue-400/35"
                         : "border-white/10 bg-white/4 hover:bg-white/10"
@@ -124,7 +136,7 @@ export function OnboardingImport({ advance }: { advance: OnboardingAdvanceCallba
                       className="size-7 rounded-lg text-[10px]"
                     />
                     <span className="text-xs font-medium text-white truncate">{browser.name}</span>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>

@@ -1,5 +1,6 @@
 import { ArrowLeftRight, ArrowRight, Calculator, Clock, Copy, Globe, Palette, QrCode, Search } from "lucide-react";
 import { useState } from "react";
+import { motion } from "motion/react";
 import type { OmniboxSuggestion } from "@/lib/omnibox-new/types";
 import { WebsiteFavicon } from "@/components/main/website-favicon";
 import { QrCodeSvg } from "@/components/ui/qr-code";
@@ -111,10 +112,17 @@ export type OmniboxSuggestionRowProps = {
   suggestion: OmniboxSuggestion;
   index: number;
   selected: boolean;
+  highlightLayoutId?: string;
   onSelect: (suggestion: OmniboxSuggestion) => void;
 };
 
-export function OmniboxSuggestionRow({ suggestion, index, selected, onSelect }: OmniboxSuggestionRowProps) {
+export function OmniboxSuggestionRow({
+  suggestion,
+  index,
+  selected,
+  highlightLayoutId = "omnibox-active-row",
+  onSelect
+}: OmniboxSuggestionRowProps) {
   const [hasLoadedFavicon, setHasLoadedFavicon] = useState(false);
   const faviconUrl = pageUrlForFavicon(suggestion);
   const title = primaryLabel(suggestion);
@@ -144,16 +152,21 @@ export function OmniboxSuggestionRow({ suggestion, index, selected, onSelect }: 
     >
       <div
         className={cn(
-          "flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-100",
+          "relative flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-100",
           suggestion.type === "instant-answer" ? "px-3 py-2.5" : "px-2.5 py-2.5",
-          selected
-            ? "bg-primary/14 ring-1 ring-primary/28 dark:bg-primary/22 dark:ring-primary/35"
-            : "bg-transparent hover:bg-black/4 dark:hover:bg-white/5"
+          !selected && "bg-transparent hover:bg-black/4 dark:hover:bg-white/5"
         )}
       >
+        {selected && (
+          <motion.div
+            layoutId={highlightLayoutId}
+            transition={{ type: "spring", stiffness: 520, damping: 38 }}
+            className="pointer-events-none absolute inset-0 rounded-xl bg-primary/14 ring-1 ring-primary/28 dark:bg-primary/22 dark:ring-primary/35"
+          />
+        )}
         <span
           className={cn(
-            "flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg",
+            "relative z-10 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg",
             selected && hasLoadedFavicon
               ? "bg-white shadow-xs"
               : suggestion.type === "instant-answer" || suggestion.type === "pedal"
@@ -169,7 +182,7 @@ export function OmniboxSuggestionRow({ suggestion, index, selected, onSelect }: 
           />
         </span>
 
-        <div className="min-w-0 flex-1">
+        <div className="relative z-10 min-w-0 flex-1">
           <div className="truncate font-sans text-[14px] font-medium leading-tight">
             <span className={cn(selected ? "text-zinc-950 dark:text-white" : "text-zinc-800 dark:text-zinc-100")}>
               {title}
@@ -186,13 +199,13 @@ export function OmniboxSuggestionRow({ suggestion, index, selected, onSelect }: 
         </div>
 
         {suggestion.type === "instant-answer" && suggestion.qrValue && (
-          <div className="shrink-0 rounded-lg border border-black/10 bg-white p-1 shadow-xs dark:border-white/15">
+          <div className="relative z-10 shrink-0 rounded-lg border border-black/10 bg-white p-1 shadow-xs dark:border-white/15">
             <QrCodeSvg value={suggestion.qrValue} size={68} />
           </div>
         )}
 
         {showAction ? (
-          <span className="flex shrink-0 items-center gap-2">
+          <span className="relative z-10 flex shrink-0 items-center gap-2">
             <span
               className={cn(
                 "hidden font-sans text-[11px] font-medium sm:inline",

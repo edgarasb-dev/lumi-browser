@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -279,27 +280,39 @@ export function SidePanel() {
               type="button"
               onClick={() => setActiveMode("scratchpad")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1 text-xs font-medium transition",
+                "relative flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1 text-xs font-medium transition-colors cursor-pointer",
                 activeMode === "scratchpad"
-                  ? "bg-white text-foreground shadow-xs dark:bg-white/15 dark:text-white"
+                  ? "text-foreground dark:text-white"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <StickyNote className="size-3.5" />
-              Scratchpad
+              {activeMode === "scratchpad" && (
+                <motion.div
+                  layoutId="side-panel-mode-pill"
+                  transition={{ type: "spring", stiffness: 460, damping: 34 }}
+                  className="absolute inset-0 rounded-lg bg-white shadow-xs dark:bg-white/15"
+                />
+              )}
+              <StickyNote className="relative z-10 size-3.5" />
+              <span className="relative z-10">Scratchpad</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveMode("web")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1 text-xs font-medium transition",
-                activeMode === "web"
-                  ? "bg-white text-foreground shadow-xs dark:bg-white/15 dark:text-white"
-                  : "text-muted-foreground hover:text-foreground"
+                "relative flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1 text-xs font-medium transition-colors cursor-pointer",
+                activeMode === "web" ? "text-foreground dark:text-white" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Globe className="size-3.5" />
-              Web View
+              {activeMode === "web" && (
+                <motion.div
+                  layoutId="side-panel-mode-pill"
+                  transition={{ type: "spring", stiffness: 460, damping: 34 }}
+                  className="absolute inset-0 rounded-lg bg-white shadow-xs dark:bg-white/15"
+                />
+              )}
+              <Globe className="relative z-10 size-3.5" />
+              <span className="relative z-10">Web View</span>
             </button>
           </div>
 
@@ -341,12 +354,20 @@ export function SidePanel() {
               </div>
 
               <div className="flex items-center gap-1.5">
-                {savedNotice && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                    <Check className="size-3" />
-                    Saved
-                  </span>
-                )}
+                <AnimatePresence>
+                  {savedNotice && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.14 }}
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+                    >
+                      <Check className="size-3" />
+                      Saved
+                    </motion.span>
+                  )}
+                </AnimatePresence>
                 <Button
                   variant="ghost"
                   size="sm"

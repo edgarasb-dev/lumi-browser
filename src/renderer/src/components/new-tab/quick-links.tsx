@@ -193,8 +193,16 @@ export function QuickLinks({ className = "" }: QuickLinksProps) {
       </div>
 
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
-        {quickLinks.map((link) => (
-          <div key={link.id} className="group relative">
+        {quickLinks.map((link, idx) => (
+          <motion.div
+            key={link.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.035, type: "spring", stiffness: 380, damping: 28 }}
+            whileHover={{ y: -3, scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            className="group relative"
+          >
             <button
               type="button"
               onClick={() => handleDeleteLink(link.id)}
@@ -205,7 +213,7 @@ export function QuickLinks({ className = "" }: QuickLinksProps) {
             </button>
             <a
               href={link.url}
-              className="lumi-glass-panel flex flex-col items-center justify-center gap-2 px-3 py-3.5 text-center no-underline transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md"
+              className="lumi-glass-panel flex flex-col items-center justify-center gap-2 px-3 py-3.5 text-center no-underline transition-colors duration-150 hover:border-primary/40 hover:shadow-md"
             >
               <div className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-white/85 shadow-xs dark:bg-white/10">
                 {link.url.startsWith("lumi://history") ? (
@@ -220,7 +228,7 @@ export function QuickLinks({ className = "" }: QuickLinksProps) {
               </div>
               <div className="w-full truncate text-xs font-medium text-foreground">{link.name}</div>
             </a>
-          </div>
+          </motion.div>
         ))}
       </div>
     </motion.div>

@@ -9,6 +9,7 @@ import { PrivacySettings } from "@/components/settings/sections/privacy/section"
 import { ShortcutsSettings } from "@/components/settings/sections/shortcuts/section";
 import { SearchEnginesSettings } from "@/components/settings/sections/search/section";
 import { ImportDataSettings } from "@/components/settings/sections/import/section";
+import { McpSettings } from "@/components/settings/sections/mcp/section";
 import { SettingsProvider } from "@/components/providers/settings-provider";
 import { AppUpdatesProvider } from "@/components/providers/app-updates-provider";
 import {
@@ -21,7 +22,8 @@ import {
   Search,
   Sparkles,
   ArrowUpRight,
-  Download
+  Download,
+  PlugZap
 } from "lucide-react";
 import { ShortcutsProvider, useShortcuts } from "@/components/providers/shortcuts-provider";
 import { SearchEnginesProvider, useSearchEngines } from "@/components/providers/search-engines-provider";
@@ -57,6 +59,7 @@ const SECTIONS: Section[] = [
   { id: "spaces", label: "Spaces", icon: <OrbitIcon className="size-4" />, category: "workspace" },
   { id: "profiles", label: "Profiles", icon: <UsersIcon className="size-4" />, category: "workspace" },
   { id: "import", label: "Import Data", icon: <Download className="size-4" />, category: "workspace" },
+  { id: "mcp", label: "MCP Server", icon: <PlugZap className="size-4" />, category: "workspace" },
   { id: "shortcuts", label: "Shortcuts", icon: <KeyboardIcon className="size-4" />, category: "workspace" },
   { id: "about", label: "About Lumi", icon: <Sparkles className="size-4 text-primary" />, category: "system" }
 ];
@@ -289,6 +292,8 @@ function SettingsWorkspace() {
         return <SpacesSettings initialSelectedProfile={selectedProfileId} initialSelectedSpace={selectedSpaceId} />;
       case "import":
         return <ImportDataSettings />;
+      case "mcp":
+        return <McpSettings />;
       case "shortcuts":
         return <ShortcutsSettings />;
       default:

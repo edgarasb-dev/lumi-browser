@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
 import { Search } from "lucide-react";
 import { requestOmniboxSuggestions } from "@/lib/omnibox-new";
 import { primeOpenTabsCache, primeQuickHistoryCache } from "@/lib/omnibox-new/suggestors";
@@ -333,7 +334,11 @@ export function OmniboxMain() {
         paddingLeft: openState.shadowPadding.left
       }}
     >
-      <div
+      <motion.div
+        key={openState.sequence}
+        initial={{ opacity: 0, y: -6, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 520, damping: 36 }}
         className={cn(
           "h-full w-full rounded-[15px]",
           "backdrop-blur-2xl saturate-150 transition-colors",
@@ -442,7 +447,7 @@ export function OmniboxMain() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

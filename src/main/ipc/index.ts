@@ -38,6 +38,7 @@ import "@/ipc/app/open-external";
 import "@/ipc/app/onboarding";
 import "@/ipc/settings/search-engines";
 import "@/ipc/settings/importer";
+import "@/ipc/settings/mcp";
 
 // Special
 import "@/ipc/listeners-manager";

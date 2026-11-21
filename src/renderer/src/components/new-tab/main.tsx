@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Check, Moon, Palette, Search, SlidersHorizontal, Sun } from "lucide-react";
 import { useTheme } from "@/components/main/theme";
 import { QuickLinks } from "./quick-links";
@@ -427,19 +427,28 @@ export function NewTabPage() {
             )}
           </div>
 
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="lumi-glass-panel absolute left-0 right-0 top-full z-elevated max-h-[340px] space-y-1 overflow-y-auto rounded-t-none border-t border-black/8 p-2 shadow-2xl dark:border-white/10">
-              {suggestions.map((suggestion, index) => (
-                <OmniboxSuggestionRow
-                  key={suggestionKey(suggestion, index)}
-                  suggestion={suggestion}
-                  index={index}
-                  selected={index === selectedIndex}
-                  onSelect={commitSuggestion}
-                />
-              ))}
-            </div>
-          )}
+          <AnimatePresence>
+            {showSuggestions && suggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.99 }}
+                transition={{ duration: 0.14, ease: "easeOut" }}
+                className="lumi-glass-panel absolute left-0 right-0 top-full z-elevated max-h-[340px] space-y-1 overflow-y-auto rounded-t-none border-t border-black/8 p-2 shadow-2xl dark:border-white/10"
+              >
+                {suggestions.map((suggestion, index) => (
+                  <OmniboxSuggestionRow
+                    key={suggestionKey(suggestion, index)}
+                    suggestion={suggestion}
+                    index={index}
+                    selected={index === selectedIndex}
+                    highlightLayoutId="newtab-omnibox-row"
+                    onSelect={commitSuggestion}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {widgetPrefs.quickLinks && <QuickLinks />}

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.2] — 2026-11-21
+
+### Codename: Prism
+
+### Added
+
+- **Native Local MCP Server (`lumi://settings?section=mcp`)**: Opt-in local Model Context Protocol server (`127.0.0.1` loopback Streamable HTTP + `out/main/mcp-stdio.js` stdio bridge for Claude Desktop) exposing 16 scoped tools and 3 resources (`lumi_list_workspaces`, `lumi_list_tabs`, `lumi_read_page`, `lumi_get_page_snapshot`, `lumi_capture_screenshot`, `lumi_search_history`, `lumi_search_bookmarks`, `lumi_open_tab`, `lumi_navigate_tab`, `lumi_activate_tab`, `lumi_close_tab`, `lumi_switch_space`, `lumi_open_split_view`, `lumi_interact_page`, `lumi_add_bookmark`, and gated `lumi_evaluate_js`) with tiered permissions (`Read Only` / `Interactive` / `Full`), profile scoping, constant-time Bearer auth, web origin CSRF rejection, and a live Activity Log.
+- **README Animated Motion Previews**: Added animated GIFs showcasing Workspace transitions, Spaces tinting, Layout morphing, Split Side Panel, and the 5-step Onboarding Studio flow.
+
+### Changed
+
+- **Upgraded Onboarding Studio & `motion/react` Animations**: Upgraded onboarding with a living sapphire aurora backdrop, spring-animated step indicator and macOS traffic-light-cleared Back navigation, live Workspace preview on Welcome, unified **Craft Your First Space** studio with real-time chrome preview, interactive Layout morph preview, and personalized Setup Summary launch screen—alongside sliding spring highlights and transitions in Omnibox, New Tab Speed Dial, and Split Side Panel.
+
+---
+
 ## [0.3.1] — 2026-11-21
 
 ### Codename: Prism

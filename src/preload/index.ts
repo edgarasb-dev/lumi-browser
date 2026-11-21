@@ -31,6 +31,8 @@ import { LumiOpenExternalAPI } from "~/lumi/interfaces/settings/openExternal";
 import { LumiOnboardingAPI } from "~/lumi/interfaces/settings/onboarding";
 import { LumiSearchEnginesAPI } from "~/lumi/interfaces/settings/search-engines";
 import { LumiImporterAPI } from "~/lumi/interfaces/settings/importer";
+import { LumiMcpAPI } from "~/lumi/interfaces/settings/mcp";
+import type { McpConfigUpdate, McpServerStatus } from "~/types/mcp";
 import type { SearchEngine, SearchEngineInput } from "~/types/search-engines";
 import type { LumiOmniboxAPI, OmniboxOpenParams } from "~/lumi/interfaces/browser/omnibox";
 import { LumiSettingsAPI } from "~/lumi/interfaces/settings/settings";
@@ -680,6 +682,28 @@ const importerAPI: LumiImporterAPI = {
   }
 };
 
+// MCP SERVER API //
+const mcpAPI: LumiMcpAPI = {
+  getStatus: async () => {
+    return ipcRenderer.invoke("mcp:get-status");
+  },
+  setEnabled: async (enabled: boolean) => {
+    return ipcRenderer.invoke("mcp:set-enabled", enabled);
+  },
+  updateConfig: async (updates: McpConfigUpdate) => {
+    return ipcRenderer.invoke("mcp:update-config", updates);
+  },
+  rotateToken: async () => {
+    return ipcRenderer.invoke("mcp:rotate-token");
+  },
+  clearActivity: async () => {
+    return ipcRenderer.invoke("mcp:clear-activity");
+  },
+  onStatusChanged: (callback: (status: McpServerStatus) => void) => {
+    return listenOnIPCChannel("mcp:on-status-changed", callback);
+  }
+};
+
 // OMNIBOX API //
 const omniboxAPI: LumiOmniboxAPI = {
   show: (bounds: Electron.Rectangle | null, params: OmniboxOpenParams | null) => {
@@ -1150,6 +1174,7 @@ const lumiAPI: typeof lumi = {
   searchEngines: wrapAPI(searchEnginesAPI, "settings"),
   openExternal: wrapAPI(openExternalAPI, "settings"),
   onboarding: wrapAPI(onboardingAPI, "settings"),
-  importer: wrapAPI(importerAPI, "settings")
+  importer: wrapAPI(importerAPI, "settings"),
+  mcp: wrapAPI(mcpAPI, "settings")
 };
 contextBridge.exposeInMainWorld("lumi", lumiAPI);
