@@ -59,14 +59,14 @@ function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
 
   sqlite = new Database(DB_PATH);
 
-  // Configure SQLite pragmas for performance and concurrency
+  // Configure SQLite pragmas for performance and low memory footprint
   sqlite.pragma("foreign_keys = ON");
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
-  sqlite.pragma("cache_size = -64000"); // 64MB cache
+  sqlite.pragma("cache_size = -8000"); // 8MB page cache (down from 64MB)
   sqlite.pragma("busy_timeout = 3000");
   sqlite.pragma("temp_store = MEMORY");
-  sqlite.pragma("mmap_size = 268435456"); // 256MB memory-mapped I/O
+  sqlite.pragma("mmap_size = 33554432"); // 32MB memory-mapped I/O (down from 256MB)
 
   debugPrint("DB", "Configured SQLite pragmas");
 
@@ -101,6 +101,7 @@ function scheduleHistoryPrune(): void {
     if (!db || !sqlite) return;
     try {
       pruneBrowsingHistory();
+      sqlite.pragma("shrink_memory");
     } catch (err) {
       debugError("DB", "Browsing history prune failed:", err);
     }

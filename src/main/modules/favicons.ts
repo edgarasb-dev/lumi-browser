@@ -45,10 +45,12 @@ let cleanupTimer: NodeJS.Timeout | null = null;
 
 function getDb(): Database.Database {
   if (!db) {
+    sharp.cache(false);
+    sharp.concurrency(1);
     db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
     db.pragma("synchronous = NORMAL");
-    db.pragma("cache_size = -64000");
+    db.pragma("cache_size = -4000"); // 4MB page cache (down from 64MB)
     db.pragma("busy_timeout = 3000");
 
     db.exec(`

@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.3" date="2026-11-22">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.3</url>
+      <description>
+        <p>Open the Start Page (lumi://new-tab) or wake the most recently active restored tab instead of showing a blank screen on browser launch or empty spaces, add 5-minute background and window-focus auto-update checks with a Topbar Update pill, and reduce CPU, GPU, and RAM usage via background tab sleeping/throttling, Chromium memory-reclaim flags, and trimmed SQLite and Sharp caches.</p>
+      </description>
+    </release>
     <release version="0.4.2" date="2026-11-22">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.2</url>
       <description>

@@ -14,6 +14,7 @@ import { RecentlyClosedPopover } from "@/components/browser-ui/browser-sidebar/_
 import { TabPreviewCard } from "@/components/browser-ui/browser-sidebar/_components/tab-preview-card";
 import { MediaMiniPlayer } from "@/components/browser-ui/media-mini-player";
 import { useSidePanel } from "@/components/providers/side-panel-provider";
+import { useAppUpdates } from "@/components/providers/app-updates-provider";
 import { useSetting } from "@/components/providers/settings-provider";
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
 import {
@@ -27,7 +28,10 @@ import {
   Rows2,
   ArrowLeftRight,
   Ungroup,
-  Maximize2
+  Maximize2,
+  ArrowUpCircle,
+  Download,
+  RefreshCw
 } from "lucide-react";
 import type { TabData } from "~/types/tabs";
 
@@ -191,6 +195,43 @@ export function TopbarLayout() {
   const focusedTab = useFocusedTab();
   const [, setNavigationLayout] = useSetting<"sidebar" | "topbar">("navigationLayout");
   const { isOpen: sidePanelOpen, toggleOpen: toggleSidePanel } = useSidePanel();
+  const {
+    updateStatus,
+    isDownloadingUpdate,
+    isInstallingUpdate,
+    isAutoUpdateSupported,
+    downloadUpdate,
+    installUpdate,
+    openDownloadPage
+  } = useAppUpdates();
+
+  const isUpdateDownloaded = updateStatus?.updateDownloaded === true;
+  const hasUpdateAvailable = Boolean(updateStatus?.availableUpdate);
+  const showTopbarUpdatePill = hasUpdateAvailable || isUpdateDownloaded || isDownloadingUpdate || isInstallingUpdate;
+
+  const handleTopbarUpdateClick = useCallback(async () => {
+    if (isUpdateDownloaded) {
+      const ok = await installUpdate();
+      if (!ok) openDownloadPage();
+      return;
+    }
+    if (hasUpdateAvailable && !isAutoUpdateSupported) {
+      openDownloadPage();
+      return;
+    }
+    if (hasUpdateAvailable && !isDownloadingUpdate) {
+      const started = await downloadUpdate();
+      if (!started) openDownloadPage();
+    }
+  }, [
+    isUpdateDownloaded,
+    hasUpdateAvailable,
+    isAutoUpdateSupported,
+    isDownloadingUpdate,
+    installUpdate,
+    downloadUpdate,
+    openDownloadPage
+  ]);
 
   // Measure element height and report as contentTopOffset so WebContentsView sits right below topbar
   useLayoutEffect(() => {
@@ -356,6 +397,42 @@ export function TopbarLayout() {
         </div>
 
         <div className="shrink-0 flex items-center gap-1 remove-app-drag">
+          {showTopbarUpdatePill && (
+            <button
+              type="button"
+              onClick={handleTopbarUpdateClick}
+              disabled={isInstallingUpdate || isDownloadingUpdate}
+              title={
+                isUpdateDownloaded
+                  ? `Restart & Install Lumi v${updateStatus?.availableUpdate?.version ?? ""}`
+                  : `Download Lumi v${updateStatus?.availableUpdate?.version ?? ""}`
+              }
+              className={cn(
+                "h-7 px-2.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer",
+                isUpdateDownloaded
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
+                  : "bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25",
+                "disabled:opacity-60 disabled:pointer-events-none"
+              )}
+            >
+              {isInstallingUpdate || isDownloadingUpdate ? (
+                <RefreshCw className="size-3.5 animate-spin" />
+              ) : isUpdateDownloaded ? (
+                <ArrowUpCircle className="size-3.5" />
+              ) : (
+                <Download className="size-3.5" />
+              )}
+              <span>
+                {isInstallingUpdate
+                  ? "Installing..."
+                  : isDownloadingUpdate
+                    ? "Downloading..."
+                    : isUpdateDownloaded
+                      ? "Install Update"
+                      : "Update"}
+              </span>
+            </button>
+          )}
           <MediaMiniPlayer variant="topbar" />
           <DownloadsButton />
           <RecentlyClosedPopover compact />

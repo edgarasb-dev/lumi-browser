@@ -18,6 +18,8 @@ import {
 } from "@/controllers/tabs-controller/tab-sync";
 import { pinTabToSpace } from "@/controllers/pinned-tabs-controller/actions";
 import { getCurrentShortcut } from "@/modules/shortcuts";
+import { waitForInitialWindowStartup } from "@/app/onboarding";
+import { setWindowSpace } from "@/ipc/session/spaces";
 
 // IPC Handlers //
 function getWindowTabsData(window: BrowserWindow) {
@@ -91,6 +93,7 @@ function getWindowTabsData(window: BrowserWindow) {
 }
 
 ipcMain.handle("tabs:get-data", async (event) => {
+  await waitForInitialWindowStartup();
   const webContents = event.sender;
   const window = browserWindowsController.getWindowFromWebContents(webContents);
   if (!window) return null;
@@ -288,6 +291,9 @@ ipcMain.handle(
     });
 
     if (isForeground) {
+      if (window.browserWindowType === "normal" && !window.currentSpaceId) {
+        setWindowSpace(window, spaceId);
+      }
       tabsController.activateTab(tab);
     }
     return true;

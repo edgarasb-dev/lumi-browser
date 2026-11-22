@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.3] — 2026-11-22
+
+### Codename: Prism
+
+### Fixed
+
+- **Start Page & Session Restore Active Tab on Browser Open**: Fixed Lumi opening to a blank screen both on fresh/empty spaces and when restoring saved sessions. Added `waitForInitialWindowStartup()` gating on `tabs:get-data`, updated `restoreSession()` and `TabsController.restoreActiveTab()` to restore the most recently active tab or group per window and space (waking only the visible space while keeping inactive spaces asleep), and updated `AutoNewTab` to wait for `tabsData` and `currentSpace` instead of a 100ms timer and open the Start Page (`lumi://new-tab`) foreground tab whenever a normal window or space has no active tab (rather than popping only the Command Palette over an empty void under the default `newTabMode = "omnibox"` setting).
+
+### Improved
+
+- **Automatic Background & Focus Update Checks + Topbar Update Pill**: Added an `isChecking` re-entrancy guard in `AutoUpdateController`, shortened background update polling from 15 minutes to 5 minutes, added automatic `browser-window-focus` update checks (with a 2-minute cooldown when no download/install is active), and added a one-click `Update` / `Downloading...` / `Install Update` status pill to the Horizontal Topbar layout.
+- **CPU, RAM & GPU Memory Footprint Optimizations**: Enabled `PartitionAllocMemoryReclaimer`, `MemorySaverModeRenderTuning`, and `MacAllowBackgroundingRenderProcesses` Chromium features, lowered `MAX_AWAKE_BACKGROUND_TABS` from 12 to 6, allowed idle background pinned tabs to sleep cleanly while still exempting them from auto-archival, enforced `backgroundThrottling: true` when hiding non-audible/non-PiP tabs, reduced SQLite page caches (`lumi.db` from 64 MB / 256 MB mmap to 8 MB / 32 MB mmap + `shrink_memory` after history prune; `favicons.db` from 64 MB to 4 MB), disabled `sharp` 50 MB native cache (`sharp.cache(false)`, `sharp.concurrency(1)`), and made password preload `scroll`/`resize` listeners passive with an early click fast-path.
+
+---
+
 ## [0.4.2] — 2026-11-22
 
 ### Codename: Prism

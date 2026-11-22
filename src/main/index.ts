@@ -28,6 +28,12 @@ function initializeApp() {
   // Disable FedCM (Google One Tap, which doesn't work as the native prompt never shows in Electron)
   app.commandLine.appendSwitch("--disable-features", "FedCm");
 
+  // Enable Chromium memory-reclaim and background renderer QoS optimizations
+  app.commandLine.appendSwitch(
+    "enable-features",
+    "PartitionAllocMemoryReclaimer,MemorySaverModeRenderTuning,MacAllowBackgroundingRenderProcesses"
+  );
+
   // Print header
   printHeader();
 

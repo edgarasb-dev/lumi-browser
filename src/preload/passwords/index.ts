@@ -577,6 +577,7 @@ export function tryPatchPasswords(): void {
   window.addEventListener(
     "click",
     (e) => {
+      if (!latestCandidate.password && !activeInput) return;
       const target = e.target;
       if (!(target instanceof Element)) return;
       const submitBtn = target.closest('button, input[type="submit"], [role="button"]');
@@ -607,12 +608,29 @@ export function tryPatchPasswords(): void {
   });
 
   window.addEventListener("mousedown", (e) => {
+    if (!hostEl || hostEl.style.display === "none") return;
     if (e.target !== hostEl && e.target !== activeInput) {
       closePopup();
     }
   });
-  window.addEventListener("scroll", positionOverlay, true);
-  window.addEventListener("resize", positionOverlay, true);
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (hostEl && activeInput && hostEl.style.display !== "none") {
+        positionOverlay();
+      }
+    },
+    { capture: true, passive: true }
+  );
+  window.addEventListener(
+    "resize",
+    () => {
+      if (hostEl && activeInput && hostEl.style.display !== "none") {
+        positionOverlay();
+      }
+    },
+    { capture: true, passive: true }
+  );
 
   ipcRenderer.on("passwords:fill-active-frame", (_event, payload: { username: string; password: string }) => {
     const target =

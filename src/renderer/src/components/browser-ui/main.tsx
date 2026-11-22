@@ -21,7 +21,7 @@ import {
   useFocusedTab,
   useFocusedTabFullscreen,
   useFocusedTabLoading,
-  useTabsGroups
+  useTabs
 } from "@/components/providers/tabs-provider";
 import { TabDisabler } from "@/components/logic/tab-disabler";
 import { BrowserActionProvider } from "@/components/providers/browser-action-provider";
@@ -123,25 +123,50 @@ const WindowTitle = memo(function WindowTitle() {
 });
 
 function AutoNewTab() {
-  const { tabGroups } = useTabsGroups();
-  const [isReady, setIsReady] = useState(false);
-  const openedNewTabRef = useRef(false);
+  const { tabsData, activeTabGroup, focusedTab } = useTabs();
+  const { currentSpace, isLoading: isSpacesLoading } = useSpaces();
+  const lastCheckedSpaceIdRef = useRef<string | null>(null);
+  const pendingSpaceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsReady(true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!tabsData || isSpacesLoading || !currentSpace) return;
 
-  useEffect(() => {
-    if (isReady && !openedNewTabRef.current) {
-      openedNewTabRef.current = true;
-      if (tabGroups.length === 0) {
-        lumi.newTab.open();
-      }
+    const spaceId = currentSpace.id;
+    const activeTabIds = tabsData.activeTabIds[spaceId] ?? [];
+    const hasActiveTab = activeTabIds.length > 0 || activeTabGroup !== null || focusedTab !== null;
+
+    if (hasActiveTab) {
+      lastCheckedSpaceIdRef.current = spaceId;
+      return;
     }
-  }, [isReady, tabGroups.length]);
+
+    if (lastCheckedSpaceIdRef.current === spaceId || pendingSpaceIdRef.current === spaceId) {
+      return;
+    }
+
+    pendingSpaceIdRef.current = spaceId;
+    lastCheckedSpaceIdRef.current = spaceId;
+
+    void lumi.tabs
+      .newTab(undefined, true, spaceId)
+      .then((created) => {
+        if (!created && lastCheckedSpaceIdRef.current === spaceId) {
+          lastCheckedSpaceIdRef.current = null;
+        }
+      })
+      .catch((error) => {
+        if (lastCheckedSpaceIdRef.current === spaceId) {
+          lastCheckedSpaceIdRef.current = null;
+        }
+        console.error("Failed to open Start Page for empty space:", error);
+      })
+      .finally(() => {
+        if (pendingSpaceIdRef.current === spaceId) {
+          pendingSpaceIdRef.current = null;
+        }
+      });
+  }, [tabsData, activeTabGroup, focusedTab, isSpacesLoading, currentSpace]);
+
   return null;
 }
 

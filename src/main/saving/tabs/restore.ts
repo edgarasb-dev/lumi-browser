@@ -7,6 +7,7 @@ import { shouldArchiveTab } from "@/saving/tabs";
 import { app } from "electron";
 import { GlanceTabGroup } from "@/controllers/tabs-controller/tab-groups/glance";
 import { SplitTabGroup } from "@/controllers/tabs-controller/tab-groups/split";
+import type { Tab } from "@/controllers/tabs-controller/tab";
 import type { BrowserWindowCreationOptions, BrowserWindowType } from "@/controllers/windows-controller/types/browser";
 
 /**
@@ -70,6 +71,7 @@ async function createTabsFromPersistedData(tabDatas: PersistedTabData[]): Promis
   const persistedGroups = await tabPersistenceManager.loadAllTabGroups();
   const windowStates = await tabPersistenceManager.loadAllWindowStates();
   const uniqueIdToTabId = new Map<string, number>();
+  const createdTabs: Tab[] = [];
 
   // Create windows concurrently so multi-window restores don't serialize window startup
   await Promise.all(
@@ -102,11 +104,38 @@ async function createTabsFromPersistedData(tabDatas: PersistedTabData[]): Promis
         });
 
         uniqueIdToTabId.set(tabData.uniqueId, tab.id);
+        createdTabs.push(tab);
       }
     })
   );
 
   await restoreTabGroups(persistedGroups, uniqueIdToTabId);
+
+  // Mark the most recently active restored tab (preferring regular tabs over ephemeral ones)
+  // active in each window/space so restored windows wake their visible tab instead of staying blank.
+  const bestTabByWindowSpace = new Map<string, Tab>();
+  for (const tab of createdTabs) {
+    if (tab.isDestroyed) continue;
+    const key = `${tab.getWindow().id}-${tab.spaceId}`;
+    const currentBest = bestTabByWindowSpace.get(key);
+    if (!currentBest || isPreferredRestoredTab(tab, currentBest)) {
+      bestTabByWindowSpace.set(key, tab);
+    }
+  }
+
+  for (const tab of bestTabByWindowSpace.values()) {
+    tabsController.restoreActiveTab(tab);
+  }
+}
+
+function isPreferredRestoredTab(candidate: Tab, current: Tab): boolean {
+  if (candidate.ephemeral !== current.ephemeral) {
+    return !candidate.ephemeral;
+  }
+  if (candidate.lastActiveAt !== current.lastActiveAt) {
+    return candidate.lastActiveAt > current.lastActiveAt;
+  }
+  return candidate.position < current.position;
 }
 
 /**

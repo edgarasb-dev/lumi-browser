@@ -126,6 +126,9 @@ export class TabLayoutManager {
     if (justHidden || justShown) {
       tab.updateStateProperty("lastActiveAt", getCurrentTimestamp());
     }
+    if (justHidden && tab.webContents && !tab.audible && !tab.isPictureInPicture) {
+      tab.webContents.setBackgroundThrottling(true);
+    }
 
     if (!visible) return;
 

@@ -5,8 +5,22 @@ import { onboarding } from "@/controllers/windows-controller/interfaces/onboardi
 import { restoreSession as createInitialWindow } from "@/saving/tabs/restore";
 import { flushPendingUrls, discardPendingUrls } from "@/app/urls";
 
+let initialStartupPromise: Promise<void> = Promise.resolve();
+
+/**
+ * Waits until initial startup session restore and pending startup URLs have settled.
+ */
+export function waitForInitialWindowStartup(): Promise<void> {
+  return initialStartupPromise;
+}
+
 export function runOnboardingOrInitialWindow() {
   debugPrint("INITIALIZATION", "waiting for app.whenReady() before onboarding check");
+  let resolveInitialStartup!: () => void;
+  initialStartupPromise = new Promise<void>((resolve) => {
+    resolveInitialStartup = resolve;
+  });
+
   app.whenReady().then(async () => {
     debugPrint("INITIALIZATION", "grabbing hasCompletedOnboarding()");
     try {
@@ -31,6 +45,8 @@ export function runOnboardingOrInitialWindow() {
       debugPrint("INITIALIZATION", "hasCompletedOnboarding() failed, falling back to onboarding:", error);
       onboarding.show();
       discardPendingUrls();
+    } finally {
+      resolveInitialStartup();
     }
   });
 }

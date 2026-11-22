@@ -69,6 +69,7 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
   private macCodeSignedCache: boolean | null = null;
   private macCodeSignedCheckPromise: Promise<boolean> | null = null;
   private initialCheckTimer: NodeJS.Timeout | null = null;
+  private isChecking: boolean = false;
 
   private async checkMacCodeSignedAsync(): Promise<boolean> {
     if (this.macCodeSignedCache !== null) {
@@ -173,6 +174,11 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       });
     }
 
+    if (this.isChecking) {
+      return null;
+    }
+
+    this.isChecking = true;
     try {
       this.lastError = null;
       debugPrint("AUTO_UPDATER", "Checking for updates...");
@@ -207,6 +213,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       }
       this.emit("status-changed");
       return null;
+    } finally {
+      this.isChecking = false;
     }
   }
 
@@ -509,7 +517,25 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
       this.initialCheckTimer = null;
       void this.checkForUpdates();
     }, 4000);
-    setInterval(() => this.checkForUpdates(), 1000 * 60 * 15); // Check every 15 minutes
+
+    // Check periodically every 5 minutes in the background
+    setInterval(
+      () => {
+        void this.checkForUpdates();
+      },
+      1000 * 60 * 5
+    );
+
+    // Also check when a Lumi window regains focus if at least 2 minutes have passed since the last check
+    app.on("browser-window-focus", () => {
+      if (this.isChecking || this.isDownloadingAdhoc || this.downloadProgress || this.updateDownloaded) {
+        return;
+      }
+      const elapsed = Date.now() - (this.lastChecked ?? 0);
+      if (elapsed >= 1000 * 60 * 2) {
+        void this.checkForUpdates();
+      }
+    });
   }
 }
 

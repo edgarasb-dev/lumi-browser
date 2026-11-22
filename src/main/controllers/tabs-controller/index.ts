@@ -29,7 +29,7 @@ import { readerModeController } from "@/controllers/reader-mode-controller";
 
 export const NEW_TAB_URL = "lumi://new-tab";
 const ARCHIVE_CHECK_INTERVAL_MS = 10 * 1000;
-const MAX_AWAKE_BACKGROUND_TABS = 12;
+const MAX_AWAKE_BACKGROUND_TABS = 6;
 
 type TabsControllerEvents = {
   "tab-created": [Tab];
@@ -149,8 +149,7 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       };
 
       for (const tab of this.tabs.values()) {
-        if (tab.ephemeral) continue;
-        if (!tab.visible && shouldArchiveTab(tab.lastActiveAt)) {
+        if (!tab.visible && !tab.ephemeral && shouldArchiveTab(tab.lastActiveAt)) {
           tab.destroy();
           continue;
         }
@@ -717,11 +716,7 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     return existingValidSnapshotId;
   }
 
-  /**
-   * Activate a tab/group in its window, applying popup window policy first.
-   */
-  public activateTab(tabOrGroup: Tab | TabGroup) {
-    let target: Tab | TabGroup = tabOrGroup;
+  private resolveActivationTarget(tabOrGroup: Tab | TabGroup, syncGlanceLayout = true): Tab | TabGroup {
     if (tabOrGroup instanceof Tab) {
       const group = this.getTabGroupByTabId(tabOrGroup.id);
       if (group) {
@@ -729,11 +724,21 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
           group.setFocusedTab(tabOrGroup.id);
         } else if (group.mode === "glance") {
           group.setFrontTab(tabOrGroup.id);
-          this.refreshTabGroupLayout(group);
+          if (syncGlanceLayout) {
+            this.refreshTabGroupLayout(group);
+          }
         }
-        target = group;
+        return group;
       }
     }
+    return tabOrGroup;
+  }
+
+  /**
+   * Activate a tab/group in its window, applying popup window policy first.
+   */
+  public activateTab(tabOrGroup: Tab | TabGroup) {
+    const target = this.resolveActivationTarget(tabOrGroup, true);
 
     const { window, spaceId } = this.getActivationContext(target);
 
@@ -742,6 +747,24 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     }
 
     this.setActiveTab(target);
+  }
+
+  /**
+   * Marks a restored sleeping tab (or its containing group) as active for its
+   * window and space, waking its view only if that space is currently visible.
+   */
+  public restoreActiveTab(tab: Tab): void {
+    if (tab.isDestroyed) return;
+
+    const target = this.resolveActivationTarget(tab, false);
+    const { window, windowId, spaceId } = this.getActivationContext(target);
+    this.applyActiveTabState(target, false);
+
+    if (window && !window.destroyed && window.currentSpaceId === spaceId) {
+      this.emit("active-tab-changed", windowId, spaceId);
+    } else {
+      windowTabsChanged(windowId);
+    }
   }
 
   private indexOfActiveInOrderedList(windowId: number, spaceId: string, ordered: (Tab | TabGroup)[]): number {
@@ -817,12 +840,7 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     };
   }
 
-  /**
-   * Set the active tab for a space.
-   * This only updates controller state; callers that need popup-space syncing
-   * should go through `activateTab()`.
-   */
-  private setActiveTab(tabOrGroup: Tab | TabGroup) {
+  private applyActiveTabState(tabOrGroup: Tab | TabGroup, recordHistory: boolean) {
     const { windowId, spaceId, tabToFocus, idToStore } = this.getActivationContext(tabOrGroup);
 
     const windowSpaceReference = `${windowId}-${spaceId}` as WindowSpaceReference;
@@ -844,8 +862,20 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       this.removeFocusedTab(windowId, spaceId);
     }
 
-    this.flushBrowsingHistoryForActivatedTabOrGroup(tabOrGroup);
+    if (recordHistory) {
+      this.flushBrowsingHistoryForActivatedTabOrGroup(tabOrGroup);
+    }
 
+    return { windowId, spaceId };
+  }
+
+  /**
+   * Set the active tab for a space.
+   * This only updates controller state; callers that need popup-space syncing
+   * should go through `activateTab()`.
+   */
+  private setActiveTab(tabOrGroup: Tab | TabGroup) {
+    const { windowId, spaceId } = this.applyActiveTabState(tabOrGroup, true);
     this.emit("active-tab-changed", windowId, spaceId);
   }
 
