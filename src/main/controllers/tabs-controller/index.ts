@@ -406,6 +406,8 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     tab.on("window-changed", (oldWindowId) => {
       if (quitController.isQuitting) return;
 
+      lifecycleManager.bindWindowFullScreenListeners(tab.getWindow());
+
       // Structural change — refresh both old window (tab removed) and new window (tab added)
       const newWindowId = tab.getWindow().id;
       windowTabsChanged(newWindowId);

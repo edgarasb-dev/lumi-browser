@@ -1,5 +1,4 @@
 import { type ActivateEventType, useBrowserAction } from "@/components/providers/browser-action-provider";
-import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
 import { useExtensions } from "@/components/providers/extensions-provider";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/popover";
@@ -150,7 +149,6 @@ function BrowserAction({
 // Main extensions popover for the new browser UI sidebar
 export function BrowserActionList() {
   const { isCurrentSpaceLight } = useSpaces();
-  const { hasSidebar } = useBrowserSidebar();
   const focusedTab = useFocusedTab();
   const { actions, activeTabId, partition } = useBrowserAction();
   const { extensions } = useExtensions();
@@ -173,18 +171,18 @@ export function BrowserActionList() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        title="Extensions"
         className={cn(
-          "size-6 items-center justify-center rounded-md",
-          hasSidebar && !open ? "hidden group-hover/address:flex" : "flex",
-          "hover:bg-black/15 dark:hover:bg-white/20",
-          "transition-colors duration-150",
-          "relative shrink-0"
+          "size-6 flex items-center justify-center rounded-md cursor-pointer relative shrink-0 transition-colors duration-150",
+          open
+            ? "bg-black/10 text-black dark:bg-white/15 dark:text-white"
+            : "text-black/45 dark:text-white/45 group-hover/address:text-black/65 dark:group-hover/address:text-white/65 hover:text-black/85 dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/15"
         )}
         onClick={(event) => {
           event.stopPropagation();
         }}
       >
-        <PuzzleIcon strokeWidth={2} className="size-4 text-black/80 dark:text-white/80" />
+        <PuzzleIcon strokeWidth={2} className="size-3.5" />
       </PopoverTrigger>
       <PopoverContent className={cn("w-56 p-2 select-none")} positionerClassName={spaceInjectedClasses}>
         {!noActiveTab &&

@@ -102,7 +102,7 @@ class ReaderModeController {
     }
 
     if (tab.fullScreen) {
-      tab.updateStateProperty("fullScreen", false);
+      tabsController.getTabManagers(tabId)?.lifecycle.setFullScreen(false);
     }
     tab.updateStateProperty("readerMode", true);
     tabsController.getTabManagers(tabId)?.layout.updateLayout(true);

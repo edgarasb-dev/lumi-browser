@@ -1,13 +1,11 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import { BookOpen, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
 import { useFocusedTab } from "@/components/providers/tabs-provider";
 import { useToast } from "@/components/providers/minimal-toast-provider";
 
 export const ReaderButton = memo(function ReaderButton() {
   const focusedTab = useFocusedTab();
-  const { hasSidebar } = useBrowserSidebar();
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,11 +49,10 @@ export const ReaderButton = memo(function ReaderButton() {
         void handleToggle();
       }}
       className={cn(
-        "size-6 items-center justify-center rounded-md shrink-0 transition-colors cursor-pointer",
-        hasSidebar && !isActive && !isLoading ? "hidden group-hover/address:flex" : "flex",
+        "size-6 flex items-center justify-center rounded-md shrink-0 transition-colors cursor-pointer",
         isActive
           ? "text-sky-600 dark:text-sky-400 bg-sky-500/15 hover:bg-sky-500/25"
-          : "text-black/45 dark:text-white/45 hover:text-black/80 dark:hover:text-white/85 hover:bg-black/10 dark:hover:bg-white/10"
+          : "text-black/45 dark:text-white/45 group-hover/address:text-black/65 dark:group-hover/address:text-white/65 hover:text-black/80 dark:hover:text-white/85 hover:bg-black/10 dark:hover:bg-white/10"
       )}
       title={isActive ? "Exit Reader Mode (Cmd+Option+R)" : "Enter Reader Mode (Cmd+Option+R)"}
     >

@@ -1,5 +1,6 @@
 import { Tab } from "./tab";
 import { BrowserWindow } from "@/controllers/windows-controller/types";
+import type { WebContents } from "electron";
 
 /**
  * Pre-sleep state stored in memory so the serialization layer
@@ -28,8 +29,18 @@ export class TabLifecycleManager {
   /** Snapshot of URL/nav state taken before the tab goes to sleep */
   public preSleepState: PreSleepState | null = null;
 
-  /** Disconnect function for the window "leave-full-screen" listener */
+  /** Disconnect functions for window fullscreen lifecycle listeners */
+  private disconnectEnterFullScreen: (() => void) | null = null;
   private disconnectLeaveFullScreen: (() => void) | null = null;
+
+  /** Tracks macOS OS fullscreen transition so early exits are queued rather than dropped by AppKit */
+  private isEnteringOsFullScreen: boolean = false;
+  private exitOsAfterEnter: boolean = false;
+
+  /** Cancelable cleanup timers for HTML fullscreen exit and bounds nudging */
+  private boundsNudgeTimer: NodeJS.Timeout | null = null;
+  private boundsRestoreTimer: NodeJS.Timeout | null = null;
+  private exitRetryTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly tab: Tab) {}
 
@@ -104,67 +115,211 @@ export class TabLifecycleManager {
 
   // --- Fullscreen ---
 
+  private clearExitCleanupTimers(): void {
+    if (this.boundsNudgeTimer) {
+      clearTimeout(this.boundsNudgeTimer);
+      this.boundsNudgeTimer = null;
+    }
+    if (this.boundsRestoreTimer) {
+      clearTimeout(this.boundsRestoreTimer);
+      this.boundsRestoreTimer = null;
+    }
+    if (this.exitRetryTimer) {
+      clearTimeout(this.exitRetryTimer);
+      this.exitRetryTimer = null;
+    }
+  }
+
+  private scheduleBoundsNudge(delayMs = 800): void {
+    if (this.boundsNudgeTimer) {
+      clearTimeout(this.boundsNudgeTimer);
+      this.boundsNudgeTimer = null;
+    }
+    if (this.boundsRestoreTimer) {
+      clearTimeout(this.boundsRestoreTimer);
+      this.boundsRestoreTimer = null;
+    }
+
+    const view = this.tab.view;
+    if (!view) return;
+
+    this.boundsNudgeTimer = setTimeout(() => {
+      this.boundsNudgeTimer = null;
+      const isViewValid = () => !this.tab.fullScreen && this.tab.view === view && this.tab.visible;
+      if (!isViewValid()) return;
+
+      const bounds = view.getBounds();
+      if (bounds.width <= 1) return;
+      const newBounds = { ...bounds, width: bounds.width - 1 };
+      view.setBounds(newBounds);
+
+      this.boundsRestoreTimer = setTimeout(() => {
+        this.boundsRestoreTimer = null;
+        if (!isViewValid()) return;
+
+        const currentBounds = view.getBounds();
+        if (newBounds.width !== currentBounds.width) return;
+        if (newBounds.height !== currentBounds.height) return;
+        if (newBounds.x !== currentBounds.x) return;
+        if (newBounds.y !== currentBounds.y) return;
+        view.setBounds(bounds);
+      }, 50);
+    }, delayMs);
+  }
+
+  private async exitHtmlFullscreenInFrames(
+    webContents: WebContents
+  ): Promise<{ hadFullscreen: boolean; stillFullscreen: boolean }> {
+    if (webContents.isDestroyed()) {
+      return { hadFullscreen: false, stillFullscreen: false };
+    }
+
+    let hadFullscreen = false;
+    let stillFullscreen = false;
+
+    const frames = webContents.mainFrame ? webContents.mainFrame.framesInSubtree : [];
+    for (const frame of frames) {
+      if (frame.isDestroyed()) continue;
+      try {
+        const result = (await frame.executeJavaScript(
+          `(() => {
+            if (!document.fullscreenElement) return { had: false, still: false };
+            try {
+              const res = document.exitFullscreen();
+              if (res && typeof res.then === "function") {
+                return res.then(
+                  () => ({ had: true, still: Boolean(document.fullscreenElement) }),
+                  () => ({ had: true, still: Boolean(document.fullscreenElement) })
+                );
+              }
+            } catch {
+              return { had: true, still: Boolean(document.fullscreenElement) };
+            }
+            return { had: true, still: Boolean(document.fullscreenElement) };
+          })()`,
+          true
+        )) as { had: boolean; still: boolean } | undefined;
+
+        if (result?.had) hadFullscreen = true;
+        if (result?.still) stillFullscreen = true;
+      } catch {
+        // Ignore destroyed/navigating frames during fullscreen teardown.
+      }
+    }
+
+    return { hadFullscreen, stillFullscreen };
+  }
+
+  private exitHtmlFullscreenWithVerification(attempt = 0): void {
+    if (this.exitRetryTimer) {
+      clearTimeout(this.exitRetryTimer);
+      this.exitRetryTimer = null;
+    }
+
+    const webContents = this.tab.webContents;
+    if (this.tab.fullScreen || !webContents || webContents.isDestroyed()) return;
+
+    void this.exitHtmlFullscreenInFrames(webContents).then(({ hadFullscreen, stillFullscreen }) => {
+      if (this.tab.fullScreen || this.tab.webContents !== webContents || webContents.isDestroyed()) return;
+
+      if (hadFullscreen && !stillFullscreen) {
+        this.scheduleBoundsNudge(150);
+      }
+
+      if (stillFullscreen && attempt < 3) {
+        const delays = [150, 400, 850];
+        this.exitRetryTimer = setTimeout(() => {
+          this.exitRetryTimer = null;
+          this.exitHtmlFullscreenWithVerification(attempt + 1);
+        }, delays[attempt] ?? 850);
+      }
+    });
+  }
+
+  /**
+   * Ensures a visible non-fullscreen tab does not remain stuck with an active HTML
+   * fullscreen element (e.g. if exitFullscreen ran while the view was hidden or mid-transition).
+   */
+  public ensureExitedHtmlFullscreenIfNeeded(): void {
+    if (!this.tab.fullScreen) {
+      this.exitHtmlFullscreenWithVerification();
+    }
+  }
+
   /**
    * Enters or exits fullscreen for this tab.
    * Coordinates with the Electron BrowserWindow fullscreen state.
    */
   setFullScreen(isFullScreen: boolean): boolean {
     const updated = this.tab.updateStateProperty("fullScreen", isFullScreen);
-    if (!updated) return false;
-
     const window = this.tab.getWindow();
     const electronWindow = window.browserWindow;
-    if (window.destroyed) return false;
 
     if (isFullScreen) {
+      this.clearExitCleanupTimers();
+      this.exitOsAfterEnter = false;
+      if (!updated) return false;
+      if (window.destroyed) return false;
+
       if (!electronWindow.fullScreen) {
+        this.isEnteringOsFullScreen = true;
         electronWindow.setFullScreen(true);
       }
-    } else {
-      if (electronWindow.fullScreen) {
+
+      // Notify the tab so layout can be updated
+      this.tab.emit("fullscreen-changed", true);
+      return true;
+    }
+
+    // Always clean up OS transition / HTML fullscreen even if `tab.fullScreen` was already `false`,
+    // otherwise exiting OS fullscreen after an early state reset leaves `document.fullscreenElement`
+    // expanded inside the non-fullscreen WebContentsView.
+    if (!window.destroyed) {
+      if (this.isEnteringOsFullScreen) {
+        this.exitOsAfterEnter = true;
+      } else if (electronWindow.fullScreen) {
         electronWindow.setFullScreen(false);
-      }
-
-      const webContents = this.tab.webContents;
-      const view = this.tab.view;
-      if (webContents) {
-        // Slightly nudge the view bounds to force Chromium to recognize the
-        // viewport change, which is needed to properly exit HTML fullscreen.
-        if (view) {
-          setTimeout(() => {
-            const isViewValid = () => this.tab.view === view && this.tab.visible;
-
-            if (!isViewValid()) return;
-
-            const bounds = view.getBounds();
-            const newBounds = { ...bounds, width: bounds.width - 1 };
-            view.setBounds(newBounds);
-
-            setTimeout(() => {
-              if (!isViewValid()) return;
-
-              const currentBounds = view.getBounds();
-              if (newBounds.width !== currentBounds.width) return;
-              if (newBounds.height !== currentBounds.height) return;
-              if (newBounds.x !== currentBounds.x) return;
-              if (newBounds.y !== currentBounds.y) return;
-              view.setBounds(bounds);
-            }, 50);
-          }, 800);
-        }
-
-        webContents.executeJavaScript(`if (document.fullscreenElement) { document.exitFullscreen(); }`, true);
       }
     }
 
+    this.exitHtmlFullscreenWithVerification();
+
+    if (!updated) return false;
+
+    this.scheduleBoundsNudge(800);
+
     // Notify the tab so layout can be updated
-    this.tab.emit("fullscreen-changed", isFullScreen);
+    this.tab.emit("fullscreen-changed", false);
 
     return true;
   }
 
   /**
-   * Sets up fullscreen event listeners on the tab's webContents.
+   * Binds OS window fullscreen listeners to the tab's current BrowserWindow.
+   * Call on setup and whenever a tab moves to another window.
+   */
+  bindWindowFullScreenListeners(window: BrowserWindow): void {
+    this.disconnectFullScreenListener();
+
+    this.disconnectEnterFullScreen = window.connect("enter-full-screen", () => {
+      this.isEnteringOsFullScreen = false;
+      if (this.exitOsAfterEnter && !this.tab.fullScreen && !window.destroyed) {
+        this.exitOsAfterEnter = false;
+        if (window.browserWindow.fullScreen) {
+          window.browserWindow.setFullScreen(false);
+        }
+      }
+    });
+
+    this.disconnectLeaveFullScreen = window.connect("leave-full-screen", () => {
+      this.isEnteringOsFullScreen = false;
+      this.exitOsAfterEnter = false;
+      this.setFullScreen(false);
+    });
+  }
+
+  /**
+   * Sets up fullscreen event listeners on the tab's webContents and window.
    * Idempotent: disconnects previous listeners before registering new ones.
    * Called during tab initialization and on wake from sleep.
    */
@@ -172,36 +327,26 @@ export class TabLifecycleManager {
     const webContents = this.tab.webContents;
     if (!webContents) return;
 
-    const electronWindow = window.browserWindow;
-
     webContents.on("enter-html-full-screen", () => {
       this.setFullScreen(true);
     });
 
     webContents.on("leave-html-full-screen", () => {
       // Always update tab fullscreen state directly. Don't rely solely on
-      // the indirect chain (electronWindow.setFullScreen(false) → window
+      // the indirect chain (electronWindow.setFullScreen(false) -> window
       // "leave-full-screen" event) because if the OS window is already not
       // fullscreen, that event never fires and the tab stays stuck.
       this.setFullScreen(false);
-
-      // Also exit OS fullscreen if still active
-      if (electronWindow.fullScreen) {
-        electronWindow.setFullScreen(false);
-      }
     });
 
-    // Disconnect previous leave-full-screen listener before registering a new one
-    this.disconnectFullScreenListener();
-
-    const disconnectLeaveFullScreen = window.connect("leave-full-screen", () => {
-      this.setFullScreen(false);
-    });
-
-    this.disconnectLeaveFullScreen = disconnectLeaveFullScreen;
+    this.bindWindowFullScreenListeners(window);
   }
 
   private disconnectFullScreenListener(): void {
+    if (this.disconnectEnterFullScreen) {
+      this.disconnectEnterFullScreen();
+      this.disconnectEnterFullScreen = null;
+    }
     if (this.disconnectLeaveFullScreen) {
       this.disconnectLeaveFullScreen();
       this.disconnectLeaveFullScreen = null;
@@ -295,10 +440,15 @@ export class TabLifecycleManager {
    * Handles cleanup of fullscreen state if needed.
    */
   onDestroy(): void {
+    this.clearExitCleanupTimers();
+    this.isEnteringOsFullScreen = false;
+    this.exitOsAfterEnter = false;
+
     const window = this.tab.getWindow();
     if (!window.isEmitterDestroyed()) {
       this.disconnectFullScreenListener();
     } else {
+      this.disconnectEnterFullScreen = null;
       this.disconnectLeaveFullScreen = null;
     }
 

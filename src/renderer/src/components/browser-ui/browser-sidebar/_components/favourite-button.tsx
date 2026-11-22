@@ -1,5 +1,4 @@
 import { memo, useCallback, useEffect, useState } from "react";
-import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
 import { useAddressUrl, useFocusedTab } from "@/components/providers/tabs-provider";
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,7 +7,6 @@ import { motion } from "motion/react";
 export const FavouriteButton = memo(function FavouriteButton() {
   const addressUrl = useAddressUrl();
   const focusedTab = useFocusedTab();
-  const { hasSidebar } = useBrowserSidebar();
   const [isFav, setIsFav] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -86,11 +84,10 @@ export const FavouriteButton = memo(function FavouriteButton() {
       animate={{ scale: isAnimating ? 1.25 : 1 }}
       transition={{ type: "spring", stiffness: 500, damping: 15 }}
       className={cn(
-        "size-6 items-center justify-center rounded-md shrink-0 transition-colors cursor-pointer",
-        hasSidebar && !isFav && !isAnimating ? "hidden group-hover/address:flex" : "flex",
+        "size-6 flex items-center justify-center rounded-md shrink-0 transition-colors cursor-pointer",
         isFav
           ? "text-amber-500 hover:bg-amber-500/15"
-          : "text-black/40 dark:text-white/40 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-black/10 dark:hover:bg-white/10"
+          : "text-black/45 dark:text-white/45 group-hover/address:text-black/65 dark:group-hover/address:text-white/65 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-black/10 dark:hover:bg-white/10"
       )}
       title={isFav ? "Remove from Favourites (Cmd+D)" : "Add to Favourites (Cmd+D)"}
     >

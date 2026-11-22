@@ -85,7 +85,8 @@ export const AddressBar = memo(function AddressBar() {
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
         !isPopupWindow && "hover:bg-white/75 dark:hover:bg-white/[0.16]",
         "transition-[background-color,border-color] duration-150",
-        "flex items-center px-2.5 gap-1.5 overflow-hidden cursor-default",
+        "flex items-center gap-1.5 overflow-hidden cursor-default",
+        hasSidebar ? "px-2" : "px-2.5",
         isPlaceholder ? "text-black/50 dark:text-white/50" : "text-black/85 dark:text-white/90"
       )}
     >

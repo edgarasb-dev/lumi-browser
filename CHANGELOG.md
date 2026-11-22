@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.6] — 2026-11-22
+
+### Codename: Prism
+
+### Fixed
+
+- **Fullscreen Exit Desync Leaving Video Stuck Fullscreen Inside Window**: Fixed `TabLifecycleManager.setFullScreen(false)` returning early when `tab.fullScreen` was already `false`, skipping HTML5 `document.fullscreenElement` exit cleanup when OS fullscreen exited after an earlier reset or Reader Mode transition. Added `exitHtmlFullscreenInFrames()` and `exitHtmlFullscreenWithVerification()` to exit `document.fullscreenElement` across `mainFrame.framesInSubtree`, retry briefly through transitions, cancel stale bounds-nudge timers on re-entry (`clearExitCleanupTimers`), track mid-animation macOS `enter-full-screen` transitions (`isEnteringOsFullScreen` / `exitOsAfterEnter`) so early exits are queued instead of dropped by AppKit, re-verify HTML fullscreen exit when hidden tabs become visible in `TabLayoutManager.updateLayout()`, route `readerModeController.enable()` through `lifecycle.setFullScreen(false)`, and rebind fullscreen listeners via `bindWindowFullScreenListeners()` on `window-changed`.
+- **Sidebar Address Bar Action Buttons Jumping on Hover**: Removed `hidden group-hover/address:flex` from `ReaderButton`, `FavouriteButton`, and `BrowserActionList` in sidebar mode so hovering the address bar or its visible icons no longer shifts neighboring icons sideways under the pointer, while keeping subtle resting icon opacity, matched `size-3.5` icon sizing on `BrowserActionList`, and `px-2` sidebar address-bar padding.
+
+---
+
 ## [0.4.5] — 2026-11-22
 
 ### Codename: Prism

@@ -141,6 +141,10 @@ export class TabLayoutManager {
     // Auto-wake sleeping tabs when they become visible
     this.lifecycleManager.wakeUp();
 
+    if (justShown && !tab.fullScreen) {
+      this.lifecycleManager.ensureExitedHtmlFullscreenIfNeeded();
+    }
+
     if (tab.readerMode) {
       return;
     }

@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.6" date="2026-11-22">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.6</url>
+      <description>
+        <p>Fix HTML5 video players sometimes remaining full-viewport inside the window after exiting OS fullscreen by verifying fullscreen exit across frames, queueing mid-animation macOS fullscreen exits, and re-checking on tab show/move, and stop sidebar address bar action buttons from jumping sideways on hover.</p>
+      </description>
+    </release>
     <release version="0.4.5" date="2026-11-22">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.5</url>
       <description>
