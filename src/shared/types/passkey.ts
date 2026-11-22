@@ -9,9 +9,11 @@ export interface ConditionalPasskeyRequest {
 
 export type PasskeyAuthorizationStatus = "authorized" | "denied" | "notDetermined";
 
-export interface PasskeyCredential {
+export type WebauthnSupportMode = "macos-native" | "chromium" | "unsupported";
+
+export type PasskeyCredential = {
   id: string;
   rpId: string;
   userName: string;
   userHandle: string;
-}
+};

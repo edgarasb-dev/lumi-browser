@@ -1,13 +1,13 @@
 import { cn } from "@/lib/utils";
-import { useFaviconColors } from "@/hooks/use-favicon-color";
 import { Globe } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { motion } from "motion/react";
 import type { PinnedTabData } from "~/types/pinned-tabs";
+import type { TabData } from "~/types/tabs";
 import { isPinnedTabSource, isTabGroupSource } from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
-import { generateBorderGradient } from "@/components/browser-ui/browser-sidebar/_components/pin-grid/pin-visual";
+import { PinnedTabBadge, usePinnedTabPresentation } from "./pinned-tab-presentation";
 import "./pin.css";
 
 // Drag source type for pinned tab reordering
@@ -20,6 +20,7 @@ export type PinnedTabSourceData = {
 
 interface PinnedTabButtonProps {
   pinnedTab: PinnedTabData;
+  associatedTab?: TabData;
   profileId: string | null;
   isActive: boolean;
   onClick: () => void;
@@ -44,6 +45,7 @@ interface PinnedTabButtonProps {
 
 export function PinnedTabButton({
   pinnedTab,
+  associatedTab,
   profileId,
   isActive,
   onClick,
@@ -60,65 +62,13 @@ export function PinnedTabButton({
   layoutAnimationsEnabled = true
 }: PinnedTabButtonProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [primaryFailed, setPrimaryFailed] = useState(false);
-  const [fallbackFailed, setFallbackFailed] = useState(false);
-
-  useEffect(() => {
-    setPrimaryFailed(false);
-    setFallbackFailed(false);
-  }, [pinnedTab.faviconUrl, pinnedTab.defaultUrl]);
-
-  const fallbackLumiFaviconUrl = useMemo(() => {
-    if (!pinnedTab.defaultUrl) return null;
-    try {
-      const srcUrl = new URL("lumi://favicon");
-      srcUrl.searchParams.set("url", pinnedTab.defaultUrl);
-      return srcUrl.toString();
-    } catch {
-      return null;
-    }
-  }, [pinnedTab.defaultUrl]);
-
-  const faviconUrl = useMemo(() => {
-    if (pinnedTab.faviconUrl && !primaryFailed) {
-      return pinnedTab.faviconUrl;
-    }
-    if (!fallbackFailed) {
-      return fallbackLumiFaviconUrl;
-    }
-    return null;
-  }, [pinnedTab.faviconUrl, primaryFailed, fallbackFailed, fallbackLumiFaviconUrl]);
-
-  const handleImageError = useCallback(() => {
-    if (pinnedTab.faviconUrl && !primaryFailed) {
-      setPrimaryFailed(true);
-    } else {
-      setFallbackFailed(true);
-    }
-  }, [pinnedTab.faviconUrl, primaryFailed]);
-
-  const faviconColors = useFaviconColors(faviconUrl);
-  const hasColors = faviconColors !== null;
+  const { faviconUrl, handleImageError, hasColors, activeBorderStyle, activeOverlayStyle, unreadCount, tooltipTitle } =
+    usePinnedTabPresentation({
+      pinnedTab,
+      associatedTab,
+      isActive
+    });
   const [isDragging, setIsDragging] = useState(false);
-
-  // Generate dynamic styles for active state based on the extracted colors
-  const activeBorderStyle = useMemo(() => {
-    if (!isActive) return undefined;
-    if (!hasColors) return undefined;
-
-    return {
-      "--gradient-border": generateBorderGradient(faviconColors, 0.6)
-    } as React.CSSProperties;
-  }, [faviconColors, hasColors, isActive]);
-
-  const activeOverlayStyle = useMemo(() => {
-    if (!isActive) return undefined;
-    if (!hasColors) return undefined;
-
-    return {
-      backgroundImage: generateBorderGradient(faviconColors, 0.15)
-    } as React.CSSProperties;
-  }, [faviconColors, hasColors, isActive]);
 
   // Drag-and-drop for reordering
   useEffect(() => {
@@ -214,6 +164,7 @@ export function PinnedTabButton({
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       onContextMenu();
     },
     [onContextMenu]
@@ -255,6 +206,8 @@ export function PinnedTabButton({
 
       <motion.div
         ref={ref}
+        data-pinned-tab-id={pinnedTab.uniqueId}
+        title={tooltipTitle}
         // motion's whileTap does not work in a different document,
         // so we have to use our own state.
         onMouseDown={() => {
@@ -266,7 +219,7 @@ export function PinnedTabButton({
         animate={{ scale: isPressed ? 0.99 : 1 }}
         transition={{ scale: { type: "spring", stiffness: 600, damping: 20 } }}
         className={cn(
-          "w-full h-12 rounded-xl overflow-hidden transform-gpu",
+          "relative w-full h-12 rounded-xl overflow-hidden transform-gpu",
           "bg-black/10 hover:bg-black/15",
           "dark:bg-white/15 dark:hover:bg-white/20",
           "transition-[background-color,border-color,opacity] duration-100",
@@ -300,6 +253,7 @@ export function PinnedTabButton({
             </div>
           </div>
         </div>
+        <PinnedTabBadge count={unreadCount} variant="tile" />
       </motion.div>
     </motion.div>
   );

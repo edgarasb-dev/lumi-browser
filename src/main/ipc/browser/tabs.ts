@@ -350,6 +350,22 @@ ipcMain.handle("tabs:set-tab-muted", async (_event, tabId: number, muted: boolea
   return true;
 });
 
+ipcMain.on("tabs:set-badge-count", (event, rawCount: number | null) => {
+  const webContents = event.sender;
+  if (event.senderFrame && webContents.mainFrame && event.senderFrame !== webContents.mainFrame) {
+    return;
+  }
+
+  const tab = tabsController.getTabByWebContents(webContents);
+  if (!tab || tab.isDestroyed) return;
+
+  const normalized =
+    typeof rawCount === "number" && Number.isFinite(rawCount) && rawCount > 0
+      ? Math.min(99999, Math.floor(rawCount))
+      : null;
+  tab.updateStateProperty("badgeCount", normalized);
+});
+
 ipcMain.handle("tabs:move-tab", async (event, tabId: number, newPosition: number) => {
   const webContents = event.sender;
   const window = browserWindowsController.getWindowFromWebContents(webContents);

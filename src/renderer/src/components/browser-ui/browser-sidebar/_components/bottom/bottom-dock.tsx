@@ -8,20 +8,36 @@ import { DownloadsButton } from "../downloads-button";
 import { RecentlyClosedPopover } from "../recently-closed-popover";
 import { SpaceScratchpad } from "../space-scratchpad";
 import { SpaceSwitcher } from "./space-switcher";
-import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./dock-button-sizes";
+import {
+  DOCK_BUTTON_CLASSES,
+  DOCK_ICON_STROKE_WIDTH,
+  getDockButtonClassName,
+  type DockButtonSize
+} from "./dock-button-sizes";
 
-// Layout budget inside the dock pill (px), matching size-7 (28px) buttons and gap-0.5 (2px).
-const FLANKING_BUTTONS_WIDTH = 146; // Left 3 (88px) + Right 2 (58px)
-const SINGLE_SPACE_INLINE_MIN = FLANKING_BUTTONS_WIDTH + 32; // 1 icon (28px) + gap-0.5 each side (4px)
-const MULTI_SPACE_INLINE_MIN = FLANKING_BUTTONS_WIDTH + 54; // 1 icon + 1 dot (50px) + gap-0.5 each side (4px)
-const COMPACT_BUTTONS_THRESHOLD = 152; // Below this inner width, step buttons down from 28px to 24px (126px total)
-const DOCK_HORIZONTAL_CHROME = 10; // px-1 (8px) + border (2px)
+const TOOL_COUNT = 5;
+const DOCK_GAP_PX = 2; // gap-0.5
+const DIVIDER_FOOTPRINT_PX = 5; // gap-0.5 (2) + w-px (1) + gap-0.5 (2)
+const CHROME_SM_PX = 10; // px-1 (8px) + border (2px)
+const CHROME_XS_PX = 6; // px-0.5 (4px) + border (2px)
+
+function toolsWidth(count: number, size: DockButtonSize): number {
+  return count * DOCK_BUTTON_CLASSES[size].buttonPx + Math.max(0, count - 1) * DOCK_GAP_PX;
+}
+
+function minSingleRowWidth(size: DockButtonSize, spaceCount: number): number {
+  const { buttonPx, spaceDotPx } = DOCK_BUTTON_CLASSES[size];
+  const baseTools = toolsWidth(TOOL_COUNT, size);
+  if (spaceCount === 0) return baseTools;
+  if (spaceCount === 1) return buttonPx + DOCK_GAP_PX + baseTools;
+  return buttonPx + DOCK_GAP_PX + spaceDotPx + DIVIDER_FOOTPRINT_PX + baseTools;
+}
 
 /**
- * Responsive sidebar bottom dock. Keeps all action buttons and the space switcher
- * unclipped across the full sidebar resize range (150px..500px) by promoting the
- * space switcher onto its own top row when inline width runs short and scaling
- * action buttons uniformly at narrow widths without remounting popovers.
+ * Unified sidebar bottom dock. Keeps the space switcher and all five dock action
+ * buttons visually cohesive on a single row down through default width (200px),
+ * gracefully wrapping into two balanced rows only at ultra-narrow widths (down to 150px)
+ * without ever remounting open popovers.
  */
 export function BottomDock() {
   const { spaces, isCurrentSpaceInternal } = useSpaces();
@@ -45,53 +61,76 @@ export function BottomDock() {
     return () => observer.disconnect();
   }, []);
 
-  const dockInnerWidth = dockOuterWidth !== null ? Math.max(0, dockOuterWidth - DOCK_HORIZONTAL_CHROME) : null;
-  const hasVisibleSpaces = !isCurrentSpaceInternal && spaces.length > 0;
-  const inlineMinWidth = spaces.length > 1 ? MULTI_SPACE_INLINE_MIN : SINGLE_SPACE_INLINE_MIN;
+  const visibleSpaceCount = isCurrentSpaceInternal ? 0 : spaces.length;
+  const hasVisibleSpaces = visibleSpaceCount > 0;
+  const hasMultipleSpaces = visibleSpaceCount > 1;
 
-  const isStacked = hasVisibleSpaces && dockInnerWidth !== null && dockInnerWidth < inlineMinWidth;
-  const buttonSize: DockButtonSize =
-    dockInnerWidth !== null && dockInnerWidth < COMPACT_BUTTONS_THRESHOLD ? "xs" : "sm";
+  const innerSmWidth = dockOuterWidth !== null ? Math.max(0, dockOuterWidth - CHROME_SM_PX) : null;
+  const innerXsWidth = dockOuterWidth !== null ? Math.max(0, dockOuterWidth - CHROME_XS_PX) : null;
+
+  const fitsSmSingleRow = innerSmWidth === null || innerSmWidth >= minSingleRowWidth("sm", visibleSpaceCount);
+  const buttonSize: DockButtonSize = fitsSmSingleRow ? "sm" : "xs";
+  const isTwoRow =
+    !fitsSmSingleRow && innerXsWidth !== null && innerXsWidth < minSingleRowWidth("xs", visibleSpaceCount);
+
+  const activeInnerWidth = buttonSize === "sm" ? innerSmWidth : innerXsWidth;
+  let spaceBudgetPx: number | undefined;
+  if (hasVisibleSpaces && activeInnerWidth !== null) {
+    const rowTools = isTwoRow ? toolsWidth(2, buttonSize) : toolsWidth(TOOL_COUNT, buttonSize);
+    const separatorReserve = hasMultipleSpaces ? DIVIDER_FOOTPRINT_PX : DOCK_GAP_PX;
+    spaceBudgetPx = Math.max(DOCK_BUTTON_CLASSES[buttonSize].buttonPx, activeInnerWidth - rowTools - separatorReserve);
+  }
 
   return (
     <div ref={dockRef} data-no-drag className="shrink-0 mt-1 mb-2 w-full min-w-0">
       <div
         className={cn(
-          "flex items-center justify-between rounded-xl px-1 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08]",
-          isStacked ? "flex-wrap py-1 gap-y-1" : "flex-nowrap gap-0.5 h-9"
+          "flex items-center justify-between rounded-xl border border-black/[0.06] bg-black/[0.04] dark:border-white/[0.08] dark:bg-white/[0.06]",
+          buttonSize === "xs" ? "px-0.5" : "px-1",
+          isTwoRow
+            ? "flex-wrap py-1 gap-x-0.5 gap-y-1"
+            : buttonSize === "xs"
+              ? "flex-nowrap gap-0.5 h-8"
+              : "flex-nowrap gap-0.5 h-9"
         )}
       >
-        <div className={cn("flex items-center gap-0.5 shrink-0", isStacked ? "order-2" : "order-1")}>
-          <BottomExtrasMenu size={buttonSize} />
-          <DownloadsButton size={buttonSize} />
-          <RecentlyClosedPopover size={buttonSize} />
-        </div>
+        {hasVisibleSpaces && (
+          <SpaceSwitcher
+            key="spaces"
+            size={buttonSize}
+            availableWidth={spaceBudgetPx}
+            className={isTwoRow ? "order-5" : "order-1"}
+          />
+        )}
 
-        <SpaceSwitcher
+        {hasMultipleSpaces && (
+          <div
+            key="divider"
+            aria-hidden="true"
+            className={cn("h-3.5 w-px bg-black/[0.1] dark:bg-white/[0.12] shrink-0", isTwoRow ? "order-6" : "order-2")}
+          />
+        )}
+
+        <BottomExtrasMenu key="extras" size={buttonSize} className={isTwoRow ? "order-1" : "order-3"} />
+        <DownloadsButton key="downloads" size={buttonSize} className={isTwoRow ? "order-2" : "order-4"} />
+        <RecentlyClosedPopover key="history" size={buttonSize} className={isTwoRow ? "order-3" : "order-5"} />
+
+        {isTwoRow && <div key="row-break" aria-hidden="true" className="basis-full h-0 order-4" />}
+
+        <SpaceScratchpad key="scratchpad" size={buttonSize} className={isTwoRow ? "order-7" : "order-6"} />
+
+        <button
+          key="side-panel"
+          type="button"
+          onClick={toggleSidePanel}
+          title="Toggle Split Side Panel (Cmd+Shift+.)"
           className={cn(
-            isStacked
-              ? "order-1 basis-full w-full flex-none pb-1 border-b border-black/[0.05] dark:border-white/[0.08]"
-              : "order-2"
+            getDockButtonClassName(buttonSize, { active: sidePanelOpen }),
+            isTwoRow ? "order-8" : "order-7"
           )}
-        />
-
-        <div className="flex items-center gap-0.5 shrink-0 order-3">
-          <SpaceScratchpad size={buttonSize} />
-          <button
-            type="button"
-            onClick={toggleSidePanel}
-            title="Toggle Split Side Panel (Cmd+Shift+.)"
-            className={cn(
-              DOCK_BUTTON_CLASSES[buttonSize].button,
-              "flex items-center justify-center transition-colors",
-              sidePanelOpen
-                ? "bg-primary/20 text-primary dark:bg-primary/30"
-                : "text-black/65 hover:bg-black/8 hover:text-black/90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-            )}
-          >
-            <PanelRight className="size-3.5" />
-          </button>
-        </div>
+        >
+          <PanelRight strokeWidth={DOCK_ICON_STROKE_WIDTH} className={DOCK_BUTTON_CLASSES[buttonSize].icon} />
+        </button>
       </div>
     </div>
   );

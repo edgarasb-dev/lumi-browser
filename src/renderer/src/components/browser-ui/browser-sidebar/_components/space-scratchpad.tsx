@@ -4,12 +4,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/pop
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NotebookPen, Copy, Check, Trash2 } from "lucide-react";
-import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./bottom/dock-button-sizes";
+import {
+  DOCK_BUTTON_CLASSES,
+  DOCK_ICON_STROKE_WIDTH,
+  getDockButtonClassName,
+  type DockButtonSize
+} from "./bottom/dock-button-sizes";
 
 export const SpaceScratchpad = memo(function SpaceScratchpad({
-  size = "default"
+  size = "default",
+  className
 }: {
   size?: DockButtonSize;
+  className?: string;
 } = {}) {
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
   const currentSpaceId = currentSpace?.id;
@@ -81,28 +88,22 @@ export const SpaceScratchpad = memo(function SpaceScratchpad({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Button
-        size="icon"
-        className={cn(
-          "bg-transparent hover:bg-black/10 dark:hover:bg-white/10 relative transition-colors",
-          sizeClasses.button,
-          hasNotes && "text-primary"
-        )}
-        asChild
+      <PopoverTrigger
+        type="button"
+        onClick={(e) => e.stopPropagation()}
         title={`Scratchpad for ${currentSpace?.name || "Space"}`}
+        className={cn("relative", getDockButtonClassName(size, { active: open }), className)}
       >
-        <PopoverTrigger nativeButton={true}>
-          <NotebookPen strokeWidth={2} className={cn(sizeClasses.icon, "text-black/80 dark:text-white/80")} />
-          {hasNotes && (
-            <span
-              className={cn(
-                "absolute size-1.5 rounded-full bg-blue-500 ring-2 ring-background",
-                size === "xs" ? "top-1 right-1" : "top-1.5 right-1.5"
-              )}
-            />
-          )}
-        </PopoverTrigger>
-      </Button>
+        <NotebookPen strokeWidth={DOCK_ICON_STROKE_WIDTH} className={sizeClasses.icon} />
+        {hasNotes && (
+          <span
+            className={cn(
+              "absolute size-1.5 rounded-full bg-blue-500 ring-2 ring-background",
+              size === "xs" ? "top-1 right-1" : "top-1.5 right-1.5"
+            )}
+          />
+        )}
+      </PopoverTrigger>
 
       <PopoverContent
         variant="translucent"

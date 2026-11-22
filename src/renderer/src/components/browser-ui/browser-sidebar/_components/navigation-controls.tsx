@@ -120,6 +120,7 @@ function NavigationButton({
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       if (entries.length > 0) {
         handleMouseUp();
         setOpen(true);

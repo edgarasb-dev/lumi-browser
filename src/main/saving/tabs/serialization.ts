@@ -144,7 +144,8 @@ export function serializeTabForRenderer(tab: Tab, preSleepState?: PreSleepState 
     isPictureInPicture: tab.isPictureInPicture,
     asleep: tab.asleep,
     readerMode: tab.readerMode || undefined,
-    ephemeral: tab.ephemeral || undefined
+    ephemeral: tab.ephemeral || undefined,
+    badgeCount: tab.badgeCount ?? undefined
   };
 }
 

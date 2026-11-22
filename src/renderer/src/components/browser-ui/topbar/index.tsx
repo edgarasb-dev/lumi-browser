@@ -2,20 +2,33 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAdaptiveTopbar } from "@/components/browser-ui/adaptive-topbar";
 import { usePlatform } from "@/components/main/platform";
 import { useSpaces } from "@/components/providers/spaces-provider";
-import { useFocusedTab, useTabsGroups } from "@/components/providers/tabs-provider";
+import { useFocusedTab, useTabs } from "@/components/providers/tabs-provider";
+import { usePinnedTabs } from "@/components/providers/pinned-tabs-provider";
 import { SidebarWindowControlsMacOS } from "@/components/browser-ui/window-controls/macos";
 import { NavigationControls } from "@/components/browser-ui/browser-sidebar/_components/navigation-controls";
 import { AddressBar } from "@/components/browser-ui/browser-sidebar/_components/address-bar";
 import { SpaceSwitcher } from "@/components/browser-ui/browser-sidebar/_components/bottom/space-switcher";
 import { SpaceScratchpad } from "@/components/browser-ui/browser-sidebar/_components/space-scratchpad";
 import { BottomExtrasMenu } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-extras-menu";
+import {
+  DOCK_BUTTON_CLASSES,
+  DOCK_ICON_STROKE_WIDTH,
+  getDockButtonClassName
+} from "@/components/browser-ui/browser-sidebar/_components/bottom/dock-button-sizes";
 import { DownloadsButton } from "@/components/browser-ui/browser-sidebar/_components/downloads-button";
 import { RecentlyClosedPopover } from "@/components/browser-ui/browser-sidebar/_components/recently-closed-popover";
 import { TabPreviewCard } from "@/components/browser-ui/browser-sidebar/_components/tab-preview-card";
+import {
+  PinnedTabBadge,
+  usePinnedTabPresentation
+} from "@/components/browser-ui/browser-sidebar/_components/pin-grid/pinned-tab-presentation";
+import "@/components/browser-ui/browser-sidebar/_components/pin-grid/pin.css";
 import { MediaMiniPlayer } from "@/components/browser-ui/media-mini-player";
 import { useSidePanel } from "@/components/providers/side-panel-provider";
 import { useAppUpdates } from "@/components/providers/app-updates-provider";
 import { useSetting } from "@/components/providers/settings-provider";
+import { useWindowDrag } from "@/hooks/use-window-drag";
+import { handleChromeBarContextMenu, shouldIgnoreWindowDragTarget } from "@/lib/chrome-interactions";
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
 import {
   Plus,
@@ -31,8 +44,10 @@ import {
   Maximize2,
   ArrowUpCircle,
   Download,
-  RefreshCw
+  RefreshCw,
+  Globe
 } from "lucide-react";
+import type { PinnedTabData } from "~/types/pinned-tabs";
 import type { TabData } from "~/types/tabs";
 
 interface TopbarTabProps {
@@ -62,9 +77,14 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
     [tab.id]
   );
 
-  const handleContextMenu = useCallback(() => {
-    lumi.tabs.showContextMenu(tab.id);
-  }, [tab.id]);
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      lumi.tabs.showContextMenu(tab.id);
+    },
+    [tab.id]
+  );
 
   const handleToggleMute = useCallback(
     (e: React.MouseEvent) => {
@@ -97,6 +117,7 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
         ref={tabRef}
         role="button"
         tabIndex={0}
+        data-tab-id={tab.id}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={handleMouseEnter}
@@ -186,15 +207,97 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
   );
 }
 
+interface TopbarPinnedTabProps {
+  pinnedTab: PinnedTabData;
+  associatedTab?: TabData;
+  isActive: boolean;
+  onClick: () => void;
+  onDoubleClick: () => void;
+  onContextMenu: () => void;
+}
+
+function TopbarPinnedTab({
+  pinnedTab,
+  associatedTab,
+  isActive,
+  onClick,
+  onDoubleClick,
+  onContextMenu
+}: TopbarPinnedTabProps) {
+  const { faviconUrl, handleImageError, hasColors, activeBorderStyle, activeOverlayStyle, unreadCount, tooltipTitle } =
+    usePinnedTabPresentation({
+      pinnedTab,
+      associatedTab,
+      isActive
+    });
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onContextMenu();
+    },
+    [onContextMenu]
+  );
+
+  return (
+    <div className="relative shrink-0 remove-app-drag" data-pinned-tab-id={pinnedTab.uniqueId}>
+      <button
+        type="button"
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={handleContextMenu}
+        title={tooltipTitle}
+        style={activeBorderStyle}
+        className={cn(
+          "relative size-8 rounded-xl overflow-hidden flex items-center justify-center cursor-pointer",
+          "transition-[background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.96]",
+          isActive
+            ? cn(
+                "bg-white/90 dark:bg-white/[0.18] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)]",
+                !hasColors && "border border-black/15 dark:border-white/60",
+                hasColors && "pinned-tab-active-border"
+              )
+            : "bg-black/[0.045] hover:bg-black/[0.09] dark:bg-white/[0.06] dark:hover:bg-white/[0.13] border border-transparent"
+        )}
+      >
+        <div className="size-full flex items-center justify-center" style={activeOverlayStyle}>
+          {faviconUrl ? (
+            <img
+              src={faviconUrl}
+              alt=""
+              onError={handleImageError}
+              className={cn("size-4 rounded-xs object-contain user-drag-none", associatedTab?.asleep && "opacity-75")}
+            />
+          ) : (
+            <Globe className="size-4 text-black/55 dark:text-white/75" />
+          )}
+        </div>
+      </button>
+
+      <PinnedTabBadge count={unreadCount} variant="compact" />
+    </div>
+  );
+}
+
 export function TopbarLayout() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { setContentTopOffset } = useAdaptiveTopbar();
   const { platform } = usePlatform();
-  const { currentSpace, isCurrentSpaceLight } = useSpaces();
-  const { getTabGroups, activeTabGroup } = useTabsGroups();
+  const { currentSpace, isCurrentSpaceLight, isProfileEphemeral } = useSpaces();
+  const { tabsData, getTabGroups, activeTabGroup } = useTabs();
+  const {
+    getPinnedTabs,
+    click: clickPinnedTab,
+    doubleClick: doubleClickPinnedTab,
+    showContextMenu: showPinnedTabContextMenu
+  } = usePinnedTabs();
   const focusedTab = useFocusedTab();
   const [, setNavigationLayout] = useSetting<"sidebar" | "topbar">("navigationLayout");
   const { isOpen: sidePanelOpen, toggleOpen: toggleSidePanel } = useSidePanel();
+  const { handleMouseDown } = useWindowDrag({
+    shouldIgnoreTarget: shouldIgnoreWindowDragTarget
+  });
   const {
     updateStatus,
     isDownloadingUpdate,
@@ -255,6 +358,20 @@ export function TopbarLayout() {
     return groups.flatMap((g) => g.tabs);
   }, [currentSpace, getTabGroups]);
 
+  const pinnedTabs = useMemo(() => {
+    if (!currentSpace || isProfileEphemeral(currentSpace.profileId)) return [];
+    return getPinnedTabs(currentSpace.profileId);
+  }, [currentSpace, isProfileEphemeral, getPinnedTabs]);
+
+  const tabsById = useMemo(() => {
+    const map = new Map<number, TabData>();
+    if (!tabsData) return map;
+    for (const tab of tabsData.tabs) {
+      map.set(tab.id, tab);
+    }
+    return map;
+  }, [tabsData]);
+
   const handleNewTab = useCallback(() => {
     if (currentSpace) {
       lumi.tabs.newTab(undefined, true, currentSpace.id);
@@ -267,18 +384,30 @@ export function TopbarLayout() {
     setNavigationLayout("sidebar");
   }, [setNavigationLayout]);
 
+  const handleBarDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (!target || target.ownerDocument !== e.currentTarget.ownerDocument || !e.currentTarget.contains(target)) {
+      return;
+    }
+    if (shouldIgnoreWindowDragTarget(target)) return;
+    lumi.interface.maximizeWindow();
+  }, []);
+
   const spaceInjectedClasses = useMemo(() => (isCurrentSpaceLight ? "" : "dark"), [isCurrentSpaceLight]);
 
   return (
     <div
       ref={containerRef}
+      onMouseDown={handleMouseDown}
+      onDoubleClick={handleBarDoubleClick}
+      onContextMenu={handleChromeBarContextMenu}
       className={cn(
         spaceInjectedClasses,
-        "w-full flex flex-col gap-1.5 px-2.5 pt-2.5 pb-0.5 select-none",
-        "transition-colors duration-150 app-drag"
+        "w-full flex flex-col gap-1 px-2.5 pt-2 pb-0.5 select-none",
+        "transition-colors duration-150 remove-app-drag"
       )}
     >
-      {/* Row 1: Traffic lights + Horizontal Tab Strip + Space Switcher + Layout Switch */}
+      {/* Row 1: Traffic lights + Pinned Tabs + Horizontal Tab Strip + Space Switcher + Layout Switch */}
       <div className="w-full flex items-center gap-2 min-w-0">
         {platform === "darwin" && (
           <div className="shrink-0 flex items-center pr-1.5 remove-app-drag">
@@ -287,7 +416,27 @@ export function TopbarLayout() {
         )}
 
         {/* Tab strip container */}
-        <div className="flex-1 flex items-center gap-1.5 min-w-0 overflow-x-auto no-scrollbar py-0.5">
+        <div className="flex-1 flex items-center gap-1.5 min-w-0 overflow-x-auto no-scrollbar py-1.5">
+          {pinnedTabs.map((pinnedTab) => {
+            const associatedTabId = currentSpace ? pinnedTab.associatedTabIdsBySpace[currentSpace.id] : undefined;
+            const associatedTab = associatedTabId !== undefined ? tabsById.get(associatedTabId) : undefined;
+            return (
+              <TopbarPinnedTab
+                key={pinnedTab.uniqueId}
+                pinnedTab={pinnedTab}
+                associatedTab={associatedTab}
+                isActive={associatedTabId !== undefined && associatedTabId === focusedTab?.id}
+                onClick={() => clickPinnedTab(pinnedTab.uniqueId)}
+                onDoubleClick={() => doubleClickPinnedTab(pinnedTab.uniqueId)}
+                onContextMenu={() => showPinnedTabContextMenu(pinnedTab.uniqueId)}
+              />
+            );
+          })}
+
+          {pinnedTabs.length > 0 && tabs.length > 0 && (
+            <div className="h-4 w-px bg-black/12 dark:bg-white/15 shrink-0 mx-0.5" />
+          )}
+
           {tabs.map((tab) => (
             <TopbarTab key={tab.id} tab={tab} isActive={focusedTab?.id === tab.id} />
           ))}
@@ -370,18 +519,16 @@ export function TopbarLayout() {
           )}
 
           <div className="max-w-[150px]">
-            <SpaceSwitcher />
+            <SpaceSwitcher size="sm" availableWidth={150} />
           </div>
 
           <button
+            type="button"
             onClick={handleSwitchToSidebar}
-            className={cn(
-              "size-7 rounded-lg flex items-center justify-center",
-              "text-black/60 dark:text-white/60 hover:text-black/90 dark:hover:text-white/90 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-            )}
+            className={cn(getDockButtonClassName("sm"), "remove-app-drag")}
             title="Switch back to vertical sidebar layout"
           >
-            <PanelLeft className="size-4" />
+            <PanelLeft strokeWidth={DOCK_ICON_STROKE_WIDTH} className={DOCK_BUTTON_CLASSES.sm.icon} />
           </button>
         </div>
       </div>
@@ -434,23 +581,18 @@ export function TopbarLayout() {
             </button>
           )}
           <MediaMiniPlayer variant="topbar" />
-          <DownloadsButton />
-          <RecentlyClosedPopover compact />
+          <DownloadsButton size="sm" />
+          <RecentlyClosedPopover size="sm" />
           <button
             type="button"
             onClick={toggleSidePanel}
             title="Toggle Split Side Panel (Cmd+Shift+.)"
-            className={cn(
-              "size-7 rounded-lg flex items-center justify-center transition-colors",
-              sidePanelOpen
-                ? "bg-primary/20 text-primary dark:bg-primary/30"
-                : "text-black/65 hover:bg-black/8 hover:text-black/90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-            )}
+            className={getDockButtonClassName("sm", { active: sidePanelOpen })}
           >
-            <PanelRight className="size-3.5" />
+            <PanelRight strokeWidth={DOCK_ICON_STROKE_WIDTH} className={DOCK_BUTTON_CLASSES.sm.icon} />
           </button>
-          <SpaceScratchpad />
-          <BottomExtrasMenu />
+          <SpaceScratchpad size="sm" />
+          <BottomExtrasMenu size="sm" />
         </div>
       </div>
     </div>

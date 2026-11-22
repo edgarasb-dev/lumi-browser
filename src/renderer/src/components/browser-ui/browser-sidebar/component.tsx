@@ -9,6 +9,7 @@ import { SidebarInner } from "./inner";
 import { type ImperativeResizablePanelWrapperHandle, PixelBasedResizablePanel } from "@/components/ui/resizable-extras";
 import { PortalComponent } from "@/components/portal/portal";
 import { SpaceBackgroundStylesheet } from "@/components/providers/spaces-provider";
+import { handleChromeBarContextMenu } from "@/lib/chrome-interactions";
 import { SIDEBAR_ANIMATION_CSS_EASING, SIDEBAR_ANIMATION_DURATION_MS } from "~/lumi/sidebar-animation";
 
 // Component //
@@ -175,6 +176,7 @@ export function BrowserSidebar({
   const content = (
     <div
       data-space-background-scope={isFloating ? "" : undefined}
+      onContextMenu={handleChromeBarContextMenu}
       className={cn(
         "w-full h-full max-h-screen remove-app-drag",
         "transition-transform",

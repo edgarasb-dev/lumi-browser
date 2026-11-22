@@ -1,12 +1,16 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { CheckCircle2, DownloadIcon, ExternalLink, FolderOpen, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/popover";
-import { Button } from "@/components/ui/button";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { useDownloads } from "@/components/providers/downloads-provider";
 import { cn } from "@/lib/utils";
 import type { DownloadItemData } from "~/types/downloads";
-import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./bottom/dock-button-sizes";
+import {
+  DOCK_BUTTON_CLASSES,
+  DOCK_ICON_STROKE_WIDTH,
+  getDockButtonClassName,
+  type DockButtonSize
+} from "./bottom/dock-button-sizes";
 
 export function formatDownloadBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -163,42 +167,34 @@ function DownloadPopoverRow({ item }: { item: DownloadItemData }) {
   );
 }
 
-export function DownloadsButton({ size = "default" }: { size?: DockButtonSize } = {}) {
+export function DownloadsButton({ size = "default", className }: { size?: DockButtonSize; className?: string } = {}) {
   const [open, setOpen] = useState(false);
   const { downloads, hasActiveDownloads, overallProgress } = useDownloads();
   const { isCurrentSpaceLight } = useSpaces();
   const spaceInjectedClasses = cn(isCurrentSpaceLight ? "" : "dark");
 
-  const openAllDownloads = useCallback(() => {
+  const openAllDownloads = () => {
     lumi.tabs.newTab("lumi://downloads", true);
     setOpen(false);
-  }, []);
+  };
 
   const recentDownloads = downloads.slice(0, 8);
   const sizeClasses = DOCK_BUTTON_CLASSES[size];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Button
-        size="icon"
-        className={cn("relative bg-transparent hover:bg-black/10 dark:hover:bg-white/10", sizeClasses.button)}
+      <PopoverTrigger
+        type="button"
+        onClick={(e) => e.stopPropagation()}
         title={hasActiveDownloads ? "Downloads (in progress)" : "Downloads"}
-        asChild
+        className={cn("relative", getDockButtonClassName(size, { active: open }), className)}
       >
-        <PopoverTrigger nativeButton={true}>
-          <div className={cn("relative flex items-center justify-center", size === "default" ? "size-7" : "size-full")}>
-            {hasActiveDownloads && <ProgressRing progress={overallProgress} />}
-            <DownloadIcon
-              strokeWidth={2}
-              className={cn(
-                sizeClasses.icon,
-                "transition-colors",
-                hasActiveDownloads ? "text-sky-500" : "text-black/80 dark:text-white/80"
-              )}
-            />
-          </div>
-        </PopoverTrigger>
-      </Button>
+        {hasActiveDownloads && <ProgressRing progress={overallProgress} />}
+        <DownloadIcon
+          strokeWidth={DOCK_ICON_STROKE_WIDTH}
+          className={cn(sizeClasses.icon, "transition-colors", hasActiveDownloads && "text-sky-500")}
+        />
+      </PopoverTrigger>
 
       <PopoverContent className="w-80 p-2.5 select-none" positionerClassName={spaceInjectedClasses}>
         <div className="flex items-center justify-between px-1 pb-2 border-b border-black/10 dark:border-white/10">

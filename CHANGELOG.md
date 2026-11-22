@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.4] — 2026-11-22
+
+### Codename: Prism
+
+### Fixed
+
+- **macOS Unentitled Passkey Sign-In Hang Fix**: Added `WebauthnSupportMode` (`"macos-native" | "chromium" | "unsupported"`) and `"webauthn:get-support-mode"` IPC in `src/main/ipc/webauthn/index.ts` and `src/preload/webauthn/index.ts`. Unentitled macOS builds without native `electron-webauthn` report `false` for `PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`, `isConditionalMediationAvailable()`, and passkey `getClientCapabilities()` flags, and reject `navigator.credentials.create()` / `.get()` (`publicKey`) immediately with `NotSupportedError` (or `AbortError` if aborted) instead of hanging indefinitely in Chromium's UI-less WebAuthn stub, allowing sites like Google to fall back smoothly to password/2FA flows.
+- **Unified Sidebar Bottom Dock & Topbar Action Styling**: Replaced mixed `<Button>` wrappers and mismatched `size-3.5`/opacity overrides across `BottomDock`, `BottomExtrasMenu`, `DownloadsButton`, `RecentlyClosedPopover`, `SpaceScratchpad`, and `SpaceSwitcher` with shared `DOCK_BUTTON_CLASSES`, `DOCK_ICON_STROKE_WIDTH`, and `getDockButtonClassName` tokens (`size-7 rounded-lg` / `xs: size-6 rounded-md`). Kept `SpaceSwitcher` and all five dock action buttons integrated on one cohesive row down through default `200px` sidebar width (with CSS `order-*` balanced two-row wrapping only at narrower widths without unmounting open popovers), and matched `TopbarLayout` tool buttons to the same `size="sm"` styling.
+
+### Added
+
+- **Pinned Tab Unread Count Badges**: Added W3C App Badging API interception (`tryPatchAppBadge()` -> `"tabs:set-badge-count"` -> `Tab.badgeCount` persisted in tab serialization) alongside title-based unread parsing (`getTabUnreadCount()`, `formatUnreadCount()` in `src/renderer/src/lib/unread-badge.ts` supporting Gmail, mail/chat title patterns, and `99+` formatting) and a shared `usePinnedTabPresentation` + `<PinnedTabBadge />` Liquid Glass pill on pinned tabs.
+- **Pinned Tabs in Horizontal Topbar & Right-Click Layout Switcher**: Added `TopbarPinnedTab` with live favicons, unread badge pills, click/double-click actions, and native pinned-tab context menus in `TopbarLayout`, and added `interface:show-navigation-layout-menu` with `useWindowDrag()` + `handleChromeBarContextMenu()` so right-clicking empty chrome in either the Vertical Sidebar or Horizontal Top Bar opens a native menu with `New Tab`, `Vertical Sidebar` / `Horizontal Top Bar` switching, and sidebar left/right placement.
+
+---
+
 ## [0.4.3] — 2026-11-22
 
 ### Codename: Prism

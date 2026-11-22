@@ -16,6 +16,7 @@ import { UpdateBanner } from "@/components/browser-ui/browser-sidebar/_component
 import { BottomDock } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-dock";
 import { MediaMiniPlayer } from "@/components/browser-ui/media-mini-player";
 import { useWindowDrag } from "@/hooks/use-window-drag";
+import { shouldIgnoreWindowDragTarget } from "@/lib/chrome-interactions";
 
 function SidebarIcon({ className }: { className?: string }) {
   return (
@@ -42,22 +43,7 @@ export function SidebarInner({ direction }: { direction: AttachedDirection }) {
   const { isCurrentSpaceLight } = useSpaces();
 
   const { handleMouseDown } = useWindowDrag({
-    shouldIgnoreTarget: (target) => {
-      return Boolean(
-        target.closest("button") ||
-        target.closest("input") ||
-        target.closest("textarea") ||
-        target.closest("select") ||
-        target.closest("label") ||
-        target.closest("a") ||
-        target.closest("[data-tab-id]") ||
-        target.closest(".tab-group") ||
-        target.closest("[role='button']") ||
-        target.closest("[role='menuitem']") ||
-        target.closest("[data-no-drag]") ||
-        target.closest("[data-slot='sidebar-scroll-area-scrollbar']")
-      );
-    }
+    shouldIgnoreTarget: shouldIgnoreWindowDragTarget
   });
 
   const handleSetSlotMachine = useCallback(

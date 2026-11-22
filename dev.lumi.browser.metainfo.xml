@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.4" date="2026-11-22">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.4</url>
+      <description>
+        <p>Fix unentitled macOS passkey prompts hanging so sign-ins fall back cleanly, add Liquid Glass unread count badges on pinned tabs via W3C App Badging and title parsing, display pinned tabs in Horizontal Topbar mode, add a right-click layout switcher menu on empty Sidebar and Topbar chrome, and unify Sidebar Bottom Dock and Space Switcher button styling and single-row layout.</p>
+      </description>
+    </release>
     <release version="0.4.3" date="2026-11-22">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.3</url>
       <description>

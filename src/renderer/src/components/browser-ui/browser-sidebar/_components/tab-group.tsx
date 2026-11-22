@@ -139,6 +139,7 @@ const SidebarTab = memo(
     const handleContextMenu = useCallback(
       (e: React.MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         lumi.tabs.showContextMenu(tab.id);
       },
       [tab.id]

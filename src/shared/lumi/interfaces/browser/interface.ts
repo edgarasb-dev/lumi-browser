@@ -113,4 +113,9 @@ export interface LumiInterfaceAPI {
    * Adds a callback to be called when the window state changes
    */
   onWindowStateChanged: IPCListener<[WindowState]>;
+
+  /**
+   * Opens the native chrome bar context menu (switch between vertical sidebar and horizontal topbar)
+   */
+  showNavigationLayoutContextMenu: () => void;
 }

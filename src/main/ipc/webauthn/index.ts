@@ -7,6 +7,7 @@ import type {
   CreateCredentialErrorCodes,
   CreateCredentialResult
 } from "~/types/fido2-types";
+import type { WebauthnSupportMode } from "~/types/passkey";
 import "./conditional";
 
 /**
@@ -161,8 +162,20 @@ ipcMain.handle("webauthn:get", async (event, options: CredentialRequestOptions |
 
 ipcMain.handle("webauthn:is-available", async (): Promise<boolean> => {
   const webauthn = await getWebauthnAddon();
-  if (!webauthn) {
-    return false;
+  return Boolean(webauthn);
+});
+
+ipcMain.handle("webauthn:get-support-mode", async (): Promise<WebauthnSupportMode> => {
+  const webauthn = await getWebauthnAddon();
+  if (webauthn) {
+    return "macos-native";
   }
-  return true;
+
+  // Unentitled Electron macOS builds cannot access Apple AuthenticationServices
+  // passkey APIs and Electron has no built-in Chrome WebAuthn modal delegate on macOS.
+  if (process.platform === "darwin") {
+    return "unsupported";
+  }
+
+  return "chromium";
 });

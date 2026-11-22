@@ -7,6 +7,7 @@ import type {
   CreateCredentialErrorCodes,
   CreateCredentialResult
 } from "~/types/fido2-types";
+import type { WebauthnSupportMode } from "~/types/passkey";
 import { WebauthnUtils } from "./webauthn-utils";
 
 let hasConditionalMediationLock = false;
@@ -82,10 +83,12 @@ export function tryPatchPasskeys() {
       abort: (abortId: string) => void;
 
       isAvailable: () => Promise<boolean>;
+      getSupportMode: () => Promise<WebauthnSupportMode>;
       isConditionalMediationAvailable: () => Promise<boolean>;
     };
 
     let isWebauthnAddonAvailablePromise: Promise<boolean> | null = null;
+    let webauthnSupportModePromise: Promise<WebauthnSupportMode> | null = null;
 
     const patchedCredentialsContainer: PatchedCredentialsContainer = {
       // @ts-expect-error: just not gonna bother with the error types
@@ -142,6 +145,13 @@ export function tryPatchPasskeys() {
         isWebauthnAddonAvailablePromise = ipcRenderer.invoke("webauthn:is-available");
         return isWebauthnAddonAvailablePromise;
       },
+      getSupportMode: async () => {
+        if (webauthnSupportModePromise) {
+          return webauthnSupportModePromise;
+        }
+        webauthnSupportModePromise = ipcRenderer.invoke("webauthn:get-support-mode");
+        return webauthnSupportModePromise;
+      },
       isConditionalMediationAvailable: async () => {
         return true;
       }
@@ -152,18 +162,51 @@ export function tryPatchPasskeys() {
       if ("electronCredentials" in globalThis) {
         const patchedCredentials: typeof patchedCredentialsContainer = globalThis.electronCredentials;
 
-        let shouldUseMacOSWebauthnAddon_cached: boolean | null = null;
-        async function shouldUseMacOSWebauthnAddon(): Promise<boolean> {
-          if (shouldUseMacOSWebauthnAddon_cached !== null) {
-            return shouldUseMacOSWebauthnAddon_cached;
-          }
+        let supportModeCached: WebauthnSupportMode | null = null;
+        let supportModePromise: Promise<WebauthnSupportMode> | null = null;
 
-          if (await patchedCredentials.isAvailable()) {
-            shouldUseMacOSWebauthnAddon_cached = true;
-            return true;
-          } else {
-            shouldUseMacOSWebauthnAddon_cached = false;
-            return false;
+        function getSupportMode(): Promise<WebauthnSupportMode> {
+          if (supportModeCached !== null) {
+            return Promise.resolve(supportModeCached);
+          }
+          if (!supportModePromise) {
+            supportModePromise = patchedCredentials
+              .getSupportMode()
+              .then((mode) => {
+                supportModeCached = mode;
+                return mode;
+              })
+              .catch(() => {
+                supportModePromise = null;
+                return "unsupported" as WebauthnSupportMode;
+              });
+          }
+          return supportModePromise;
+        }
+
+        function throwWebauthnError(errorCode: CreateCredentialErrorCodes | AssertCredentialErrorCodes): never {
+          switch (errorCode) {
+            case "NotAllowedError":
+              // Mirror Chromium's error message.
+              throw new DOMException(
+                "The operation either timed out or was not allowed. See: https://www.w3.org/TR/webauthn-2/#sctn-privacy-considerations-client.",
+                "NotAllowedError"
+              );
+            case "SecurityError":
+              throw new DOMException("The calling domain is not a valid domain.", "SecurityError");
+            case "TypeError":
+              throw new DOMException("Failed to parse arguments.", "TypeError");
+            case "AbortError":
+              throw new DOMException("The operation was aborted.", "AbortError");
+            case "NotSupportedError":
+              throw new DOMException("The user agent does not support this operation.", "NotSupportedError");
+            case "InvalidStateError":
+              throw new DOMException(
+                "The user attempted to register an authenticator that contains one of the credentials already registered with the relying party.",
+                "InvalidStateError"
+              );
+            case "OperationError":
+              throw new DOMException("A request is already pending.", "OperationError");
           }
         }
 
@@ -174,34 +217,20 @@ export function tryPatchPasskeys() {
 
           // navigator.credentials.create()
           credentials.create = async (options) => {
-            if (options && (await shouldUseMacOSWebauthnAddon())) {
-              if (options.publicKey) {
+            if (options?.publicKey) {
+              const mode = await getSupportMode();
+              if (mode === "macos-native") {
                 const result = await patchedCredentials.create(options);
-
-                // Cannot throw errors in patchedCredentials, so we need to handle the errors here.
-                const errorCode = result as unknown as CreateCredentialErrorCodes;
-                if (errorCode === "NotAllowedError") {
-                  // Mirror Chromium's error message.
-                  throw new DOMException(
-                    "The operation either timed out or was not allowed. See: https://www.w3.org/TR/webauthn-2/#sctn-privacy-considerations-client.",
-                    "NotAllowedError"
-                  );
-                } else if (errorCode === "SecurityError") {
-                  throw new DOMException("The calling domain is not a valid domain.", "SecurityError");
-                } else if (errorCode === "TypeError") {
-                  throw new DOMException("Failed to parse arguments.", "TypeError");
-                } else if (errorCode === "AbortError") {
-                  throw new DOMException("The operation was aborted.", "AbortError");
-                } else if (errorCode === "NotSupportedError") {
-                  throw new DOMException("The user agent does not support this operation.", "NotSupportedError");
-                } else if (errorCode === "InvalidStateError") {
-                  throw new DOMException(
-                    "The user attempted to register an authenticator that contains one of the credentials already registered with the relying party.",
-                    "InvalidStateError"
-                  );
+                if (typeof result === "string") {
+                  throwWebauthnError(result);
                 }
-
                 return result;
+              }
+              if (mode === "unsupported") {
+                if (options.signal?.aborted) {
+                  throwWebauthnError("AbortError");
+                }
+                throwWebauthnError("NotSupportedError");
               }
             }
 
@@ -210,14 +239,15 @@ export function tryPatchPasskeys() {
 
           // navigator.credentials.get()
           credentials.get = async (options) => {
-            if (options && (await shouldUseMacOSWebauthnAddon())) {
-              if (options.publicKey) {
+            if (options?.publicKey) {
+              const mode = await getSupportMode();
+              if (mode === "macos-native") {
                 // Generate abort ID and run `patchedCredentials.get()`
                 const abortId = crypto.randomUUID();
                 const getPromise = patchedCredentials.get(options, abortId);
 
                 // Handle abort signal
-                const abortSignal = options?.signal;
+                const abortSignal = options.signal;
                 if (abortSignal) {
                   const onAbort = () => {
                     patchedCredentials.abort(abortId);
@@ -236,28 +266,16 @@ export function tryPatchPasskeys() {
 
                 // Wait for the operation to resolve
                 const result = await getPromise;
-
-                // Cannot throw errors in patchedCredentials, so we need to handle the errors here.
-                const errorCode = result as unknown as AssertCredentialErrorCodes;
-                if (errorCode === "NotAllowedError") {
-                  // Mirror Chromium's error message.
-                  throw new DOMException(
-                    "The operation either timed out or was not allowed. See: https://www.w3.org/TR/webauthn-2/#sctn-privacy-considerations-client.",
-                    "NotAllowedError"
-                  );
-                } else if (errorCode === "SecurityError") {
-                  throw new DOMException("The calling domain is not a valid domain.", "SecurityError");
-                } else if (errorCode === "TypeError") {
-                  throw new DOMException("Failed to parse arguments.", "TypeError");
-                } else if (errorCode === "AbortError") {
-                  throw new DOMException("The operation was aborted.", "AbortError");
-                } else if (errorCode === "NotSupportedError") {
-                  throw new DOMException("The user agent does not support this operation.", "NotSupportedError");
-                } else if (errorCode === "OperationError") {
-                  throw new DOMException("A request is already pending.", "OperationError");
+                if (typeof result === "string") {
+                  throwWebauthnError(result);
                 }
-
                 return result as PublicKeyCredential | null;
+              }
+              if (mode === "unsupported") {
+                if (options.signal?.aborted) {
+                  throwWebauthnError("AbortError");
+                }
+                throwWebauthnError("NotSupportedError");
               }
             }
 
@@ -265,31 +283,64 @@ export function tryPatchPasskeys() {
           };
         }
 
-        if (
-          "PublicKeyCredential" in globalThis &&
-          "isUserVerifyingPlatformAuthenticatorAvailable" in globalThis.PublicKeyCredential
-        ) {
-          const PublicKeyCredential = globalThis.PublicKeyCredential;
-
-          // PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-          const oldIsUserVerifyingPlatformAuthenticatorAvailable =
-            PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable.bind(PublicKeyCredential);
-          PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable = async () => {
-            if (await patchedCredentials.isAvailable()) {
-              return await patchedCredentials.isAvailable();
-            }
-            return await oldIsUserVerifyingPlatformAuthenticatorAvailable();
+        if ("PublicKeyCredential" in globalThis) {
+          const PublicKeyCredentialCtor = globalThis.PublicKeyCredential as typeof PublicKeyCredential & {
+            getClientCapabilities?: () => Promise<Record<string, boolean>>;
           };
 
-          // PublicKeyCredential.isConditionalMediationAvailable()
-          const oldIsConditionalMediationAvailable =
-            PublicKeyCredential.isConditionalMediationAvailable.bind(PublicKeyCredential);
-          PublicKeyCredential.isConditionalMediationAvailable = async () => {
-            if (await patchedCredentials.isAvailable()) {
-              return await patchedCredentials.isConditionalMediationAvailable();
-            }
-            return await oldIsConditionalMediationAvailable();
-          };
+          if ("isUserVerifyingPlatformAuthenticatorAvailable" in PublicKeyCredentialCtor) {
+            const oldIsUserVerifyingPlatformAuthenticatorAvailable =
+              PublicKeyCredentialCtor.isUserVerifyingPlatformAuthenticatorAvailable.bind(PublicKeyCredentialCtor);
+            PublicKeyCredentialCtor.isUserVerifyingPlatformAuthenticatorAvailable = async () => {
+              const mode = await getSupportMode();
+              if (mode === "macos-native") {
+                return await patchedCredentials.isAvailable();
+              }
+              if (mode === "unsupported") {
+                return false;
+              }
+              return await oldIsUserVerifyingPlatformAuthenticatorAvailable();
+            };
+          }
+
+          if ("isConditionalMediationAvailable" in PublicKeyCredentialCtor) {
+            const oldIsConditionalMediationAvailable =
+              PublicKeyCredentialCtor.isConditionalMediationAvailable.bind(PublicKeyCredentialCtor);
+            PublicKeyCredentialCtor.isConditionalMediationAvailable = async () => {
+              const mode = await getSupportMode();
+              if (mode === "macos-native") {
+                return await patchedCredentials.isConditionalMediationAvailable();
+              }
+              if (mode === "unsupported") {
+                return false;
+              }
+              return await oldIsConditionalMediationAvailable();
+            };
+          }
+
+          if (
+            "getClientCapabilities" in PublicKeyCredentialCtor &&
+            typeof PublicKeyCredentialCtor.getClientCapabilities === "function"
+          ) {
+            const oldGetClientCapabilities =
+              PublicKeyCredentialCtor.getClientCapabilities.bind(PublicKeyCredentialCtor);
+            PublicKeyCredentialCtor.getClientCapabilities = async () => {
+              const mode = await getSupportMode();
+              const caps = await oldGetClientCapabilities();
+              if (mode === "unsupported") {
+                return {
+                  ...caps,
+                  conditionalCreate: false,
+                  conditionalGet: false,
+                  hybridTransport: false,
+                  immediateGet: false,
+                  passkeyPlatformAuthenticator: false,
+                  userVerifyingPlatformAuthenticator: false
+                };
+              }
+              return caps;
+            };
+          }
         }
 
         delete globalThis.electronCredentials;

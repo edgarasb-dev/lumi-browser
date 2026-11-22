@@ -1,7 +1,6 @@
 import { BubbleEvent } from "@/components/logic/bubble-event";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/popover";
 import { useSpaces } from "@/components/providers/spaces-provider";
-import { Button } from "@/components/ui/button";
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import {
@@ -17,9 +16,14 @@ import {
   SparklesIcon,
   StarIcon
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Favourite } from "~/lumi/interfaces/browser/favourites";
-import { DOCK_BUTTON_CLASSES, type DockButtonSize } from "./dock-button-sizes";
+import {
+  DOCK_BUTTON_CLASSES,
+  DOCK_ICON_STROKE_WIDTH,
+  getDockButtonClassName,
+  type DockButtonSize
+} from "./dock-button-sizes";
 
 function BottomExtrasMenuItem({
   id,
@@ -42,7 +46,7 @@ function BottomExtrasMenuItem({
   );
 }
 
-export function BottomExtrasMenu({ size = "default" }: { size?: DockButtonSize } = {}) {
+export function BottomExtrasMenu({ size = "default", className }: { size?: DockButtonSize; className?: string } = {}) {
   const [open, setOpen] = useState(false);
   const [favourites, setFavourites] = useState<Favourite[]>([]);
   const commandRef = useRef<HTMLDivElement>(null);
@@ -53,7 +57,7 @@ export function BottomExtrasMenu({ size = "default" }: { size?: DockButtonSize }
     }
   }, [open]);
 
-  const onItemSelected = useCallback((url: string) => {
+  const onItemSelected = (url: string) => {
     if (url === "internal://settings") {
       lumi.windows.openSettings();
     } else if (url.startsWith("action:")) {
@@ -63,7 +67,7 @@ export function BottomExtrasMenu({ size = "default" }: { size?: DockButtonSize }
       lumi.tabs.newTab(url, true);
     }
     setOpen(false);
-  }, []);
+  };
 
   const { isCurrentSpaceLight } = useSpaces();
   const spaceInjectedClasses = cn(isCurrentSpaceLight ? "" : "dark");
@@ -71,15 +75,14 @@ export function BottomExtrasMenu({ size = "default" }: { size?: DockButtonSize }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Button
-        size="icon"
-        className={cn(sizeClasses.button, "bg-transparent hover:bg-black/10 dark:hover:bg-white/10")}
-        asChild
+      <PopoverTrigger
+        type="button"
+        onClick={(e) => e.stopPropagation()}
+        title="Workspace Menu & Pages"
+        className={cn(getDockButtonClassName(size, { active: open }), className)}
       >
-        <PopoverTrigger nativeButton={true}>
-          <ArchiveIcon strokeWidth={2} className={cn(sizeClasses.icon, "text-black/80 dark:text-white/80")} />
-        </PopoverTrigger>
-      </Button>
+        <ArchiveIcon strokeWidth={DOCK_ICON_STROKE_WIDTH} className={sizeClasses.icon} />
+      </PopoverTrigger>
       <PopoverContent className={cn("w-56 p-2 select-none")} positionerClassName={spaceInjectedClasses}>
         <Command ref={commandRef} loop>
           <BubbleEvent targetRef={commandRef} eventType="keydown" />

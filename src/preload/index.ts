@@ -7,6 +7,7 @@ import { injectBrowserAction } from "electron-chrome-extensions/browser-action";
 import { tryPatchPasskeys } from "./webauthn";
 import { tryPatchPrompts } from "./prompts";
 import { tryPatchPasswords } from "./passwords";
+import { tryPatchAppBadge } from "./app-badge";
 
 // TYPE IMPORTS //
 import type { ProfileData } from "@/controllers/profiles-controller";
@@ -129,6 +130,7 @@ if (hasPermission("browser")) {
 tryPatchPasskeys();
 tryPatchPrompts();
 tryPatchPasswords();
+tryPatchAppBadge();
 
 // INTERNAL FUNCTIONS //
 function getOSFromPlatform(platform: NodeJS.Platform) {
@@ -524,6 +526,9 @@ const interfaceAPI: LumiInterfaceAPI = {
   },
   onWindowStateChanged: (callback: (state: WindowState) => void) => {
     return listenOnIPCChannel("interface:window-state-changed", callback);
+  },
+  showNavigationLayoutContextMenu: () => {
+    return ipcRenderer.send("interface:show-navigation-layout-menu");
   },
 
   // Special Exception: These are allowed on every tab, but very tightly secured.

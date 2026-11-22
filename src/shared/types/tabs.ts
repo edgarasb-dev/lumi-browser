@@ -76,6 +76,7 @@ export type TabData = Omit<PersistedTabData, "navHistory" | "navHistoryIndex"> &
   asleep: boolean;
   readerMode?: boolean;
   ephemeral?: boolean; // true for pinned-tab-associated tabs that shouldn't appear in the sidebar tab list
+  badgeCount?: number | null;
 };
 
 /**

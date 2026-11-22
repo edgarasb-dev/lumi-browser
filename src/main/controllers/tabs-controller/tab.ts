@@ -38,7 +38,8 @@ type TabStateProperty =
   | "asleep"
   | "readerMode"
   | "lastActiveAt"
-  | "position";
+  | "position"
+  | "badgeCount";
 type TabContentProperty = "title" | "url" | "isLoading" | "audible" | "muted" | "navHistory" | "navHistoryIndex";
 
 export type TabPublicProperty = TabStateProperty | TabContentProperty;
@@ -208,6 +209,7 @@ export class Tab extends TypedEventEmitter<TabEvents> {
   public muted: boolean = false;
   public navHistory: NavigationEntry[] = [];
   public navHistoryIndex: number = 0;
+  public badgeCount: number | null = null;
 
   // Cached for nav history diff (avoids JSON.stringify every time)
   private lastNavHistoryLength: number = 0;
@@ -557,9 +559,12 @@ export class Tab extends TypedEventEmitter<TabEvents> {
       void this.applySiteSettingsForCurrentUrl();
     });
 
-    webContents.on("did-start-navigation", (_event, _url, _isInPlace, isMainFrame) => {
+    webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
       if (isMainFrame) {
         this.smartDarkCssKey = null;
+        if (!isInPlace && this.badgeCount !== null) {
+          this.updateStateProperty("badgeCount", null);
+        }
         if (this.hasMediaPlayback) {
           this.hasMediaPlayback = false;
           this.emit("media-changed");

@@ -1,8 +1,9 @@
-import { BrowserWindow as ElectronWindow } from "electron";
+import { BrowserWindow as ElectronWindow, ipcMain, Menu, MenuItem } from "electron";
 import { BrowserWindow } from "@/controllers/windows-controller/types";
-import { ipcMain } from "electron";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 import { setWindowCursorEdgeMode } from "@/controllers/windows-controller/utils/cursor-edge-monitor";
+import { openNewTab } from "@/ipc/app/new-tab";
+import { getSettingValueById, setSettingValueById } from "@/saving/settings";
 import type { CursorEdgeMonitorMode } from "~/lumi/interfaces/browser/interface";
 
 ipcMain.on("window-button:set-position", (event, position: { x: number; y: number }) => {
@@ -118,4 +119,61 @@ ipcMain.on("interface:set-cursor-edge-monitor-mode", (event, mode: CursorEdgeMon
   if (win) {
     setWindowCursorEdgeMode(win.id, mode);
   }
+});
+
+ipcMain.on("interface:show-navigation-layout-menu", (event) => {
+  const win = browserWindowsController.getWindowFromWebContents(event.sender);
+  if (!win || win.browserWindowType !== "normal") return;
+
+  const currentLayout = getSettingValueById("navigationLayout") === "topbar" ? "topbar" : "sidebar";
+  const sidebarSide = getSettingValueById("sidebarSide") === "right" ? "right" : "left";
+
+  const contextMenu = new Menu();
+
+  contextMenu.append(
+    new MenuItem({
+      label: "New Tab",
+      click: () => {
+        openNewTab(win);
+      }
+    })
+  );
+
+  contextMenu.append(new MenuItem({ type: "separator" }));
+
+  contextMenu.append(
+    new MenuItem({
+      label: "Vertical Sidebar",
+      type: "radio",
+      checked: currentLayout === "sidebar",
+      click: () => {
+        void setSettingValueById("navigationLayout", "sidebar");
+      }
+    })
+  );
+
+  contextMenu.append(
+    new MenuItem({
+      label: "Horizontal Top Bar",
+      type: "radio",
+      checked: currentLayout === "topbar",
+      click: () => {
+        void setSettingValueById("navigationLayout", "topbar");
+      }
+    })
+  );
+
+  if (currentLayout === "sidebar") {
+    contextMenu.append(new MenuItem({ type: "separator" }));
+    contextMenu.append(
+      new MenuItem({
+        label: sidebarSide === "right" ? "Move Sidebar to Left" : "Move Sidebar to Right",
+        click: () => {
+          void setSettingValueById("sidebarSide", sidebarSide === "right" ? "left" : "right");
+        }
+      })
+    );
+  }
+
+  contextMenu.popup({ window: win.browserWindow });
 });

@@ -7,7 +7,7 @@ import { useMeasure } from "react-use";
 import { PinnedTabButton } from "@/components/browser-ui/browser-sidebar/_components/pin-grid/pinned-tab-button";
 import { SidebarScrollArea } from "@/components/browser-ui/browser-sidebar/_components/sidebar-scroll-area";
 import { usePinnedTabs } from "@/components/providers/pinned-tabs-provider";
-import { useFocusedTabId } from "@/components/providers/tabs-provider";
+import { useFocusedTabId, useTabs } from "@/components/providers/tabs-provider";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { usePinGridColumns } from "./use-pin-grid-columns";
 import { usePinGridLayoutAnimations } from "./use-pin-grid-layout-animations";
@@ -22,11 +22,23 @@ interface PinGridProps {
 export function PinGrid({ profileId }: PinGridProps) {
   const [measureRef, { width }] = useMeasure<HTMLDivElement>();
   const { getPinnedTabs, createFromTab, click, doubleClick, reorder, showContextMenu } = usePinnedTabs();
+  const { tabsData } = useTabs();
   const focusedTabId = useFocusedTabId();
   const { currentSpace } = useSpaces();
 
   const pinnedTabs = useMemo(() => getPinnedTabs(profileId), [profileId, getPinnedTabs]);
   const pinCount = pinnedTabs.length;
+  const tabsById = useMemo(() => {
+    const map = new Map<
+      number,
+      (typeof tabsData extends null ? never : NonNullable<typeof tabsData>)["tabs"][number]
+    >();
+    if (!tabsData) return map;
+    for (const tab of tabsData.tabs) {
+      map.set(tab.id, tab);
+    }
+    return map;
+  }, [tabsData]);
 
   // --- Hooks ---
   const { cols, colsRef, gridColumnClass } = usePinGridColumns(width, pinCount);
@@ -82,26 +94,31 @@ export function PinGrid({ profileId }: PinGridProps) {
         {showingEmptyState ? (
           <PinGridEmptyState isDragOver={isDragOver} hidden={isDismissed} onDismiss={dismiss} />
         ) : (
-          pinnedTabs.map((pinnedTab, index) => (
-            <PinnedTabButton
-              key={pinnedTab.uniqueId}
-              pinnedTab={pinnedTab}
-              profileId={profileId}
-              isActive={currentSpace !== null && pinnedTab.associatedTabIdsBySpace[currentSpace.id] === focusedTabId}
-              onClick={() => click(pinnedTab.uniqueId)}
-              onDoubleClick={() => doubleClick(pinnedTab.uniqueId)}
-              onContextMenu={() => showContextMenu(pinnedTab.uniqueId)}
-              onReorder={handleReorder}
-              onCreateFromTab={handleCreateFromTab}
-              pinnedTabs={pinnedTabs}
-              index={index}
-              onEdgeChange={handleChildEdgeChange}
-              activeEdge={activeIndicator?.index === index ? activeIndicator.edge : undefined}
-              isFirstInRow={index % cols === 0}
-              isLastInRow={index % cols === cols - 1 || index === pinCount - 1}
-              layoutAnimationsEnabled={layoutAnimationsEnabled}
-            />
-          ))
+          pinnedTabs.map((pinnedTab, index) => {
+            const associatedTabId = currentSpace ? pinnedTab.associatedTabIdsBySpace[currentSpace.id] : undefined;
+            const associatedTab = associatedTabId !== undefined ? tabsById.get(associatedTabId) : undefined;
+            return (
+              <PinnedTabButton
+                key={pinnedTab.uniqueId}
+                pinnedTab={pinnedTab}
+                associatedTab={associatedTab}
+                profileId={profileId}
+                isActive={associatedTabId !== undefined && associatedTabId === focusedTabId}
+                onClick={() => click(pinnedTab.uniqueId)}
+                onDoubleClick={() => doubleClick(pinnedTab.uniqueId)}
+                onContextMenu={() => showContextMenu(pinnedTab.uniqueId)}
+                onReorder={handleReorder}
+                onCreateFromTab={handleCreateFromTab}
+                pinnedTabs={pinnedTabs}
+                index={index}
+                onEdgeChange={handleChildEdgeChange}
+                activeEdge={activeIndicator?.index === index ? activeIndicator.edge : undefined}
+                isFirstInRow={index % cols === 0}
+                isLastInRow={index % cols === cols - 1 || index === pinCount - 1}
+                layoutAnimationsEnabled={layoutAnimationsEnabled}
+              />
+            );
+          })
         )}
       </div>
     </SidebarScrollArea>
