@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.5] — 2026-11-22
+
+### Codename: Prism
+
+### Fixed
+
+- **YouTube Player Not Loading Under Content Blocker & Multi-Profile Blocker Stabilization**: Overrode `@ghostery/adblocker-electron`'s `onInjectCosmeticFilters` in `src/main/modules/content-blocker.ts` with `wrapIsolatedScriptlet` and `executeIsolatedCosmeticScripts` so cosmetic scriptlets run inside isolated lexical scopes sharing `scriptletGlobals`. This prevents global `JSONPath` redeclaration `SyntaxError`s and prevents repeated `proxyApplyFn` injections from overwriting `proxyApplyFn.nativeToString` with an already-proxied `Function.prototype.toString` (which previously caused `RangeError: Maximum call stack size exceeded` and left YouTube's `#player` box blank while metadata and comments loaded). Also added `clearCosmeticIpcHandlers` / `registerCosmeticIpcHandlers` and a serialized `configQueue` in `updateConfig()` / `applyConfig()` so enabling or unloading multiple profiles never hits duplicate `ipcMain` handler errors or overlapping configuration transitions.
+
+---
+
 ## [0.4.4] — 2026-11-22
 
 ### Codename: Prism

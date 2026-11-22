@@ -3,9 +3,10 @@ import { LUMI_DATA_DIR } from "@/modules/paths";
 import { getSettingValueById, onSettingsCached, settingsEmitter } from "@/saving/settings";
 import { getDatastore } from "@/saving/datastore";
 import { ElectronBlocker } from "@ghostery/adblocker-electron";
-import { Session, webContents } from "electron";
+import { ipcMain, Session, webContents, type WebContents } from "electron";
 import fs from "fs/promises";
 import path from "path";
+import { parse as parseTld } from "tldts";
 import { loadedProfilesController } from "@/controllers/loaded-profiles-controller";
 import { profilesController } from "@/controllers/profiles-controller";
 import { unifiedWebRequests } from "@/controllers/sessions-controller";
@@ -22,8 +23,48 @@ const ContentBlockerDataStore = getDatastore("content-blocker");
 const ADBLOCKER_CACHE_DIR = path.join(LUMI_DATA_DIR, "adblocker-cache");
 const STATS_SAVE_DEBOUNCE_MS = 30_000;
 const MAX_WHITELIST_URL_CACHE = 256;
+const COSMETIC_INJECT_CHANNEL = "@ghostery/adblocker/inject-cosmetic-filters";
+const MUTATION_OBSERVER_CHANNEL = "@ghostery/adblocker/is-mutation-observer-enabled";
 
 const DEFAULT_FOCUS_DOMAINS = ["youtube.com", "x.com", "twitter.com", "reddit.com", "instagram.com", "tiktok.com"];
+
+function wrapIsolatedScriptlet(script: string): string {
+  return `(function(scriptletGlobals){\n${script}\n})(globalThis.scriptletGlobals ?? (globalThis.scriptletGlobals = {}));`;
+}
+
+/**
+ * Executes cosmetic scriptlets in isolated function scopes sharing `scriptletGlobals`.
+ * Ghostery's default un-isolated `executeJavaScript(script)` runs scriptlets at top-level
+ * window scope, where shared identifiers like `JSONPath` throw SyntaxError and repeated
+ * `function proxyApplyFn()` declarations overwrite `proxyApplyFn.nativeToString` with an
+ * already-proxied `Function.prototype.toString`, triggering infinite stack overflow on sites
+ * like YouTube and aborting player initialization.
+ */
+async function executeIsolatedCosmeticScripts(sender: WebContents, scripts: string[]): Promise<void> {
+  if (sender.isDestroyed() || scripts.length === 0) return;
+
+  const bundle = scripts.map((script) => `try{\n${wrapIsolatedScriptlet(script)}\n}catch{}`).join(";\n");
+  try {
+    await sender.executeJavaScript(bundle, true);
+  } catch {
+    for (const script of scripts) {
+      if (sender.isDestroyed()) return;
+      await sender.executeJavaScript(wrapIsolatedScriptlet(script), true).catch(() => {});
+    }
+  }
+}
+
+function clearCosmeticIpcHandlers(): void {
+  ipcMain.removeHandler(COSMETIC_INJECT_CHANNEL);
+  ipcMain.removeHandler(MUTATION_OBSERVER_CHANNEL);
+}
+
+function registerCosmeticIpcHandlers(blocker: ElectronBlocker): void {
+  if (blocker.config.loadCosmeticFilters !== true) return;
+  clearCosmeticIpcHandlers();
+  ipcMain.handle(COSMETIC_INJECT_CHANNEL, blocker.onInjectCosmeticFilters);
+  ipcMain.handle(MUTATION_OBSERVER_CHANNEL, blocker.onIsMutationObserverEnabled);
+}
 
 interface TabStatsData {
   tabId: number;
@@ -51,6 +92,7 @@ class ContentBlocker {
   private focusBlockActive: boolean = false;
   private focusBlockedDomains: string[] = [...DEFAULT_FOCUS_DOMAINS];
   private focusHookedSessions = new WeakSet<Session>();
+  private configQueue: Promise<void> = Promise.resolve();
 
   /**
    * Load persisted content blocker settings (whitelisted domains and total count)
@@ -396,13 +438,51 @@ class ContentBlocker {
         originalOnBeforeRequest(details, callback);
       };
 
-      // Wrap onInjectCosmeticFilters to bypass cosmetic filters for whitelisted domains
-      const originalOnInjectCosmeticFilters = blocker.onInjectCosmeticFilters.bind(blocker);
+      // Override cosmetic filter injection to bypass whitelisted domains and run scriptlets
+      // inside isolated lexical scopes so multi-scriptlet injections never collide globally.
       blocker.onInjectCosmeticFilters = async (event, url, msg) => {
+        if (!url || event.sender.isDestroyed()) {
+          return;
+        }
         if (this.whitelistedDomainsSet.size > 0 && this.isPageUrlWhitelisted(url)) {
           return;
         }
-        return originalOnInjectCosmeticFilters(event, url, msg);
+
+        const parsed = parseTld(url);
+        const hostname = parsed.hostname || "";
+        const domain = parsed.domain || "";
+        const isFirstRun = msg === undefined;
+
+        const { active, styles, scripts } = blocker.getCosmeticsFilters({
+          domain,
+          hostname,
+          url,
+          classes: msg?.classes,
+          hrefs: msg?.hrefs,
+          ids: msg?.ids,
+          getBaseRules: isFirstRun,
+          getInjectionRules: isFirstRun,
+          getExtendedRules: false,
+          getRulesFromHostname: isFirstRun,
+          getRulesFromDOM: !isFirstRun,
+          callerContext: {
+            frameId: event.frameId,
+            processId: event.processId,
+            lifecycle: msg?.lifecycle
+          }
+        });
+
+        if (active === false || event.sender.isDestroyed()) {
+          return;
+        }
+
+        if (styles.length > 0) {
+          void event.sender.insertCSS(styles, { cssOrigin: "user" }).catch(() => {});
+        }
+
+        if (scripts.length > 0) {
+          await executeIsolatedCosmeticScripts(event.sender, scripts);
+        }
       };
 
       blocker.on("request-blocked", (request) => {
@@ -430,7 +510,10 @@ class ContentBlocker {
 
     const blocker = await this.blockerInstancePromise;
     for (const session of this.blockedSessions.values()) {
-      blocker.disableBlockingInSession(unifiedWebRequests.createSession(session, SESSION_KEY));
+      const wrappedSession = unifiedWebRequests.createSession(session, SESSION_KEY);
+      if (blocker.isBlockingEnabled(wrappedSession)) {
+        blocker.disableBlockingInSession(wrappedSession);
+      }
     }
 
     this.blockedSessions.clear();
@@ -451,8 +534,15 @@ class ContentBlocker {
 
     if (this.blockedSessions.get(profileId) === session) return;
 
+    const wrappedSession = unifiedWebRequests.createSession(session, SESSION_KEY);
+    if (!blocker.isBlockingEnabled(wrappedSession)) {
+      // Ghostery's BlockingContext registers global ipcMain handlers per session;
+      // clear prior handlers first so multi-profile sessions do not throw duplicate-handler errors.
+      clearCosmeticIpcHandlers();
+      blocker.enableBlockingInSession(wrappedSession);
+    }
+
     this.blockedSessions.set(profileId, session);
-    blocker.enableBlockingInSession(unifiedWebRequests.createSession(session, SESSION_KEY));
   }
 
   private removeProfileSession(profileId: string): void {
@@ -462,7 +552,13 @@ class ContentBlocker {
     this.blockedSessions.delete(profileId);
     if (this.blockerInstancePromise) {
       void this.blockerInstancePromise.then((blocker) => {
-        blocker.disableBlockingInSession(unifiedWebRequests.createSession(session, SESSION_KEY));
+        const wrappedSession = unifiedWebRequests.createSession(session, SESSION_KEY);
+        if (blocker.isBlockingEnabled(wrappedSession)) {
+          blocker.disableBlockingInSession(wrappedSession);
+        }
+        if (this.blockedSessions.size > 0) {
+          registerCosmeticIpcHandlers(blocker);
+        }
       });
     }
   }
@@ -513,7 +609,12 @@ class ContentBlocker {
   /**
    * Updates content blocker configuration based on user settings
    */
-  public async updateConfig(): Promise<void> {
+  public updateConfig(): Promise<void> {
+    this.configQueue = this.configQueue.catch(() => {}).then(() => this.applyConfig());
+    return this.configQueue;
+  }
+
+  private async applyConfig(): Promise<void> {
     const contentBlockerSetting = getSettingValueById("contentBlocker") as string | undefined;
     const profiles = loadedProfilesController.getAll();
 
@@ -526,7 +627,7 @@ class ContentBlocker {
       case "adsAndTrackers":
       case "adsOnly":
         for (const profile of profiles) {
-          this.enableBlockerForProfile(
+          await this.enableBlockerForProfile(
             contentBlockerSetting as BlockerInstanceType,
             profile.profileId,
             profile.session
@@ -534,7 +635,7 @@ class ContentBlocker {
         }
         break;
       default:
-        this.disableBlocker();
+        await this.disableBlocker();
     }
 
     debugPrint("CONTENT_BLOCKER", "Content blocker configuration updated:", contentBlockerSetting);

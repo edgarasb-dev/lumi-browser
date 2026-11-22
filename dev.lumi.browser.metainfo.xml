@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.5" date="2026-11-22">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.5</url>
+      <description>
+        <p>Fix YouTube player failing to initialize when Content Blocker cosmetic scriptlets collide in global scope (preventing Function.prototype.toString stack overflow and JSONPath redeclaration errors), and serialize multi-profile adblocker lifecycle and IPC registration.</p>
+      </description>
+    </release>
     <release version="0.4.4" date="2026-11-22">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.4</url>
       <description>
