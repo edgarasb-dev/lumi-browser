@@ -120,6 +120,18 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
 }
 
 /**
+ * Checkpoint SQLite WAL frames into the main database file cleanly.
+ */
+export function checkpointDatabase(): void {
+  if (!sqlite) return;
+  try {
+    sqlite.pragma("wal_checkpoint(TRUNCATE)");
+  } catch (err) {
+    debugError("DB", "Database WAL checkpoint failed:", err);
+  }
+}
+
+/**
  * Close the database connection cleanly.
  * Should be called during app shutdown.
  */
@@ -129,6 +141,7 @@ export function closeDatabase(): void {
     historyPruneTimer = null;
   }
   if (sqlite) {
+    checkpointDatabase();
     debugPrint("DB", "Closing database connection");
     try {
       sqlite.close();

@@ -13,14 +13,34 @@ import {
 
 export const SpaceScratchpad = memo(function SpaceScratchpad({
   size = "default",
-  className
+  className,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+  side = "bottom",
+  align = "center"
 }: {
   size?: DockButtonSize;
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+  side?: "top" | "bottom" | "left" | "right";
+  align?: "start" | "center" | "end";
 } = {}) {
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
   const currentSpaceId = currentSpace?.id;
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (controlledOpen === undefined) {
+        setInternalOpen(nextOpen);
+      }
+      onOpenChange?.(nextOpen);
+    },
+    [controlledOpen, onOpenChange]
+  );
   const [content, setContent] = useState("");
   const [hasNotes, setHasNotes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,6 +59,16 @@ export const SpaceScratchpad = memo(function SpaceScratchpad({
       setHasNotes(!!savedNotes && savedNotes.trim().length > 0);
     });
   }, [currentSpaceId]);
+
+  useEffect(() => {
+    const onWorkspaceAction = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === "open_scratchpad") {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("lumi:workspace-action", onWorkspaceAction);
+    return () => window.removeEventListener("lumi:workspace-action", onWorkspaceAction);
+  }, [setOpen]);
 
   // Debounced auto-save
   const handleChange = useCallback(
@@ -88,25 +118,36 @@ export const SpaceScratchpad = memo(function SpaceScratchpad({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        type="button"
-        onClick={(e) => e.stopPropagation()}
-        title={`Scratchpad for ${currentSpace?.name || "Space"}`}
-        className={cn("relative", getDockButtonClassName(size, { active: open }), className)}
-      >
-        <NotebookPen strokeWidth={DOCK_ICON_STROKE_WIDTH} className={sizeClasses.icon} />
-        {hasNotes && (
-          <span
-            className={cn(
-              "absolute size-1.5 rounded-full bg-blue-500 ring-2 ring-background",
-              size === "xs" ? "top-1 right-1" : "top-1.5 right-1.5"
-            )}
-          />
-        )}
-      </PopoverTrigger>
+      {hideTrigger ? (
+        <PopoverTrigger
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-0"
+        />
+      ) : (
+        <PopoverTrigger
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          title={`Scratchpad for ${currentSpace?.name || "Space"}`}
+          className={cn("relative", getDockButtonClassName(size, { active: open }), className)}
+        >
+          <NotebookPen strokeWidth={DOCK_ICON_STROKE_WIDTH} className={sizeClasses.icon} />
+          {hasNotes && (
+            <span
+              className={cn(
+                "absolute size-1.5 rounded-full bg-blue-500 ring-2 ring-background",
+                size === "xs" ? "top-1 right-1" : "top-1.5 right-1.5"
+              )}
+            />
+          )}
+        </PopoverTrigger>
+      )}
 
       <PopoverContent
         variant="translucent"
+        side={side}
+        align={align}
         className={cn(
           "w-84 select-none p-3.5 flex flex-col gap-2.5 font-sans rounded-2xl shadow-2xl backdrop-blur-xl border border-black/10 dark:border-white/15",
           "h-96"

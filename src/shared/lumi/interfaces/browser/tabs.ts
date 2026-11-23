@@ -1,10 +1,12 @@
 import { IPCListener } from "~/lumi/types";
 import {
+  FolderColorId,
   RecentlyClosedTabData,
   SplitDirection,
   TabData,
   TabPlaceholderUpdate,
   TabTargetUrlUpdate,
+  TidyResult,
   WindowTabsData
 } from "~/types/tabs";
 
@@ -175,4 +177,59 @@ export interface LumiTabsAPI {
    * Dismiss a Glance overlay group (close front tab or promote front tab to full view)
    */
   dismissGlance: (groupId: string, promoteFront?: boolean) => Promise<boolean>;
+
+  /**
+   * Create a named collapsible folder from one or more tabs
+   */
+  createFolder: (tabIds: number[], options?: { name?: string; color?: FolderColorId }) => Promise<string | null>;
+
+  /**
+   * Rename an existing folder tab group
+   */
+  renameFolder: (groupId: string, name: string) => Promise<boolean>;
+
+  /**
+   * Set the surface tint color of a folder tab group
+   */
+  setFolderColor: (groupId: string, color: FolderColorId) => Promise<boolean>;
+
+  /**
+   * Persist folder collapse/expand state
+   */
+  setFolderCollapsed: (groupId: string, collapsed: boolean) => Promise<boolean>;
+
+  /**
+   * Add a tab into an existing folder tab group
+   */
+  addTabToFolder: (groupId: string, tabId: number, position?: number) => Promise<boolean>;
+
+  /**
+   * Remove a tab from its folder group back to a loose tab
+   */
+  removeTabFromFolder: (tabId: number, newPosition?: number) => Promise<boolean>;
+
+  /**
+   * Move an entire folder tab group to a new position in the current space
+   */
+  moveTabGroup: (groupId: string, newPosition: number) => Promise<boolean>;
+
+  /**
+   * Move an entire folder tab group to another space
+   */
+  moveTabGroupToSpace: (groupId: string, spaceId: string, newPosition?: number) => Promise<boolean>;
+
+  /**
+   * Show the native context menu for a folder tab group
+   */
+  showFolderContextMenu: (groupId: string) => void;
+
+  /**
+   * Deterministically tidy ungrouped tabs in a space (domain folders + duplicate/blank cleanup)
+   */
+  tidySpace: (spaceId: string) => Promise<TidyResult>;
+
+  /**
+   * Revert a previously applied Tidy action using its undo token
+   */
+  undoTidy: (undoId: string) => Promise<boolean>;
 }

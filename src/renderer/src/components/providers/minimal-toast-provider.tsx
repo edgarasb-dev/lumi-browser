@@ -14,6 +14,8 @@ interface ToastConfiguration<T extends any[]> {
 interface ToastGenerateData {
   message: string;
   duration: number;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 type ToastId = keyof typeof TOAST_CONFIGURATIONS;
@@ -22,10 +24,12 @@ interface ActiveToast {
   uid: string;
   message: string;
   duration: number;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 // CONFIGURATION //
-const TOAST_WIDTH = 250;
+const TOAST_WIDTH = 312;
 const TOAST_HEIGHT = 46;
 const TOAST_PADDING = 8;
 const TOAST_CONFIGURATIONS = {
@@ -51,6 +55,14 @@ const TOAST_CONFIGURATIONS = {
     generate: (filename: string) => ({
       message: `Downloaded ${filename}`,
       duration: 4200
+    })
+  },
+  tidyApplied: {
+    generate: (summary: string, undoId: string | null) => ({
+      message: summary,
+      duration: undoId ? 6500 : 2800,
+      actionLabel: undoId ? "Undo" : undefined,
+      onAction: undoId ? () => void lumi.tabs.undoTidy(undoId) : undefined
     })
   }
 } satisfies Record<string, ToastConfiguration<any[]>>;
@@ -146,7 +158,7 @@ function ActiveToastPortal({
               }}
               className={cn(
                 "box-border overflow-hidden",
-                "flex items-center",
+                "flex items-center gap-2 px-3",
                 "border rounded-lg",
                 "border-t-gray-800/30 dark:border-t-gray-300/30",
                 "border-x-gray-800/40 dark:border-x-gray-300/40",
@@ -155,9 +167,27 @@ function ActiveToastPortal({
               )}
               onClick={() => onRemoveToast(activeToast.uid)}
             >
-              <span className="text-white/90 text-center text-[13px] font-bold tracking-[-0.01em] truncate flex-1 leading-none">
+              <span
+                className={cn(
+                  "text-white/90 text-[13px] font-bold tracking-[-0.01em] truncate flex-1 leading-none",
+                  !activeToast.actionLabel && "text-center"
+                )}
+              >
                 {currentMessage}
               </span>
+              {activeToast.actionLabel && activeToast.onAction && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    activeToast.onAction?.();
+                    onRemoveToast(activeToast.uid);
+                  }}
+                  className="shrink-0 rounded-md bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-neutral-900 shadow-xs hover:bg-white cursor-pointer transition-colors"
+                >
+                  {activeToast.actionLabel}
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -232,9 +262,9 @@ export function MinimalToastProvider({ children, anchorRef, sidebarSide }: Toast
 
       const configuration = TOAST_CONFIGURATIONS[toastId];
       const generateToastData = configuration.generate as GenerateFunction;
-      const { message, duration } = generateToastData(...args);
+      const { message, duration, actionLabel, onAction } = generateToastData(...args);
       const uid = crypto.randomUUID();
-      setToasts([{ uid, message, duration }]);
+      setToasts([{ uid, message, duration, actionLabel, onAction }]);
       return uid;
     },
     []

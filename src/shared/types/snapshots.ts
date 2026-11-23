@@ -1,4 +1,4 @@
-import type { SplitDirection } from "./tabs";
+import type { FolderColorId, SplitDirection } from "./tabs";
 
 export interface SnapshotTabEntry {
   uniqueId: string;
@@ -9,11 +9,14 @@ export interface SnapshotTabEntry {
 }
 
 export interface SnapshotGroupEntry {
-  mode: "glance" | "split";
+  mode: "glance" | "split" | "folder";
   tabUniqueIds: string[];
   glanceFrontTabUniqueId?: string;
   splitDirection?: SplitDirection;
   splitRatio?: number;
+  name?: string;
+  color?: FolderColorId;
+  collapsed?: boolean;
   position: number;
 }
 

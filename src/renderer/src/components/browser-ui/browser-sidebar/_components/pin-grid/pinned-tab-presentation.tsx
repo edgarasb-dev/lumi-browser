@@ -100,7 +100,13 @@ export function usePinnedTabPresentation({
 /**
  * Luminous Liquid Glass unread count pill rendered on pinned tabs (e.g. Gmail unread emails).
  */
-export function PinnedTabBadge({ count, variant = "tile" }: { count: number | null; variant?: "tile" | "compact" }) {
+export function PinnedTabBadge({
+  count,
+  variant = "tile"
+}: {
+  count: number | null;
+  variant?: "tile" | "tile-compact" | "compact";
+}) {
   const formatted = count !== null && count > 0 ? formatUnreadCount(count) : null;
 
   return (
@@ -119,7 +125,9 @@ export function PinnedTabBadge({ count, variant = "tile" }: { count: number | nu
             "shadow-[0_2px_6px_rgba(244,63,94,0.45),inset_0_1px_0_rgba(255,255,255,0.4)]",
             variant === "tile"
               ? "absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1.5 text-[10px] font-semibold ring-1 ring-white/45 dark:ring-black/30"
-              : "absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 text-[9.5px] font-bold ring-1 ring-white/80 dark:ring-neutral-900/80"
+              : variant === "tile-compact"
+                ? "absolute top-1 right-1 min-w-[15px] h-[15px] px-1 text-[9px] font-semibold ring-1 ring-white/45 dark:ring-black/30"
+                : "absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 text-[9.5px] font-bold ring-1 ring-white/80 dark:ring-neutral-900/80"
           )}
         >
           {formatted}

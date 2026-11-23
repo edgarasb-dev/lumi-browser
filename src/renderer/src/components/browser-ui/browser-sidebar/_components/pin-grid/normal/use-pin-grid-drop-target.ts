@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import { isPinnedTabSource, isTabGroupSource } from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
+import {
+  isFolderTabSource,
+  isPinnedTabSource,
+  isTabGroupSource
+} from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
 import { findClosestPinEdge, type GridIndicator } from "./find-closest-pin-edge";
 
 interface UsePinGridDropTargetOptions {
@@ -83,14 +87,14 @@ export function usePinGridDropTarget({
         if (isPinnedTabSource(data)) {
           return data.profileId === profileId;
         }
-        if (isTabGroupSource(data)) {
+        if (isTabGroupSource(data) || isFolderTabSource(data)) {
           if (profileId && data.profileId !== profileId) return false;
           return true;
         }
         return false;
       },
       onDragEnter: ({ location, source }) => {
-        if (isTabGroupSource(source.data)) {
+        if (isTabGroupSource(source.data) || isFolderTabSource(source.data)) {
           setIsDragOver(true);
         }
         const { input, dropTargets } = location.current;
@@ -145,6 +149,13 @@ export function usePinGridDropTarget({
             handleCreateFromTab(data.primaryTabId, position);
           } else {
             handleCreateFromTab(data.primaryTabId);
+          }
+        } else if (isFolderTabSource(data)) {
+          if (indicator) {
+            const position = indicator.edge === "left" ? indicator.index - 0.5 : indicator.index + 0.5;
+            handleCreateFromTab(data.tabId, position);
+          } else {
+            handleCreateFromTab(data.tabId);
           }
         } else if (isPinnedTabSource(data)) {
           if (indicator) {

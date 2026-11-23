@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Play,
@@ -17,6 +17,91 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/pop
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
 import type { MediaControlAction, MediaTabInfo } from "~/types/media";
 
+interface MediaImageCandidate {
+  key: string;
+  src: string;
+  kind: "artwork" | "favicon";
+}
+
+function getSafeWebArtworkUrl(raw?: string): string | null {
+  if (!raw) return null;
+  const parsed = URL.parse(raw);
+  if (!parsed) return null;
+  const proto = parsed.protocol.toLowerCase();
+  if (proto === "https:" || proto === "http:" || proto === "data:") {
+    return parsed.toString();
+  }
+  return null;
+}
+
+function getCachedFaviconUrl(tabUrl: string): string | null {
+  const parsed = URL.parse(tabUrl);
+  if (!parsed) return null;
+  const proto = parsed.protocol.toLowerCase();
+  if (proto !== "https:" && proto !== "http:") return null;
+  const srcUrl = new URL("lumi://favicon");
+  srcUrl.searchParams.set("url", tabUrl);
+  return srcUrl.toString();
+}
+
+function MediaThumbnail({ item }: { item: MediaTabInfo }) {
+  const candidates = useMemo<MediaImageCandidate[]>(() => {
+    const list: MediaImageCandidate[] = [];
+
+    const safeArtwork = getSafeWebArtworkUrl(item.artworkUrl);
+    if (safeArtwork) {
+      list.push({ key: `art:${safeArtwork}`, src: safeArtwork, kind: "artwork" });
+    }
+
+    if (item.faviconURL) {
+      const activeFavicon = craftActiveFaviconURL(item.tabId, item.faviconURL);
+      if (activeFavicon) {
+        list.push({ key: `active-fav:${activeFavicon}`, src: activeFavicon, kind: "favicon" });
+      }
+    }
+
+    const cachedFavicon = getCachedFaviconUrl(item.url);
+    if (cachedFavicon) {
+      list.push({ key: `cached-fav:${cachedFavicon}`, src: cachedFavicon, kind: "favicon" });
+    }
+
+    return list;
+  }, [item.artworkUrl, item.faviconURL, item.tabId, item.url]);
+
+  const [candidateIndex, setCandidateIndex] = useState(0);
+
+  const candidatesSignature = useMemo(() => candidates.map((c) => c.key).join("|"), [candidates]);
+  useEffect(() => {
+    setCandidateIndex(0);
+  }, [candidatesSignature]);
+
+  const activeCandidate = candidates[candidateIndex];
+  const advanceCandidate = useCallback(() => {
+    setCandidateIndex((prev) => prev + 1);
+  }, []);
+
+  if (!activeCandidate) {
+    return <Music2 className="size-4 text-primary" />;
+  }
+
+  return (
+    <img
+      key={activeCandidate.key}
+      src={activeCandidate.src}
+      alt=""
+      referrerPolicy={activeCandidate.kind === "artwork" ? "no-referrer" : undefined}
+      className={activeCandidate.kind === "artwork" ? "size-full object-cover" : "size-5 rounded-xs object-contain"}
+      style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties}
+      onLoad={(e) => {
+        if (e.currentTarget.naturalWidth === 0) {
+          advanceCandidate();
+        }
+      }}
+      onError={advanceCandidate}
+    />
+  );
+}
+
 function MediaPlayerCard({
   item,
   onControl
@@ -24,7 +109,7 @@ function MediaPlayerCard({
   item: MediaTabInfo;
   onControl: (tabId: number, action: MediaControlAction) => void;
 }) {
-  const artwork = item.artworkUrl || (item.faviconURL ? craftActiveFaviconURL(item.tabId, item.faviconURL) : null);
+  const subtitle = item.mediaArtist || URL.parse(item.url)?.hostname.replace(/^www\./, "") || "Media";
 
   return (
     <div className="flex flex-col gap-2">
@@ -35,20 +120,14 @@ function MediaPlayerCard({
           className="size-9 rounded-lg overflow-hidden bg-black/10 dark:bg-white/10 shrink-0 flex items-center justify-center ring-1 ring-black/10 dark:ring-white/15 cursor-pointer hover:opacity-90 transition-opacity"
           title="Jump to media tab"
         >
-          {artwork ? (
-            <img src={artwork} alt="" className="size-full object-cover" />
-          ) : (
-            <Music2 className="size-4 text-primary" />
-          )}
+          <MediaThumbnail item={item} />
         </button>
 
         <div className="min-w-0 flex-1">
           <div className="text-xs font-semibold text-black/90 dark:text-white/95 truncate">
             {item.mediaTitle || item.title}
           </div>
-          <div className="text-[10px] text-black/55 dark:text-white/55 truncate">
-            {item.mediaArtist || new URL(item.url || "about:blank").hostname.replace(/^www\./, "")}
-          </div>
+          <div className="text-[10px] text-black/55 dark:text-white/55 truncate">{subtitle}</div>
         </div>
 
         <button

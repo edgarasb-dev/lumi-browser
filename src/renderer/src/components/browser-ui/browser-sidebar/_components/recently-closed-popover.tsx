@@ -38,15 +38,35 @@ function getHostname(url: string): string {
 export function RecentlyClosedPopover({
   compact = false,
   size,
-  className
+  className,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+  side = "bottom",
+  align = "center"
 }: {
   compact?: boolean;
   size?: DockButtonSize;
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+  side?: "top" | "bottom" | "left" | "right";
+  align?: "start" | "center" | "end";
 }) {
   const { currentSpace, isCurrentSpaceLight } = useSpaces();
   const currentSpaceId = currentSpace?.id;
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (controlledOpen === undefined) {
+        setInternalOpen(nextOpen);
+      }
+      onOpenChange?.(nextOpen);
+    },
+    [controlledOpen, onOpenChange]
+  );
   const [activeTab, setActiveTab] = useState<"closed" | "snapshots">("closed");
   const [recentTabs, setRecentTabs] = useState<RecentlyClosedTabData[]>([]);
   const [snapshots, setSnapshots] = useState<WorkspaceSnapshot[]>([]);
@@ -88,7 +108,7 @@ export function RecentlyClosedPopover({
     };
     window.addEventListener("lumi:workspace-action", onWorkspaceAction);
     return () => window.removeEventListener("lumi:workspace-action", onWorkspaceAction);
-  }, []);
+  }, [setOpen]);
 
   const filteredClosed = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -148,17 +168,28 @@ export function RecentlyClosedPopover({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        type="button"
-        onClick={(e) => e.stopPropagation()}
-        title="Recently Closed Tabs & Workspace Snapshots"
-        className={cn(getDockButtonClassName(effectiveSize, { active: open }), className)}
-      >
-        <RotateCcw strokeWidth={DOCK_ICON_STROKE_WIDTH} className={sizeClasses.icon} />
-      </PopoverTrigger>
+      {hideTrigger ? (
+        <PopoverTrigger
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-0"
+        />
+      ) : (
+        <PopoverTrigger
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          title="Recently Closed Tabs & Workspace Snapshots"
+          className={cn(getDockButtonClassName(effectiveSize, { active: open }), className)}
+        >
+          <RotateCcw strokeWidth={DOCK_ICON_STROKE_WIDTH} className={sizeClasses.icon} />
+        </PopoverTrigger>
+      )}
 
       <PopoverContent
         variant="translucent"
+        side={side}
+        align={align}
         className="w-84 space-y-3 p-3.5 font-sans select-none"
         positionerClassName={spaceInjectedClasses}
       >

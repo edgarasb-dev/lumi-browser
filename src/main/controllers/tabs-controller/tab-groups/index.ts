@@ -3,7 +3,9 @@ import { Tab } from "../tab";
 import { TypedEventEmitter } from "@/modules/typed-event-emitter";
 import { type GlanceTabGroup } from "./glance";
 import { type SplitTabGroup } from "./split";
+import { type FolderTabGroup } from "./folder";
 import { type TabsController } from "@/controllers/tabs-controller";
+import type { TabGroupMode } from "~/types/tabs";
 
 // Interfaces and Types
 export type TabGroupEvents = {
@@ -24,11 +26,12 @@ function getTabFromId(tabsController: TabsController, id: number): Tab | null {
 }
 
 // Tab Group Class
-export type TabGroup = GlanceTabGroup | SplitTabGroup;
+export type TabGroup = GlanceTabGroup | SplitTabGroup | FolderTabGroup;
 
 export class BaseTabGroup extends TypedEventEmitter<TabGroupEvents> {
   /** String identifier used as map key, persistence key, and Tab.groupId value */
   public readonly groupId: string;
+  public readonly mode?: TabGroupMode;
   public isDestroyed: boolean = false;
 
   public windowId: number;
@@ -151,6 +154,9 @@ export class BaseTabGroup extends TypedEventEmitter<TabGroupEvents> {
       }
     };
     const onActiveTabChanged = (windowId: number, spaceId: string) => {
+      // Folders are organizational containers; activating one tab inside a folder
+      // must keep only that tab active instead of showing sibling folder tabs together.
+      if (this.mode === "folder") return;
       if (windowId === this.windowId && spaceId === this.spaceId) {
         const activeTab = this.tabsController.getActiveTab(windowId, spaceId);
         if (activeTab === tab) {

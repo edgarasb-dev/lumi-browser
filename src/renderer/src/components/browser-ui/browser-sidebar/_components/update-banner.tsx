@@ -1,14 +1,9 @@
-import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useAppUpdates } from "@/components/providers/app-updates-provider";
-import { useSettings } from "@/components/providers/settings-provider";
-import { SettingsInput } from "@/components/settings/components/setting-input";
 import { cn } from "@/lib/utils";
-import { Download, RefreshCw, ArrowUpCircle, ExternalLink } from "lucide-react";
+import { Download, RefreshCw, ArrowUpCircle } from "lucide-react";
 
 export function UpdateBanner() {
-  const [hovered, setHovered] = useState(false);
-  const { settings } = useSettings();
   const {
     updateStatus,
     isDownloadingUpdate,
@@ -19,8 +14,6 @@ export function UpdateBanner() {
     openDownloadPage
   } = useAppUpdates();
 
-  const autoUpdateSetting = settings.find((setting) => setting.id === "autoUpdate");
-
   const isDownloaded = updateStatus?.updateDownloaded === true;
   const hasUpdate = Boolean(updateStatus?.availableUpdate);
   const hasError = Boolean(updateStatus?.error);
@@ -29,7 +22,7 @@ export function UpdateBanner() {
     return null;
   }
 
-  const onButtonClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const onActionClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
 
     if (isDownloaded) {
@@ -53,104 +46,74 @@ export function UpdateBanner() {
     }
   };
 
-  const getButtonText = () => {
-    if (isInstallingUpdate) return "Installing...";
-    if (isDownloadingUpdate) return "Downloading...";
-    if (isDownloaded) return "Install Update";
-    if (!isAutoUpdateSupported) return "Download Manually";
-    if (hasError) return "Retry Download";
-    return "Download Update";
-  };
+  const progressPct = updateStatus?.downloadProgress?.percent;
+  const statusLabel = isInstallingUpdate
+    ? "Restarting..."
+    : isDownloadingUpdate
+      ? typeof progressPct === "number" && progressPct > 0
+        ? `Downloading ${Math.round(progressPct)}%`
+        : "Downloading..."
+      : isDownloaded
+        ? "Update ready"
+        : hasError
+          ? "Update paused"
+          : `Update ${updateStatus?.availableUpdate?.version ? `v${updateStatus.availableUpdate.version}` : "ready"}`;
 
-  const getButtonIcon = () => {
-    if (isInstallingUpdate || isDownloadingUpdate) {
-      return <RefreshCw className="size-3.5 mr-1.5 animate-spin" />;
-    }
-    if (isDownloaded) {
-      return <ArrowUpCircle className="size-3.5 mr-1.5" />;
-    }
-    if (!isAutoUpdateSupported) {
-      return <ExternalLink className="size-3.5 mr-1.5" />;
-    }
-    return <Download className="size-3.5 mr-1.5" />;
-  };
+  const ctaLabel = isInstallingUpdate
+    ? "..."
+    : isDownloadingUpdate
+      ? "Wait"
+      : isDownloaded
+        ? "Restart"
+        : !isAutoUpdateSupported
+          ? "Manual"
+          : hasError
+            ? "Retry"
+            : "Download";
 
   return (
     <AnimatePresence>
       <motion.div
         key="update-banner"
         initial={{ opacity: 0, height: 0, marginTop: 0 }}
-        animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+        animate={{ opacity: 1, height: "auto", marginTop: 6 }}
         exit={{ opacity: 0, height: 0, marginTop: 0 }}
-        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="shrink-0 overflow-hidden mb-2"
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        className="shrink-0 overflow-hidden mb-1.5"
       >
         <div
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
           className={cn(
-            "w-full rounded-xl overflow-hidden",
-            "border border-black/10 dark:border-white/15",
-            "bg-black/5 dark:bg-white/10",
-            "transition-colors duration-150",
-            "hover:bg-gray-100/90 dark:hover:bg-black/80"
+            "w-full rounded-xl px-2.5 py-1.5",
+            "border border-black/[0.08] dark:border-white/[0.12]",
+            "bg-black/[0.06] dark:bg-white/[0.09]",
+            "flex items-center justify-between gap-2 min-w-0"
           )}
         >
-          {/* Header — always visible */}
-          <div className="flex items-center justify-center py-1 px-3">
-            <span className="text-xs font-semibold text-black/80 dark:text-white/90">New Update Available</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            {isInstallingUpdate || isDownloadingUpdate ? (
+              <RefreshCw className="size-3.5 shrink-0 animate-spin text-black/70 dark:text-white/80" />
+            ) : isDownloaded ? (
+              <ArrowUpCircle className="size-3.5 shrink-0 text-black/70 dark:text-white/85" />
+            ) : (
+              <Download className="size-3.5 shrink-0 text-black/70 dark:text-white/85" />
+            )}
+            <span className="truncate text-[12px] font-medium text-black/85 dark:text-white/90">{statusLabel}</span>
           </div>
 
-          {/* Expanded content — on hover */}
-          <AnimatePresence>
-            {hovered && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{
-                  duration: 0.3,
-                  ease: [0.22, 1, 0.36, 1],
-                  opacity: { duration: 0.2 }
-                }}
-                className="overflow-hidden bg-white dark:bg-black/5"
-              >
-                <div className="mb-0.5 h-px bg-black/10 dark:bg-white/25" />
-                <motion.div
-                  initial={{ y: 6, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.05, duration: 0.25 }}
-                  className="flex flex-col gap-1.5 px-3 pt-1.5 pb-2.5"
-                >
-                  {isAutoUpdateSupported && autoUpdateSetting && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-black/60 dark:text-white/60">Auto Update</span>
-                      <SettingsInput setting={autoUpdateSetting} />
-                    </div>
-                  )}
-                  <button
-                    className={cn(
-                      "w-full flex items-center justify-center",
-                      "rounded-md py-1.5 px-3",
-                      "text-xs font-medium",
-                      "bg-black/8 dark:bg-white/12",
-                      "text-black/80 dark:text-white/90",
-                      "transition-colors duration-150",
-                      "hover:bg-black/14 dark:hover:bg-white/20",
-                      "active:bg-black/18 dark:active:bg-white/25",
-                      "disabled:opacity-50 disabled:pointer-events-none",
-                      "cursor-pointer"
-                    )}
-                    onClick={onButtonClick}
-                    disabled={isInstallingUpdate || isDownloadingUpdate}
-                  >
-                    {getButtonIcon()}
-                    {getButtonText()}
-                  </button>
-                </motion.div>
-              </motion.div>
+          <button
+            type="button"
+            onClick={onActionClick}
+            disabled={isInstallingUpdate || isDownloadingUpdate}
+            title={updateStatus?.error || statusLabel}
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold leading-4",
+              "bg-black text-white dark:bg-white dark:text-neutral-900",
+              "shadow-xs hover:opacity-90 active:scale-[0.97] transition",
+              "disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             )}
-          </AnimatePresence>
+          >
+            {ctaLabel}
+          </button>
         </div>
       </motion.div>
     </AnimatePresence>

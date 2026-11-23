@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.7" date="2026-11-23">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.7</url>
+      <description>
+        <p>Add persistent collapsible card tab folders with color tints and inline rename, smart offline domain/duplicate Tidy cleanup with Undo toast, fluid count-aware pinned tab grids, streamlined 3-slot sidebar footer dock with Space dropdown and Workspace/Profile menu, sidebar status polish (unread dots, single-row update CTA, downloads dot, conditional MCP pill), media mini-player artwork-to-favicon fallback, and complete session recovery across update restarts.</p>
+      </description>
+    </release>
     <release version="0.4.6" date="2026-11-22">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.6</url>
       <description>

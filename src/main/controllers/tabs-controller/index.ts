@@ -11,12 +11,15 @@ import { serializeTab, serializeTabGroup } from "@/saving/tabs/serialization";
 import { recentlyClosedManager } from "./recently-closed-manager";
 import { GlanceTabGroup } from "./tab-groups/glance";
 import { SplitTabGroup } from "./tab-groups/split";
+import { FolderTabGroup } from "./tab-groups/folder";
+import { deriveSiteClusterInfo } from "./tidy";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 import { spacesController } from "@/controllers/spaces-controller";
 import { loadedProfilesController } from "@/controllers/loaded-profiles-controller";
 import { setWindowSpace } from "@/ipc/session/spaces";
 import { WebContents } from "electron";
-import { TabGroupMode, SplitDirection } from "~/types/tabs";
+import { FolderColorId, TabGroupMode, SplitDirection } from "~/types/tabs";
+import { getCurrentTimestamp } from "@/modules/utils";
 import { FLAGS } from "@/modules/flags";
 import { quitController } from "@/controllers/quit-controller";
 import { clearPlaceholdersForTab, isSyncExcludedTab, isTabSyncEnabled, registerTabsController } from "./tab-sync";
@@ -141,7 +144,8 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
         if (tab.audible || tab.isPictureInPicture) return true;
         if (tab.groupId) {
           const group = this.tabGroups.get(tab.groupId);
-          if (group && group.tabs.some((groupTab) => groupTab.visible)) {
+          // Folders do not keep inactive sibling tabs awake forever; split/glance views do.
+          if (group && group.mode !== "folder" && group.tabs.some((groupTab) => groupTab.visible)) {
             return true;
           }
         }
@@ -175,6 +179,49 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     this.on("destroyed", () => {
       clearInterval(interval);
     });
+
+    quitController.registerBeforeQuitPrep(() => this.snapshotAllForQuit());
+  }
+
+  /**
+   * Synchronously capture fresh state for all live persistent tabs, active windows,
+   * and tab groups so quit / update-restart flushes never drop tabs or bounds.
+   */
+  public async snapshotAllForQuit(): Promise<void> {
+    const now = getCurrentTimestamp();
+
+    for (const tab of this.tabs.values()) {
+      if (tab.isDestroyed || !shouldPersistTab(tab)) continue;
+      if (!tab.asleep) {
+        tab.updateTabState();
+      }
+      if (tab.visible || this.isTabActive(tab)) {
+        tab.lastActiveAt = now;
+      }
+      this.persistTab(tab);
+    }
+
+    for (const win of browserWindowsController.getWindows()) {
+      if (win.destroyed || win.browserWindow.isDestroyed() || win.browserWindowType === "popup") continue;
+      const bounds = win.browserWindow.getBounds();
+      tabPersistenceManager.markWindowStateDirty(`w-${win.id}`, {
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y
+      });
+    }
+
+    const groupSaves: Promise<void>[] = [];
+    for (const group of this.tabGroups.values()) {
+      if (group.isDestroyed || group.tabs.length === 0) continue;
+      groupSaves.push(
+        tabPersistenceManager
+          .saveTabGroup(group.groupId, serializeTabGroup(group))
+          .catch((err) => console.error("[TabsController] Failed to save tab group before quit:", err))
+      );
+    }
+    await Promise.all(groupSaves);
   }
 
   // --- Persistence helper ---
@@ -355,12 +402,19 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
 
     // Handle initial sleep — set pre-sleep state directly on the lifecycle manager
     if (tabCreationOptions.asleep) {
-      const { navHistory, navHistoryIndex } = tabCreationOptions;
+      const { navHistory, navHistoryIndex, url, title } = tabCreationOptions;
       if (navHistory && navHistory.length > 0) {
+        const idx = navHistoryIndex ?? navHistory.length - 1;
         lifecycleManager.preSleepState = {
-          url: navHistory[navHistoryIndex ?? navHistory.length - 1]?.url ?? "",
+          url: navHistory[idx]?.url ?? url ?? "",
           navHistory: [...navHistory],
-          navHistoryIndex: navHistoryIndex ?? navHistory.length - 1
+          navHistoryIndex: idx
+        };
+      } else if (url) {
+        lifecycleManager.preSleepState = {
+          url,
+          navHistory: [{ title: title || url, url }],
+          navHistoryIndex: 0
         };
       }
     }
@@ -427,6 +481,8 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     });
     tab.on("focused", () => {
       if (!this.isTabActive(tab)) return;
+      tab.updateStateProperty("hasUnseenUpdate", false);
+      tab.updateStateProperty("lastActiveAt", getCurrentTimestamp());
       const win = tab.getWindow();
       const prevFocused = this.getFocusedTab(win.id, tab.spaceId);
       if (prevFocused?.id === tab.id) return;
@@ -434,6 +490,8 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       const group = this.getTabGroupByTabId(tab.id);
       if (group?.mode === "split") {
         group.setFocusedTab(tab.id);
+      } else if (group?.mode === "folder") {
+        group.setLastFocusedTab(tab.id);
       }
       this.setFocusedTab(tab);
       windowTabsChanged(win.id);
@@ -722,6 +780,14 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     if (tabOrGroup instanceof Tab) {
       const group = this.getTabGroupByTabId(tabOrGroup.id);
       if (group) {
+        if (group.mode === "folder") {
+          group.setLastFocusedTab(tabOrGroup.id);
+          if (group.collapsed) {
+            group.setCollapsed(false);
+            windowTabsChanged(group.windowId);
+          }
+          return tabOrGroup;
+        }
         if (group.mode === "split") {
           group.setFocusedTab(tabOrGroup.id);
         } else if (group.mode === "glance") {
@@ -731,6 +797,15 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
           }
         }
         return group;
+      }
+    } else if (tabOrGroup.mode === "folder") {
+      const targetTab = tabOrGroup.tabs.find((t) => t.id === tabOrGroup.lastFocusedTabId) ?? tabOrGroup.tabs[0];
+      if (targetTab) {
+        if (tabOrGroup.collapsed) {
+          tabOrGroup.setCollapsed(false);
+          windowTabsChanged(tabOrGroup.windowId);
+        }
+        return targetTab;
       }
     }
     return tabOrGroup;
@@ -826,6 +901,8 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       spaceId = tabOrGroup.spaceId;
       if (tabOrGroup.mode === "glance") {
         tabToFocus = tabOrGroup.tabs.find((t) => t.id === tabOrGroup.frontTabId) ?? tabOrGroup.tabs[0];
+      } else if (tabOrGroup.mode === "folder") {
+        tabToFocus = tabOrGroup.tabs.find((t) => t.id === tabOrGroup.lastFocusedTabId) ?? tabOrGroup.tabs[0];
       } else {
         tabToFocus = tabOrGroup.tabs.find((t) => t.id === tabOrGroup.focusedTabId) ?? tabOrGroup.tabs[0];
       }
@@ -1129,8 +1206,8 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     const group = this.getTabGroupByTabId(tabId);
     if (group) {
       group.removeTab(tabId);
-      // Dissolve degenerate groups (e.g. a 2-tab glance loses a member)
-      if (group.tabs.length < 2) {
+      const minGroupTabs = group.mode === "folder" ? 1 : 2;
+      if (group.tabs.length < minGroupTabs) {
         this.destroyTabGroup(group.groupId);
       }
     }
@@ -1441,6 +1518,9 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       case "split":
         tabGroup = new SplitTabGroup(this, groupId, initialTabs as [Tab, ...Tab[]]);
         break;
+      case "folder":
+        tabGroup = new FolderTabGroup(this, groupId, initialTabs as [Tab, ...Tab[]]);
+        break;
       default:
         throw new Error(`Invalid tab group mode: ${mode}`);
     }
@@ -1469,11 +1549,11 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
       .saveTabGroup(groupId, serializeTabGroup(tabGroup))
       .catch((err) => console.error("[TabsController] Failed to save tab group:", err));
 
-    // If any of the initial tabs were active, make the new group active.
+    // If any of the initial tabs were active in split/glance, activate the group cleanly.
     const firstTab = initialTabs[0];
     const currentActive = this.getActiveTab(firstTab.getWindow().id, firstTab.spaceId);
     const currentActiveIsFirstTab = currentActive instanceof Tab && currentActive.id === firstTab.id;
-    if (currentActiveIsFirstTab) {
+    if (mode !== "folder" && currentActiveIsFirstTab) {
       this.activateTab(tabGroup);
     } else {
       // Ensure layout is updated for grouped tabs
@@ -1656,6 +1736,173 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
     }
     if (targetTab && !targetTab.isDestroyed) {
       this.getTabManagers(targetTab.id)?.layout.updateLayout();
+    }
+    windowTabsChanged(group.windowId);
+    return true;
+  }
+
+  public createFolder(tabIds: number[], options?: { name?: string; color?: FolderColorId }): string | null {
+    const validTabs = tabIds
+      .map((id) => this.getTabById(id))
+      .filter((t): t is Tab => Boolean(t && !t.isDestroyed && !t.ephemeral));
+    if (validTabs.length === 0) return null;
+
+    const anchor = validTabs[0]!;
+    const window = anchor.getWindow();
+    const spaceId = anchor.spaceId;
+    const basePos = anchor.position;
+
+    for (let i = 0; i < validTabs.length; i++) {
+      const member = validTabs[i]!;
+      if (member.profileId !== anchor.profileId) continue;
+      if (member.getWindow().id !== window.id) {
+        member.setWindow(window);
+      }
+      if (member.spaceId !== spaceId) {
+        member.setSpace(spaceId);
+      }
+      member.updateStateProperty("position", basePos + i * 0.001);
+    }
+
+    const sameProfileIds = validTabs.filter((t) => t.profileId === anchor.profileId).map((t) => t.id);
+    if (sameProfileIds.length === 0) return null;
+
+    const folderGroup = this.createTabGroup("folder", sameProfileIds as [number, ...number[]]);
+    if (folderGroup instanceof FolderTabGroup) {
+      const inferredName =
+        options?.name?.trim() ||
+        deriveSiteClusterInfo(anchor.url)?.label ||
+        anchor.title.trim().slice(0, 28) ||
+        "Folder";
+      folderGroup.rename(inferredName);
+      if (options?.color) {
+        folderGroup.setColor(options.color);
+      }
+    }
+
+    this.normalizePositions(window.id, spaceId);
+    windowTabsChanged(window.id);
+    return folderGroup.groupId;
+  }
+
+  public renameFolder(groupId: string, name: string): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group || group.mode !== "folder") return false;
+    const changed = group.rename(name);
+    if (changed) {
+      windowTabsChanged(group.windowId);
+    }
+    return true;
+  }
+
+  public setFolderColor(groupId: string, color: FolderColorId): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group || group.mode !== "folder") return false;
+    const changed = group.setColor(color);
+    if (changed) {
+      windowTabsChanged(group.windowId);
+    }
+    return true;
+  }
+
+  public setFolderCollapsed(groupId: string, collapsed: boolean): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group || group.mode !== "folder") return false;
+    const changed = group.setCollapsed(collapsed);
+    if (changed) {
+      windowTabsChanged(group.windowId);
+    }
+    return true;
+  }
+
+  public addTabToFolder(groupId: string, tabId: number, position?: number): boolean {
+    const group = this.getTabGroupById(groupId);
+    const tab = this.getTabById(tabId);
+    if (!group || group.mode !== "folder" || !tab || tab.isDestroyed || tab.ephemeral) return false;
+    if (tab.profileId !== group.profileId) return false;
+
+    const existingGroup = this.getTabGroupByTabId(tabId);
+    if (existingGroup && existingGroup.groupId !== groupId) {
+      existingGroup.removeTab(tabId);
+    }
+
+    const folderTabs = group.tabs;
+    const targetPos =
+      position !== undefined
+        ? position
+        : folderTabs.length > 0
+          ? folderTabs[folderTabs.length - 1]!.position + 0.5
+          : tab.position;
+
+    tab.updateStateProperty("position", targetPos);
+    if (!group.hasTab(tabId)) {
+      group.addTab(tabId);
+    }
+    group.syncTabOrderFromPositions();
+    if (group.collapsed && tab.visible) {
+      group.setCollapsed(false);
+    }
+
+    this.normalizePositions(group.windowId, group.spaceId);
+    windowTabsChanged(group.windowId);
+    return true;
+  }
+
+  public removeTabFromFolder(tabId: number, newPosition?: number): boolean {
+    const tab = this.getTabById(tabId);
+    if (!tab || tab.isDestroyed) return false;
+    const group = this.getTabGroupByTabId(tabId);
+    if (!group || group.mode !== "folder") return false;
+
+    const remainingBeforeRemove = group.tabs.filter((t) => t.id !== tabId);
+    const fallbackPos =
+      remainingBeforeRemove.length > 0
+        ? remainingBeforeRemove[remainingBeforeRemove.length - 1]!.position + 0.5
+        : tab.position;
+
+    group.removeTab(tabId);
+    tab.updateStateProperty("position", newPosition ?? fallbackPos);
+    this.normalizePositions(tab.getWindow().id, tab.spaceId);
+    windowTabsChanged(tab.getWindow().id);
+    return true;
+  }
+
+  public moveTabGroup(groupId: string, newPosition: number): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group) return false;
+
+    const members = [...group.tabs];
+    if (members.length === 0) return false;
+
+    for (let i = 0; i < members.length; i++) {
+      members[i]!.updateStateProperty("position", newPosition + i * 0.001);
+    }
+
+    this.normalizePositions(group.windowId, group.spaceId);
+    windowTabsChanged(group.windowId);
+    return true;
+  }
+
+  public moveTabGroupToSpace(groupId: string, spaceId: string, newPosition?: number): boolean {
+    const group = this.getTabGroupById(groupId);
+    if (!group) return false;
+
+    const sourceSpaceId = group.spaceId;
+    const members = [...group.tabs];
+    const window = browserWindowsController.getWindowById(group.windowId);
+
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i]!;
+      member.setSpace(spaceId);
+      if (window) member.setWindow(window);
+      if (newPosition !== undefined) {
+        member.updateStateProperty("position", newPosition + i * 0.001);
+      }
+    }
+
+    this.normalizePositions(group.windowId, spaceId);
+    if (sourceSpaceId !== spaceId) {
+      this.normalizePositions(group.windowId, sourceSpaceId);
     }
     windowTabsChanged(group.windowId);
     return true;

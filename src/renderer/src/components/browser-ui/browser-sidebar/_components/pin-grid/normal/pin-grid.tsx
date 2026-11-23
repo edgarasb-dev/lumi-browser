@@ -41,7 +41,7 @@ export function PinGrid({ profileId }: PinGridProps) {
   }, [tabsData]);
 
   // --- Hooks ---
-  const { cols, colsRef, gridColumnClass } = usePinGridColumns(width, pinCount);
+  const { cols, colsRef, gridColumnClass, density } = usePinGridColumns(width, pinCount);
   const { layoutAnimationsEnabled, enableAnimationsTemporarily } = usePinGridLayoutAnimations();
   const { isDismissed, dismiss } = useEmptyStateDismiss(profileId);
 
@@ -86,7 +86,8 @@ export function PinGrid({ profileId }: PinGridProps) {
       <div
         ref={setGridRefs}
         className={cn(
-          "grid gap-2 transition-colors duration-150",
+          "grid transition-colors duration-150",
+          density === "comfortable" ? "gap-2" : "gap-1.5",
           gridColumnClass,
           isDragOver && pinCount > 0 && "rounded-xl bg-white/10 dark:bg-white/5"
         )}
@@ -116,6 +117,7 @@ export function PinGrid({ profileId }: PinGridProps) {
                 isFirstInRow={index % cols === 0}
                 isLastInRow={index % cols === cols - 1 || index === pinCount - 1}
                 layoutAnimationsEnabled={layoutAnimationsEnabled}
+                density={density}
               />
             );
           })

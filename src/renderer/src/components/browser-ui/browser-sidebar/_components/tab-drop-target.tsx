@@ -1,4 +1,3 @@
-import { TabGroupSourceData } from "@/components/browser-ui/browser-sidebar/_components/tab-group";
 import { DropIndicator } from "@/components/browser-ui/browser-sidebar/_components/drop-indicator";
 import { useEffect, useRef, useState } from "react";
 import { Space } from "~/lumi/interfaces/sessions/spaces";
@@ -7,7 +6,11 @@ import {
   ElementDropTargetEventBasePayload
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { usePinnedTabs } from "@/components/providers/pinned-tabs-provider";
-import { isPinnedTabSource } from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
+import {
+  isFolderTabSource,
+  isPinnedTabSource,
+  isTabGroupSource
+} from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
 import { useWindowDrag } from "@/hooks/use-window-drag";
 
 type TabDropTargetProps = {
@@ -43,16 +46,35 @@ export function TabDropTarget({ spaceData, isSpaceLight, moveTab, biggestIndex }
         return;
       }
 
-      const tabGroupData = sourceData as TabGroupSourceData;
-      const sourceTabId = tabGroupData.primaryTabId;
-
       const newPos = biggestIndex + 1;
 
-      if (tabGroupData.spaceId !== spaceData.id) {
-        if (tabGroupData.profileId !== spaceData.profileId) {
-          // TODO: @MOVE_TABS_BETWEEN_PROFILES not supported yet
+      if (isFolderTabSource(sourceData)) {
+        if (sourceData.profileId !== spaceData.profileId) return;
+        if (sourceData.spaceId !== spaceData.id) {
+          void lumi.tabs.moveTabToWindowSpace(sourceData.tabId, spaceData.id, newPos);
         } else {
-          lumi.tabs.moveTabToWindowSpace(sourceTabId, spaceData.id, newPos);
+          void lumi.tabs.removeTabFromFolder(sourceData.tabId, newPos);
+        }
+        return;
+      }
+
+      if (!isTabGroupSource(sourceData)) return;
+
+      if (sourceData.mode === "folder") {
+        if (sourceData.spaceId !== spaceData.id) {
+          if (sourceData.profileId === spaceData.profileId) {
+            void lumi.tabs.moveTabGroupToSpace(sourceData.tabGroupId, spaceData.id, newPos);
+          }
+        } else {
+          void lumi.tabs.moveTabGroup(sourceData.tabGroupId, newPos);
+        }
+        return;
+      }
+
+      const sourceTabId = sourceData.primaryTabId;
+      if (sourceData.spaceId !== spaceData.id) {
+        if (sourceData.profileId === spaceData.profileId) {
+          void lumi.tabs.moveTabToWindowSpace(sourceTabId, spaceData.id, newPos);
         }
       } else {
         moveTab(sourceTabId, newPos);
@@ -73,13 +95,15 @@ export function TabDropTarget({ spaceData, isSpaceLight, moveTab, biggestIndex }
           return sourceData.profileId === spaceData.profileId;
         }
 
+        if (isFolderTabSource(sourceData)) {
+          return sourceData.profileId === spaceData.profileId;
+        }
+
         // Accept tab group drags (existing behavior)
-        const tabGroupData = sourceData as TabGroupSourceData;
-        if (tabGroupData.type !== "tab-group") {
+        if (!isTabGroupSource(sourceData)) {
           return false;
         }
-        if (tabGroupData.profileId !== spaceData.profileId) {
-          // TODO: @MOVE_TABS_BETWEEN_PROFILES not supported yet
+        if (sourceData.profileId !== spaceData.profileId) {
           return false;
         }
         return true;

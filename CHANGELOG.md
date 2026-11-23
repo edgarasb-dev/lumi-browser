@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.7] — 2026-11-23
+
+### Codename: Flare
+
+### Added
+
+- **Collapsible Card Tab Folders**: Added persistent `folder` tab groups (`drizzle/0009_flawless_husk.sql` adding `name`, `color`, and `collapsed` columns to `tab_groups`) with `FolderTabGroup` main-process lifecycle, single-tab foreground activation (auto-expanding collapsed folders without bundling siblings into multi-tab views), standard `sleepTabAfter` idle timing, bordered tinted card containers, double-click inline rename, collapsed 3-favicon + count previews, native context menus, and drag-and-drop across folders, loose tabs, spaces, and the pin grid.
+- **Smart Local `Tidy` + 1-Click Undo**: Added deterministic offline organization (`src/main/controllers/tabs-controller/tidy.ts` using `tldts`) that closes redundant blank tabs, removes canonical duplicate URLs, clusters ungrouped same-site tabs (`>= 2` tabs or matching existing folders), replaces the top `SpaceTitle` with a sleek `Tidy` divider button, and shows an interactive `Undo` action toast backed by a bounded 5-snapshot undo stack.
+- **Conditional Local MCP Status Pill**: Added `McpStatusPill` above the sidebar footer, rendered only when the opt-in Local MCP server has active agent sessions or recent non-`ok` activity.
+
+### Improved
+
+- **Fluid Count-Aware Pin Grid**: Removed static fixed-density pin sizing in favor of continuous `(pinCount, containerWidth)` density tiers (`comfortable` for `1–3` pins, `balanced` up to 3 columns for `4–6` pins, and `compact` `2×4` 4-column grid at `7+` pins).
+- **Streamlined 3-Slot Sidebar Footer (`BottomDock`)**: Replaced the multi-icon sidebar bottom strip with `[ Downloads • | Space ^ | Workspace & Profile Menu ]`, moving `Split Side Panel`, `Space Scratchpad`, `Recently Closed Tabs`, `Workspace Snapshots`, `Focus / Zen Mode`, `Capture Screenshot`, internal pages, and `Favourites` into `WorkspaceProfileMenu` with controlled footer-anchored popovers while preserving `TopbarLayout` unchanged.
+- **Sidebar Indicator & Banner Polish**: Aligned right-side unseen background-update dots, audio toggles, sleep pills, and close buttons on sidebar tab rows; compacted `UpdateBanner` into a single-row pill CTA (`Restart` / `Download`); added an amber unseen-download indicator dot on `DownloadsButton`; and refreshed README showcase screenshots.
+
+### Fixed
+
+- **Missing Tabs on Update Restart**: Coordinated clean session flushing via `markPreserveSessionForRestart()` / `consumePreserveSessionForRestart()`, SQLite WAL `TRUNCATE` checkpointing on shutdown (`closeDatabase()`), deduped pre-quit snapshots (`snapshotAllForQuit()` flushing all live persistent tabs, active `lastActiveAt` timestamps, debounced window bounds, and tab groups before `autoUpdater.quitAndInstall()` and macOS ad-hoc updater restarts), update-restart bypass of age auto-archiving in `loadAndFilterTabs()` (plus newest-tab protection per window/space), `url` fallback when waking sleeping tabs with empty history, and per-tab restore error isolation.
+- **Media Mini-Player Broken Artwork Icon**: Resolved relative artwork URLs and skipped unsupported `blob:` schemes in `PROBE_MEDIA_SCRIPT`, and upgraded `MediaPlayerCard` with `MediaThumbnail` multi-stage fallback (`artworkUrl` → tab active favicon → cached utility favicon → `<Music2>` icon) whenever an artwork request errors or loads with `naturalWidth === 0`.
+
+---
+
 ## [0.4.6] — 2026-11-22
 
 ### Codename: Prism

@@ -12,6 +12,7 @@ import {
   resetSlotMachine
 } from "@/components/browser-ui/browser-sidebar/_components/pin-grid/slot-machine/main";
 import { SpacePagesCarousel } from "@/components/browser-ui/browser-sidebar/_components/space-pages-carousel";
+import { McpStatusPill } from "@/components/browser-ui/browser-sidebar/_components/mcp-status-pill";
 import { UpdateBanner } from "@/components/browser-ui/browser-sidebar/_components/update-banner";
 import { BottomDock } from "@/components/browser-ui/browser-sidebar/_components/bottom/bottom-dock";
 import { MediaMiniPlayer } from "@/components/browser-ui/media-mini-player";
@@ -79,7 +80,8 @@ export function SidebarInner({ direction }: { direction: AttachedDirection }) {
         {slotMachineEnabled && <SlotMachinePinGrid />}
         <SpacePagesCarousel />
       </div>
-      {/* Update Banner & Live Media Mini-Player */}
+      {/* MCP Activity, Update Banner & Live Media Mini-Player */}
+      <McpStatusPill />
       <UpdateBanner />
       <MediaMiniPlayer variant="sidebar" />
       {/* Bottom Dock Section */}

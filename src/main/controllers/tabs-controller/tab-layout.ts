@@ -126,6 +126,9 @@ export class TabLayoutManager {
     if (justHidden || justShown) {
       tab.updateStateProperty("lastActiveAt", getCurrentTimestamp());
     }
+    if (justShown) {
+      tab.updateStateProperty("hasUnseenUpdate", false);
+    }
     if (justHidden && tab.webContents && !tab.audible && !tab.isPictureInPicture) {
       tab.webContents.setBackgroundThrottling(true);
     }
@@ -183,6 +186,9 @@ export class TabLayoutManager {
       newBounds = this.calculateGlanceBounds(pageBounds, isFront);
 
       layerType = isFront ? "tab" : "tabBack";
+    } else if (tabGroup.mode === "folder") {
+      newTabGroupMode = "folder";
+      newBounds = pageBounds;
     } else if (tabGroup.mode === "split") {
       newTabGroupMode = "split";
       const tabsInGroup = tabGroup.tabs;

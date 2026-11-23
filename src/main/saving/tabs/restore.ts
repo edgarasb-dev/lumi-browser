@@ -1,5 +1,6 @@
 import { PersistedTabData, PersistedTabGroupData } from "~/types/tabs";
 import { tabPersistenceManager } from "@/saving/tabs";
+import { consumePreserveSessionForRestart } from "@/saving/ephemeral";
 import { onSettingsCached } from "@/saving/settings";
 import { tabsController } from "@/controllers/tabs-controller";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
@@ -7,6 +8,7 @@ import { shouldArchiveTab } from "@/saving/tabs";
 import { app } from "electron";
 import { GlanceTabGroup } from "@/controllers/tabs-controller/tab-groups/glance";
 import { SplitTabGroup } from "@/controllers/tabs-controller/tab-groups/split";
+import { FolderTabGroup } from "@/controllers/tabs-controller/tab-groups/folder";
 import type { Tab } from "@/controllers/tabs-controller/tab";
 import type { BrowserWindowCreationOptions, BrowserWindowType } from "@/controllers/windows-controller/types/browser";
 
@@ -30,14 +32,41 @@ export async function restoreSession(): Promise<boolean> {
 
 /**
  * Loads tabs from storage and filters out archived ones.
+ * On an update restart (`preserveSession`), skips auto-archiving completely so
+ * every open tab from the pre-update session reopens reliably.
  */
 async function loadAndFilterTabs(): Promise<PersistedTabData[]> {
-  const allTabs = await tabPersistenceManager.loadAllTabs();
+  const [allTabs, preserveAllTabs] = await Promise.all([
+    tabPersistenceManager.loadAllTabs(),
+    consumePreserveSessionForRestart().catch(() => false)
+  ]);
 
+  if (preserveAllTabs) {
+    return allTabs;
+  }
+
+  // Never archive the most recently active tab in each (windowGroupId, spaceId)
+  // at cold startup even if its lastActiveAt crossed archiveTabAfter during a long session.
+  const newestByWindowSpace = new Map<string, string>();
+  const maxActiveByWindowSpace = new Map<string, number>();
+  for (const tabData of allTabs) {
+    const key = `${tabData.windowGroupId}::${tabData.spaceId}`;
+    const prevMax = maxActiveByWindowSpace.get(key) ?? -Infinity;
+    if (tabData.lastActiveAt >= prevMax) {
+      maxActiveByWindowSpace.set(key, tabData.lastActiveAt);
+      newestByWindowSpace.set(key, tabData.uniqueId);
+    }
+  }
+
+  const protectedUniqueIds = new Set(newestByWindowSpace.values());
   const filtered: PersistedTabData[] = [];
   const archivedUniqueIds: string[] = [];
   for (const tabData of allTabs) {
-    if (typeof tabData.lastActiveAt === "number" && shouldArchiveTab(tabData.lastActiveAt)) {
+    if (
+      !protectedUniqueIds.has(tabData.uniqueId) &&
+      typeof tabData.lastActiveAt === "number" &&
+      shouldArchiveTab(tabData.lastActiveAt)
+    ) {
       archivedUniqueIds.push(tabData.uniqueId);
       continue;
     }
@@ -91,20 +120,25 @@ async function createTabsFromPersistedData(tabDatas: PersistedTabData[]): Promis
       const window = await browserWindowsController.create(windowType, windowOptions);
 
       for (const tabData of tabs) {
-        const tab = await tabsController.createTab(window.id, tabData.profileId, tabData.spaceId, undefined, {
-          asleep: true,
-          createdAt: tabData.createdAt,
-          lastActiveAt: tabData.lastActiveAt,
-          position: tabData.position,
-          navHistory: tabData.navHistory,
-          navHistoryIndex: tabData.navHistoryIndex,
-          uniqueId: tabData.uniqueId,
-          title: tabData.title,
-          faviconURL: tabData.faviconURL || undefined
-        });
+        try {
+          const tab = await tabsController.createTab(window.id, tabData.profileId, tabData.spaceId, undefined, {
+            asleep: true,
+            createdAt: tabData.createdAt,
+            lastActiveAt: tabData.lastActiveAt,
+            position: tabData.position,
+            url: tabData.url,
+            navHistory: tabData.navHistory,
+            navHistoryIndex: tabData.navHistoryIndex,
+            uniqueId: tabData.uniqueId,
+            title: tabData.title,
+            faviconURL: tabData.faviconURL || undefined
+          });
 
-        uniqueIdToTabId.set(tabData.uniqueId, tab.id);
-        createdTabs.push(tab);
+          uniqueIdToTabId.set(tabData.uniqueId, tab.id);
+          createdTabs.push(tab);
+        } catch (err) {
+          console.error(`[RestoreSession] Failed to restore tab ${tabData.uniqueId} (${tabData.url}):`, err);
+        }
       }
     })
   );
@@ -155,8 +189,9 @@ async function restoreTabGroups(
       }
     }
 
-    if (tabIds.length < 2) {
-      // Tab groups need at least 2 tabs
+    const minTabs = groupData.mode === "folder" ? 1 : 2;
+    if (tabIds.length < minTabs) {
+      // Split/Glance groups need at least 2 tabs; Folders need at least 1 tab
       try {
         await tabPersistenceManager.removeTabGroup(groupData.groupId);
       } catch (error) {
@@ -183,6 +218,19 @@ async function restoreTabGroups(
         }
         if (typeof groupData.splitRatio === "number") {
           group.setSplitRatio(groupData.splitRatio);
+        }
+      }
+
+      // Restore folder metadata
+      if (groupData.mode === "folder" && group instanceof FolderTabGroup) {
+        if (groupData.name) {
+          group.rename(groupData.name);
+        }
+        if (groupData.color) {
+          group.setColor(groupData.color);
+        }
+        if (groupData.collapsed !== undefined) {
+          group.setCollapsed(groupData.collapsed);
         }
       }
     } catch (error) {

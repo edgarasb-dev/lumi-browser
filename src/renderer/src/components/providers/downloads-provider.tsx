@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useToast } from "@/components/providers/minimal-toast-provider";
 import type { DownloadItemData } from "~/types/downloads";
 
@@ -6,6 +6,8 @@ interface DownloadsContextValue {
   downloads: DownloadItemData[];
   activeDownloads: DownloadItemData[];
   hasActiveDownloads: boolean;
+  hasUnseenCompletedDownload: boolean;
+  markDownloadsSeen: () => void;
   overallProgress: number | null;
 }
 
@@ -21,7 +23,12 @@ export function useDownloads() {
 
 export function DownloadsProvider({ children }: { children: ReactNode }) {
   const [downloads, setDownloads] = useState<DownloadItemData[]>([]);
+  const [hasUnseenCompletedDownload, setHasUnseenCompletedDownload] = useState(false);
   const { showToast } = useToast();
+
+  const markDownloadsSeen = useCallback(() => {
+    setHasUnseenCompletedDownload(false);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -36,6 +43,7 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
       if (event.type === "started") {
         showToast("downloadStarted", event.item.filename);
       } else if (event.type === "completed") {
+        setHasUnseenCompletedDownload(true);
         showToast("downloadCompleted", event.item.filename);
       }
     });
@@ -67,9 +75,11 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
       downloads,
       activeDownloads,
       hasActiveDownloads: activeDownloads.length > 0,
+      hasUnseenCompletedDownload,
+      markDownloadsSeen,
       overallProgress
     }),
-    [downloads, activeDownloads, overallProgress]
+    [downloads, activeDownloads, hasUnseenCompletedDownload, markDownloadsSeen, overallProgress]
   );
 
   return <DownloadsContext.Provider value={value}>{children}</DownloadsContext.Provider>;

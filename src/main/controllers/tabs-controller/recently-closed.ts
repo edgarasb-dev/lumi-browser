@@ -1,5 +1,6 @@
 import { GlanceTabGroup } from "@/controllers/tabs-controller/tab-groups/glance";
 import { SplitTabGroup } from "@/controllers/tabs-controller/tab-groups/split";
+import { FolderTabGroup } from "@/controllers/tabs-controller/tab-groups/folder";
 import { spacesController } from "@/controllers/spaces-controller";
 import { recentlyClosedManager } from "./recently-closed-manager";
 import type { BrowserWindow } from "@/controllers/windows-controller/types";
@@ -71,6 +72,12 @@ export function restoreTabGroupMembership(restoredTab: Tab, groupData?: Persiste
       if (typeof groupData.splitRatio === "number") {
         newGroup.setSplitRatio(groupData.splitRatio);
       }
+    }
+
+    if (groupData.mode === "folder" && newGroup instanceof FolderTabGroup) {
+      if (groupData.name) newGroup.rename(groupData.name);
+      if (groupData.color) newGroup.setColor(groupData.color);
+      if (groupData.collapsed !== undefined) newGroup.setCollapsed(groupData.collapsed);
     }
   } catch (error) {
     console.error("Failed to restore tab group membership:", error);

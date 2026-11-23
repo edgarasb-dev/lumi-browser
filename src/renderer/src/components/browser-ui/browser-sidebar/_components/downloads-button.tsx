@@ -169,11 +169,20 @@ function DownloadPopoverRow({ item }: { item: DownloadItemData }) {
 
 export function DownloadsButton({ size = "default", className }: { size?: DockButtonSize; className?: string } = {}) {
   const [open, setOpen] = useState(false);
-  const { downloads, hasActiveDownloads, overallProgress } = useDownloads();
+  const { downloads, hasActiveDownloads, hasUnseenCompletedDownload, markDownloadsSeen, overallProgress } =
+    useDownloads();
   const { isCurrentSpaceLight } = useSpaces();
   const spaceInjectedClasses = cn(isCurrentSpaceLight ? "" : "dark");
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      markDownloadsSeen();
+    }
+  };
+
   const openAllDownloads = () => {
+    markDownloadsSeen();
     lumi.tabs.newTab("lumi://downloads", true);
     setOpen(false);
   };
@@ -182,11 +191,17 @@ export function DownloadsButton({ size = "default", className }: { size?: DockBu
   const sizeClasses = DOCK_BUTTON_CLASSES[size];
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         type="button"
         onClick={(e) => e.stopPropagation()}
-        title={hasActiveDownloads ? "Downloads (in progress)" : "Downloads"}
+        title={
+          hasActiveDownloads
+            ? "Downloads (in progress)"
+            : hasUnseenCompletedDownload
+              ? "Downloads (new file finished)"
+              : "Downloads"
+        }
         className={cn("relative", getDockButtonClassName(size, { active: open }), className)}
       >
         {hasActiveDownloads && <ProgressRing progress={overallProgress} />}
@@ -194,6 +209,15 @@ export function DownloadsButton({ size = "default", className }: { size?: DockBu
           strokeWidth={DOCK_ICON_STROKE_WIDTH}
           className={cn(sizeClasses.icon, "transition-colors", hasActiveDownloads && "text-sky-500")}
         />
+        {!hasActiveDownloads && hasUnseenCompletedDownload && (
+          <span
+            aria-label="New completed download"
+            className={cn(
+              "absolute size-1.5 rounded-full bg-amber-400 ring-1 ring-black/20 dark:ring-black/50",
+              size === "xs" ? "top-0.5 right-0.5" : "top-1 right-1"
+            )}
+          />
+        )}
       </PopoverTrigger>
 
       <PopoverContent className="w-80 p-2.5 select-none" positionerClassName={spaceInjectedClasses}>

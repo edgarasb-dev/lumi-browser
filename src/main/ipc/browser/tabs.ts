@@ -2,7 +2,9 @@ import { BaseTabGroup, TabGroup } from "@/controllers/tabs-controller/tab-groups
 import { spacesController } from "@/controllers/spaces-controller";
 import { clipboard, ipcMain, Menu, MenuItem } from "electron";
 import { hasSnapshot } from "@/controllers/sessions-controller/protocols/_protocols/lumi-internal/tab-snapshot";
-import { SplitDirection, TabData, WindowActiveTabIds, WindowFocusedTabIds } from "~/types/tabs";
+import { FolderColorId, SplitDirection, TabData, WindowActiveTabIds, WindowFocusedTabIds } from "~/types/tabs";
+import { tidySpaceTabs, undoTidyTabs } from "@/controllers/tabs-controller/tidy";
+import { FolderTabGroup } from "@/controllers/tabs-controller/tab-groups/folder";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
 import { BrowserWindow } from "@/controllers/windows-controller/types";
 import { Tab } from "@/controllers/tabs-controller/tab";
@@ -374,15 +376,22 @@ ipcMain.handle("tabs:move-tab", async (event, tabId: number, newPosition: number
   const tab = tabsController.getTabById(tabId);
   if (!tab) return false;
 
+  const tabGroup = tabsController.getTabGroupByTabId(tab.id);
+  if (tabGroup && tabGroup.mode === "folder") {
+    tab.updateStateProperty("position", newPosition);
+    tabGroup.syncTabOrderFromPositions();
+    tabsController.normalizePositions(window.id, tab.spaceId);
+    return true;
+  }
+
   let targetTabs: Tab[] = [tab];
 
-  const tabGroup = tabsController.getTabGroupByTabId(tab.id);
   if (tabGroup) {
     targetTabs = tabGroup.tabs;
   }
 
-  for (const targetTab of targetTabs) {
-    targetTab.updateStateProperty("position", newPosition);
+  for (let i = 0; i < targetTabs.length; i++) {
+    targetTabs[i]!.updateStateProperty("position", newPosition + i * 0.001);
   }
 
   // Normalize positions after reorder to prevent drift
@@ -485,9 +494,56 @@ ipcMain.on("tabs:show-context-menu", async (event, tabId: number) => {
     })
   );
 
-  // Split View & Glance actions
+  // Folder & Split View / Glance actions
   const existingGroup = tabsController.getTabGroupByTabId(tab.id);
-  if (!existingGroup) {
+  const spaceFolders = [...tabsController.tabGroups.values()].filter(
+    (g): g is FolderTabGroup => g.mode === "folder" && g.spaceId === tab.spaceId && g.profileId === tab.profileId
+  );
+
+  if (!tab.ephemeral) {
+    contextMenu.append(
+      new MenuItem({
+        label: "New Folder with Tab",
+        click: () => {
+          tabsController.createFolder([tab.id]);
+        }
+      })
+    );
+
+    const otherFolders = spaceFolders.filter((f) => f.groupId !== existingGroup?.groupId);
+    if (otherFolders.length > 0) {
+      const folderSubmenu = new Menu();
+      for (const folder of otherFolders) {
+        folderSubmenu.append(
+          new MenuItem({
+            label: folder.name,
+            click: () => {
+              tabsController.addTabToFolder(folder.groupId, tab.id);
+            }
+          })
+        );
+      }
+      contextMenu.append(
+        new MenuItem({
+          label: "Move to Folder",
+          submenu: folderSubmenu
+        })
+      );
+    }
+
+    if (existingGroup?.mode === "folder") {
+      contextMenu.append(
+        new MenuItem({
+          label: "Remove from Folder",
+          click: () => {
+            tabsController.removeTabFromFolder(tab.id);
+          }
+        })
+      );
+    }
+  }
+
+  if (!existingGroup || existingGroup.mode === "folder") {
     const activeTabOrGroup = tabsController.getActiveTab(window.id, tab.spaceId);
     const activeFocusedTab = tabsController.getFocusedTab(window.id, tab.spaceId);
     const activePairCandidate =
@@ -613,7 +669,13 @@ ipcMain.on("tabs:show-context-menu", async (event, tabId: number) => {
             click: () => {
               let targetTabs: Tab[] = [tab];
               const tabGroup = tabsController.getTabGroupByTabId(tab.id);
-              if (tabGroup) targetTabs = tabGroup.tabs;
+              if (tabGroup) {
+                if (tabGroup.mode === "folder") {
+                  tabGroup.removeTab(tab.id);
+                } else {
+                  targetTabs = tabGroup.tabs;
+                }
+              }
               const sourceSpaceId = tab.spaceId;
               for (const targetTab of targetTabs) {
                 targetTab.setSpace(targetSpace.id);
@@ -792,4 +854,135 @@ ipcMain.handle("tabs:ungroup-tab-group", (_event, groupId: string, preferredActi
 
 ipcMain.handle("tabs:dismiss-glance", (_event, groupId: string, promoteFront?: boolean) => {
   return tabsController.dismissGlance(groupId, promoteFront);
+});
+
+// --- Folders & Tidy ---
+
+const VALID_FOLDER_COLORS: FolderColorId[] = ["neutral", "amber", "blue", "violet", "emerald", "rose"];
+
+ipcMain.handle("tabs:create-folder", (_event, tabIds: number[], options?: { name?: string; color?: FolderColorId }) => {
+  return tabsController.createFolder(tabIds, options);
+});
+
+ipcMain.handle("tabs:rename-folder", (_event, groupId: string, name: string) => {
+  return tabsController.renameFolder(groupId, name);
+});
+
+ipcMain.handle("tabs:set-folder-color", (_event, groupId: string, color: FolderColorId) => {
+  if (!VALID_FOLDER_COLORS.includes(color)) return false;
+  return tabsController.setFolderColor(groupId, color);
+});
+
+ipcMain.handle("tabs:set-folder-collapsed", (_event, groupId: string, collapsed: boolean) => {
+  return tabsController.setFolderCollapsed(groupId, collapsed);
+});
+
+ipcMain.handle("tabs:add-tab-to-folder", (_event, groupId: string, tabId: number, position?: number) => {
+  return tabsController.addTabToFolder(groupId, tabId, position);
+});
+
+ipcMain.handle("tabs:remove-tab-from-folder", (_event, tabId: number, newPosition?: number) => {
+  return tabsController.removeTabFromFolder(tabId, newPosition);
+});
+
+ipcMain.handle("tabs:move-tab-group", (_event, groupId: string, newPosition: number) => {
+  return tabsController.moveTabGroup(groupId, newPosition);
+});
+
+ipcMain.handle("tabs:move-tab-group-to-space", (_event, groupId: string, spaceId: string, newPosition?: number) => {
+  return tabsController.moveTabGroupToSpace(groupId, spaceId, newPosition);
+});
+
+ipcMain.on("tabs:show-folder-context-menu", (event, groupId: string) => {
+  const window = browserWindowsController.getWindowFromWebContents(event.sender);
+  if (!window) return;
+
+  const group = tabsController.getTabGroupById(groupId);
+  if (!group || group.mode !== "folder") return;
+
+  const colorMenu = new Menu();
+  const colorLabels: Record<FolderColorId, string> = {
+    neutral: "Neutral Glass",
+    amber: "Warm Reading",
+    blue: "Sapphire Blue",
+    violet: "Iris Violet",
+    emerald: "Forest Emerald",
+    rose: "Warm Rose"
+  };
+
+  for (const color of VALID_FOLDER_COLORS) {
+    colorMenu.append(
+      new MenuItem({
+        label: colorLabels[color],
+        type: "radio",
+        checked: group.color === color,
+        click: () => {
+          tabsController.setFolderColor(groupId, color);
+        }
+      })
+    );
+  }
+
+  const contextMenu = new Menu();
+  contextMenu.append(
+    new MenuItem({
+      label: group.collapsed ? "Expand Folder" : "Collapse Folder",
+      click: () => {
+        tabsController.setFolderCollapsed(groupId, !group.collapsed);
+      }
+    })
+  );
+  contextMenu.append(
+    new MenuItem({
+      label: "Folder Color",
+      submenu: colorMenu
+    })
+  );
+  contextMenu.append(
+    new MenuItem({
+      label: "Sleep Background Tabs",
+      click: () => {
+        for (const member of group.tabs) {
+          if (!member.visible && !member.asleep && !member.audible && !member.isPictureInPicture) {
+            tabsController.getLifecycleManager(member.id)?.putToSleep();
+          }
+        }
+      }
+    })
+  );
+  contextMenu.append(new MenuItem({ type: "separator" }));
+  contextMenu.append(
+    new MenuItem({
+      label: "Ungroup Folder",
+      click: () => {
+        tabsController.ungroupTabGroup(groupId);
+      }
+    })
+  );
+  contextMenu.append(
+    new MenuItem({
+      label: "Close Folder & All Tabs",
+      click: () => {
+        for (const member of [...group.tabs]) {
+          if (!member.isDestroyed) {
+            member.destroy();
+          }
+        }
+      }
+    })
+  );
+
+  contextMenu.popup({ window: window.browserWindow });
+});
+
+ipcMain.handle("tabs:tidy-space", (event, spaceId: string) => {
+  const window = browserWindowsController.getWindowFromWebContents(event.sender);
+  if (!window || !spaceId) {
+    return { undoId: null, summary: "No active window", groupedCount: 0, closedDuplicates: 0, closedBlankTabs: 0 };
+  }
+  return tidySpaceTabs(tabsController, window.id, spaceId);
+});
+
+ipcMain.handle("tabs:undo-tidy", (_event, undoId: string) => {
+  return undoTidyTabs(tabsController, undoId);
 });

@@ -59,6 +59,9 @@ function tabGroupRowToPersistedData(row: TabGroupRow): PersistedTabGroupData {
     glanceFrontTabUniqueId: row.glanceFrontTabUniqueId ?? undefined,
     splitDirection: row.splitDirection ?? undefined,
     splitRatio: row.splitRatio ?? undefined,
+    name: row.name ?? undefined,
+    color: row.color ?? undefined,
+    collapsed: row.collapsed ?? undefined,
     position: row.position
   };
 }
@@ -73,6 +76,9 @@ function persistedDataToTabGroupInsert(data: PersistedTabGroupData): TabGroupIns
     glanceFrontTabUniqueId: data.glanceFrontTabUniqueId ?? null,
     splitDirection: data.splitDirection ?? null,
     splitRatio: data.splitRatio ?? null,
+    name: data.name ?? null,
+    color: data.color ?? null,
+    collapsed: data.collapsed ?? null,
     position: data.position
   };
 }
@@ -374,6 +380,9 @@ export class TabPersistenceManager {
           glanceFrontTabUniqueId: insert.glanceFrontTabUniqueId,
           splitDirection: insert.splitDirection,
           splitRatio: insert.splitRatio,
+          name: insert.name,
+          color: insert.color,
+          collapsed: insert.collapsed,
           position: insert.position
         }
       })

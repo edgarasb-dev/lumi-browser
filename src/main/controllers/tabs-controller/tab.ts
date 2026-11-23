@@ -39,7 +39,8 @@ type TabStateProperty =
   | "readerMode"
   | "lastActiveAt"
   | "position"
-  | "badgeCount";
+  | "badgeCount"
+  | "hasUnseenUpdate";
 type TabContentProperty = "title" | "url" | "isLoading" | "audible" | "muted" | "navHistory" | "navHistoryIndex";
 
 export type TabPublicProperty = TabStateProperty | TabContentProperty;
@@ -182,6 +183,7 @@ export class Tab extends TypedEventEmitter<TabEvents> {
   public isPictureInPicture: boolean = false;
   public asleep: boolean = false;
   public readerMode: boolean = false;
+  public hasUnseenUpdate: boolean = false;
   public createdAt: number;
   public lastActiveAt: number;
   public position: number;
@@ -311,11 +313,18 @@ export class Tab extends TypedEventEmitter<TabEvents> {
       // Store URL and nav history from creation options for renderer display
       if (navHistory.length > 0) {
         const idx = navHistoryIndex ?? navHistory.length - 1;
-        this.url = navHistory[idx]?.url ?? "";
+        this.url = navHistory[idx]?.url ?? options.url ?? "";
         this.navHistory = [...navHistory];
         this.navHistoryIndex = idx;
         this.lastNavHistoryLength = navHistory.length;
         this.lastNavHistoryIndex = idx;
+      } else if (options.url) {
+        const fallbackTitle = this.title || options.url;
+        this.url = options.url;
+        this.navHistory = [{ title: fallbackTitle, url: options.url }];
+        this.navHistoryIndex = 0;
+        this.lastNavHistoryLength = 1;
+        this.lastNavHistoryIndex = 0;
       }
 
       this._needsInitialLoad = false;
@@ -557,6 +566,9 @@ export class Tab extends TypedEventEmitter<TabEvents> {
       webContents.setVisualZoomLevelLimits(1, 5);
       this.recordBrowsingHistoryFromWebContents(webContents);
       void this.applySiteSettingsForCurrentUrl();
+      if (this.visible) {
+        this.lastActiveAt = getCurrentTimestamp();
+      }
     });
 
     webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
@@ -585,6 +597,9 @@ export class Tab extends TypedEventEmitter<TabEvents> {
       if (!isMainFrame) return;
       this.recordBrowsingHistoryFromWebContents(webContents, url);
       void this.applySiteSettingsForCurrentUrl();
+      if (this.visible) {
+        this.lastActiveAt = getCurrentTimestamp();
+      }
       if (this.hasMediaPlayback) {
         this.emit("media-changed");
       }
@@ -708,6 +723,12 @@ export class Tab extends TypedEventEmitter<TabEvents> {
     const currentValue = this[property];
     if (currentValue === newValue) return false;
 
+    if (property === "visible" && newValue === true) {
+      this.hasUnseenUpdate = false;
+    }
+    if (property === "badgeCount" && typeof newValue === "number" && newValue > 0 && !this.visible) {
+      this.hasUnseenUpdate = true;
+    }
     this[property] = newValue;
     this.emit("updated", [property]);
     return true;
@@ -739,8 +760,10 @@ export class Tab extends TypedEventEmitter<TabEvents> {
     if (!this.webContents) return false;
 
     const { webContents } = this;
-    const changedKeys: TabContentProperty[] = [];
+    const changedKeys: TabPublicProperty[] = [];
 
+    const prevTitle = this.title;
+    const prevUrl = this.url;
     const newTitle = webContents.getTitle();
     if (newTitle !== this.title) {
       this.title = newTitle;
@@ -754,6 +777,24 @@ export class Tab extends TypedEventEmitter<TabEvents> {
     }
 
     const newIsLoading = webContents.isLoading();
+    if (
+      !this.visible &&
+      !newIsLoading &&
+      newTitle !== prevTitle &&
+      newUrl === prevUrl &&
+      prevTitle.trim().length > 0 &&
+      prevTitle !== "New Tab" &&
+      !newUrl.startsWith("lumi://") &&
+      !newUrl.startsWith("lumi-internal://") &&
+      newTitle.trim().length > 0 &&
+      !/^https?:\/\//i.test(newTitle) &&
+      !/^https?:\/\//i.test(prevTitle)
+    ) {
+      if (!this.hasUnseenUpdate) {
+        this.hasUnseenUpdate = true;
+        changedKeys.push("hasUnseenUpdate");
+      }
+    }
     if (newIsLoading !== this.isLoading) {
       this.isLoading = newIsLoading;
       changedKeys.push("isLoading");

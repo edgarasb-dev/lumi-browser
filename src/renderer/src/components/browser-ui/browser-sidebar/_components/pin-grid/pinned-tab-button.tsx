@@ -6,8 +6,13 @@ import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-
 import { motion } from "motion/react";
 import type { PinnedTabData } from "~/types/pinned-tabs";
 import type { TabData } from "~/types/tabs";
-import { isPinnedTabSource, isTabGroupSource } from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
+import {
+  isFolderTabSource,
+  isPinnedTabSource,
+  isTabGroupSource
+} from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
 import { PinnedTabBadge, usePinnedTabPresentation } from "./pinned-tab-presentation";
+import type { PinGridDensity } from "./normal/use-pin-grid-columns";
 import "./pin.css";
 
 // Drag source type for pinned tab reordering
@@ -41,6 +46,8 @@ interface PinnedTabButtonProps {
   isLastInRow?: boolean;
   /** When false, layout position changes are applied instantly (no spring animation). */
   layoutAnimationsEnabled?: boolean;
+  /** Fluid pin tile density derived from total pin count and sidebar width. */
+  density?: PinGridDensity;
 }
 
 export function PinnedTabButton({
@@ -59,7 +66,8 @@ export function PinnedTabButton({
   activeEdge,
   isFirstInRow = false,
   isLastInRow = false,
-  layoutAnimationsEnabled = true
+  layoutAnimationsEnabled = true,
+  density = "comfortable"
 }: PinnedTabButtonProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { faviconUrl, handleImageError, hasColors, activeBorderStyle, activeOverlayStyle, unreadCount, tooltipTitle } =
@@ -97,7 +105,7 @@ export function PinnedTabButton({
         if (isPinnedTabSource(data)) {
           return !profileId || data.profileId === profileId;
         }
-        if (isTabGroupSource(data)) {
+        if (isTabGroupSource(data) || isFolderTabSource(data)) {
           // Only accept tabs from the same profile
           return !profileId || data.profileId === profileId;
         }
@@ -135,6 +143,8 @@ export function PinnedTabButton({
           onReorder(sourceData.pinnedTabId, newPosition);
         } else if (isTabGroupSource(sourceData)) {
           onCreateFromTab(sourceData.primaryTabId, newPosition);
+        } else if (isFolderTabSource(sourceData)) {
+          onCreateFromTab(sourceData.tabId, newPosition);
         }
       }
     });
@@ -219,10 +229,11 @@ export function PinnedTabButton({
         animate={{ scale: isPressed ? 0.99 : 1 }}
         transition={{ scale: { type: "spring", stiffness: 600, damping: 20 } }}
         className={cn(
-          "relative w-full h-12 rounded-xl overflow-hidden transform-gpu",
+          "relative w-full overflow-hidden transform-gpu",
+          density === "compact" ? "h-10 rounded-lg" : density === "balanced" ? "h-11 rounded-xl" : "h-12 rounded-xl",
           "bg-black/10 hover:bg-black/15",
           "dark:bg-white/15 dark:hover:bg-white/20",
-          "transition-[background-color,border-color,opacity] duration-100",
+          "transition-[background-color,border-color,opacity,height] duration-150",
           "flex items-center justify-center",
           isActive && !hasColors && "border-2 border-white",
           isActive && hasColors && "pinned-tab-active-border",
@@ -234,26 +245,36 @@ export function PinnedTabButton({
       >
         <div className={cn("size-full", isActive && "bg-white/80 dark:bg-white/30")}>
           <div className={cn("size-full", "flex items-center justify-center")} style={activeOverlayStyle}>
-            <div className="relative size-5 flex items-center justify-center">
+            <div
+              className={cn(
+                "relative flex items-center justify-center",
+                density === "compact" ? "size-4" : density === "balanced" ? "size-4.5" : "size-5"
+              )}
+            >
               {faviconUrl ? (
                 <>
                   <img
                     src={faviconUrl}
                     alt=""
                     onError={handleImageError}
-                    className="size-5 absolute rounded-sm user-drag-none object-contain overflow-hidden"
+                    className={cn(
+                      "absolute rounded-sm user-drag-none object-contain overflow-hidden",
+                      density === "compact" ? "size-4" : density === "balanced" ? "size-4.5" : "size-5"
+                    )}
                   />
                   <div className="img-container">
                     <img src={faviconUrl} alt="" onError={handleImageError} className="user-drag-none" />
                   </div>
                 </>
               ) : (
-                <Globe className="size-4.5 text-black/55 dark:text-white/75" />
+                <Globe
+                  className={cn("text-black/55 dark:text-white/75", density === "compact" ? "size-3.5" : "size-4.5")}
+                />
               )}
             </div>
           </div>
         </div>
-        <PinnedTabBadge count={unreadCount} variant="tile" />
+        <PinnedTabBadge count={unreadCount} variant={density === "compact" ? "tile-compact" : "tile"} />
       </motion.div>
     </motion.div>
   );

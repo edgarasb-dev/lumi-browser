@@ -8,6 +8,7 @@ import { browserWindowsController } from "@/controllers/windows-controller/inter
 import { tabsController } from "@/controllers/tabs-controller";
 import { GlanceTabGroup } from "@/controllers/tabs-controller/tab-groups/glance";
 import { SplitTabGroup } from "@/controllers/tabs-controller/tab-groups/split";
+import { FolderTabGroup } from "@/controllers/tabs-controller/tab-groups/folder";
 import type { Tab } from "@/controllers/tabs-controller/tab";
 import type { SnapshotGroupEntry, SnapshotTabEntry, WorkspaceSnapshot } from "~/types/snapshots";
 
@@ -59,7 +60,8 @@ ipcMain.handle(
     for (const group of tabsController.tabGroups.values()) {
       if (group.spaceId !== spaceId) continue;
       const memberIds = group.tabs.filter((t) => !t.isDestroyed && tabUniqueIds.has(t.uniqueId)).map((t) => t.uniqueId);
-      if (memberIds.length < 2) continue;
+      const minMembers = group instanceof FolderTabGroup ? 1 : 2;
+      if (memberIds.length < minMembers) continue;
 
       if (group instanceof GlanceTabGroup) {
         groupEntries.push({
@@ -74,6 +76,15 @@ ipcMain.handle(
           tabUniqueIds: memberIds,
           splitDirection: group.splitDirection,
           splitRatio: group.splitRatio,
+          position: group.position
+        });
+      } else if (group instanceof FolderTabGroup) {
+        groupEntries.push({
+          mode: "folder",
+          tabUniqueIds: memberIds,
+          name: group.name,
+          color: group.color,
+          collapsed: group.collapsed,
           position: group.position
         });
       }
@@ -155,7 +166,8 @@ ipcMain.handle("snapshots:restore", async (event, snapshotId: string, replaceExi
     const memberTabIds = group.tabUniqueIds
       .map((uid) => createdBySnapshotUniqueId.get(uid)?.id)
       .filter((id): id is number => typeof id === "number");
-    if (memberTabIds.length < 2) continue;
+    const minMembers = group.mode === "folder" ? 1 : 2;
+    if (memberTabIds.length < minMembers) continue;
 
     try {
       const recreatedGroup = tabsController.createTabGroup(group.mode, memberTabIds as [number, ...number[]]);
@@ -166,6 +178,11 @@ ipcMain.handle("snapshots:restore", async (event, snapshotId: string, replaceExi
       if (group.mode === "split" && recreatedGroup instanceof SplitTabGroup) {
         if (group.splitDirection) recreatedGroup.setSplitDirection(group.splitDirection);
         if (typeof group.splitRatio === "number") recreatedGroup.setSplitRatio(group.splitRatio);
+      }
+      if (group.mode === "folder" && recreatedGroup instanceof FolderTabGroup) {
+        if (group.name) recreatedGroup.rename(group.name);
+        if (group.color) recreatedGroup.setColor(group.color);
+        if (group.collapsed !== undefined) recreatedGroup.setCollapsed(group.collapsed);
       }
     } catch (error) {
       console.error("Failed to recreate snapshot tab group:", error);

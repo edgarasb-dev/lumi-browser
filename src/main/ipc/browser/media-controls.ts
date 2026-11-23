@@ -82,7 +82,22 @@ const PROBE_MEDIA_SCRIPT = `(() => {
   const video = document.querySelector("video");
   const audio = document.querySelector("audio");
   const el = video || audio;
-  const art = meta?.artwork?.length ? meta.artwork[meta.artwork.length - 1]?.src : undefined;
+  let art;
+  if (meta?.artwork?.length) {
+    for (let i = meta.artwork.length - 1; i >= 0; i--) {
+      const raw = meta.artwork[i]?.src;
+      if (!raw) continue;
+      try {
+        const resolved = new URL(raw, window.location.href);
+        if (resolved.protocol === "https:" || resolved.protocol === "http:" || resolved.protocol === "data:") {
+          art = resolved.toString();
+          break;
+        }
+      } catch {
+        // Ignore malformed artwork URLs
+      }
+    }
+  }
   return {
     mediaTitle: meta?.title || undefined,
     mediaArtist: meta?.artist || undefined,

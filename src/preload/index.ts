@@ -15,7 +15,7 @@ import type { SpaceData } from "@/controllers/spaces-controller";
 
 // SHARED TYPES //
 import type { SharedExtensionData } from "~/types/extensions";
-import type { TabData, WindowTabsData } from "~/types/tabs";
+import type { FolderColorId, TabData, WindowTabsData } from "~/types/tabs";
 import type { PinnedTabData } from "~/types/pinned-tabs";
 import type { UpdateStatus } from "~/types/updates";
 import type { WindowState } from "~/lumi/types";
@@ -366,6 +366,50 @@ const tabsAPI: LumiTabsAPI = {
 
   dismissGlance: async (groupId: string, promoteFront?: boolean) => {
     return ipcRenderer.invoke("tabs:dismiss-glance", groupId, promoteFront);
+  },
+
+  createFolder: async (tabIds: number[], options?: { name?: string; color?: FolderColorId }) => {
+    return ipcRenderer.invoke("tabs:create-folder", tabIds, options);
+  },
+
+  renameFolder: async (groupId: string, name: string) => {
+    return ipcRenderer.invoke("tabs:rename-folder", groupId, name);
+  },
+
+  setFolderColor: async (groupId: string, color: FolderColorId) => {
+    return ipcRenderer.invoke("tabs:set-folder-color", groupId, color);
+  },
+
+  setFolderCollapsed: async (groupId: string, collapsed: boolean) => {
+    return ipcRenderer.invoke("tabs:set-folder-collapsed", groupId, collapsed);
+  },
+
+  addTabToFolder: async (groupId: string, tabId: number, position?: number) => {
+    return ipcRenderer.invoke("tabs:add-tab-to-folder", groupId, tabId, position);
+  },
+
+  removeTabFromFolder: async (tabId: number, newPosition?: number) => {
+    return ipcRenderer.invoke("tabs:remove-tab-from-folder", tabId, newPosition);
+  },
+
+  moveTabGroup: async (groupId: string, newPosition: number) => {
+    return ipcRenderer.invoke("tabs:move-tab-group", groupId, newPosition);
+  },
+
+  moveTabGroupToSpace: async (groupId: string, spaceId: string, newPosition?: number) => {
+    return ipcRenderer.invoke("tabs:move-tab-group-to-space", groupId, spaceId, newPosition);
+  },
+
+  showFolderContextMenu: (groupId: string) => {
+    return ipcRenderer.send("tabs:show-folder-context-menu", groupId);
+  },
+
+  tidySpace: async (spaceId: string) => {
+    return ipcRenderer.invoke("tabs:tidy-space", spaceId);
+  },
+
+  undoTidy: async (undoId: string) => {
+    return ipcRenderer.invoke("tabs:undo-tidy", undoId);
   }
 };
 

@@ -3,8 +3,8 @@ import { useTabsGroups } from "@/components/providers/tabs-provider";
 import { usePinnedTabs } from "@/components/providers/pinned-tabs-provider";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { SidebarScrollArea } from "./sidebar-scroll-area";
-import { SpaceTitle } from "./space-title";
 import { NewTabButton } from "./new-tab-button";
+import { TidyButton } from "./tidy-button";
 import { TabGroup } from "./tab-group";
 import { TabDropTarget } from "./tab-drop-target";
 import { AnimatePresence } from "motion/react";
@@ -70,6 +70,20 @@ const SpaceContentPage = memo(function SpaceContentPage({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [focusedTab, sortedTabGroups, moveTab]);
 
+  const biggestTabPosition = useMemo(() => {
+    let maxPos = -1;
+    for (const group of sortedTabGroups) {
+      for (const tab of group.tabs) {
+        if (tab.position > maxPos) maxPos = tab.position;
+      }
+    }
+    return maxPos;
+  }, [sortedTabGroups]);
+
+  const canTidySpace = useMemo(() => {
+    return sortedTabGroups.some((g) => g.mode === "normal");
+  }, [sortedTabGroups]);
+
   return (
     <div
       className={cn(
@@ -78,9 +92,9 @@ const SpaceContentPage = memo(function SpaceContentPage({
       )}
     >
       {!slotMachineEnabled && shouldShowPinnedTabs && <PinGrid profileId={space.profileId} />}
-      <SpaceTitle space={space} />
+      <TidyButton spaceId={space.id} disabled={!canTidySpace} />
       <SidebarScrollArea className="flex-1 min-h-0">
-        <div className="flex flex-col gap-1 flex-1 min-h-full pt-1">
+        <div className="flex flex-col gap-1 flex-1 min-h-full pt-0.5">
           <NewTabButton />
           <AnimatePresence initial={false}>
             {sortedTabGroups.map((tabGroup) => (
@@ -101,7 +115,7 @@ const SpaceContentPage = memo(function SpaceContentPage({
             spaceData={space}
             isSpaceLight={isSpaceLight}
             moveTab={moveTab}
-            biggestIndex={sortedTabGroups.length > 0 ? sortedTabGroups[sortedTabGroups.length - 1].position : -1}
+            biggestIndex={biggestTabPosition}
           />
         </div>
       </SidebarScrollArea>

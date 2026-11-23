@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, real, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { NavigationEntry, SplitDirection, TabGroupMode } from "~/types/tabs";
+import { FolderColorId, NavigationEntry, SplitDirection, TabGroupMode } from "~/types/tabs";
 import { DownloadState } from "~/types/downloads";
 import { SnapshotGroupEntry, SnapshotTabEntry } from "~/types/snapshots";
 
@@ -40,6 +40,9 @@ export const tabGroups = sqliteTable("tab_groups", {
   glanceFrontTabUniqueId: text("glance_front_tab_unique_id"),
   splitDirection: text("split_direction").$type<SplitDirection>(),
   splitRatio: real("split_ratio"),
+  name: text("name"),
+  color: text("color").$type<FolderColorId>(),
+  collapsed: integer("collapsed", { mode: "boolean" }),
   position: integer("position").notNull()
 });
 

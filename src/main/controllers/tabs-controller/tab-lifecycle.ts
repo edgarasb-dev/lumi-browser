@@ -101,10 +101,16 @@ export class TabLifecycleManager {
     // Mark as awake
     this.tab.updateStateProperty("asleep", false);
 
-    // Restore navigation history from pre-sleep state
+    // Restore navigation history from pre-sleep state (or load fallback URL if empty)
     if (this.preSleepState) {
-      this.tab.restoreNavigationHistory(this.preSleepState.navHistory, this.preSleepState.navHistoryIndex);
+      if (this.preSleepState.navHistory.length > 0) {
+        this.tab.restoreNavigationHistory(this.preSleepState.navHistory, this.preSleepState.navHistoryIndex);
+      } else if (this.preSleepState.url) {
+        this.tab.loadURL(this.preSleepState.url);
+      }
       this.preSleepState = null;
+    } else if (this.tab.url && this.tab.navHistory.length === 0) {
+      this.tab.loadURL(this.tab.url);
     }
 
     // Apply background color for the restored URL (the "updated" listener

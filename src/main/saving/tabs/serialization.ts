@@ -145,7 +145,8 @@ export function serializeTabForRenderer(tab: Tab, preSleepState?: PreSleepState 
     asleep: tab.asleep,
     readerMode: tab.readerMode || undefined,
     ephemeral: tab.ephemeral || undefined,
-    badgeCount: tab.badgeCount ?? undefined
+    badgeCount: tab.badgeCount ?? undefined,
+    hasUnseenUpdate: tab.hasUnseenUpdate || undefined
   };
 }
 
@@ -164,6 +165,9 @@ export function serializeTabGroup(tabGroup: TabGroup): PersistedTabGroupData {
       tabGroup.mode === "glance" ? tabGroup.tabs.find((t) => t.id === tabGroup.frontTabId)?.uniqueId : undefined,
     splitDirection: tabGroup.mode === "split" ? tabGroup.splitDirection : undefined,
     splitRatio: tabGroup.mode === "split" ? tabGroup.splitRatio : undefined,
+    name: tabGroup.mode === "folder" ? tabGroup.name : undefined,
+    color: tabGroup.mode === "folder" ? tabGroup.color : undefined,
+    collapsed: tabGroup.mode === "folder" ? tabGroup.collapsed : undefined,
     position: tabGroup.position
   };
 }
@@ -182,6 +186,9 @@ export function serializeTabGroupForRenderer(tabGroup: TabGroup): TabGroupData {
     glanceFrontTabId: tabGroup.mode === "glance" ? tabGroup.frontTabId : undefined,
     splitDirection: tabGroup.mode === "split" ? tabGroup.splitDirection : undefined,
     splitRatio: tabGroup.mode === "split" ? tabGroup.splitRatio : undefined,
+    name: tabGroup.mode === "folder" ? tabGroup.name : undefined,
+    color: tabGroup.mode === "folder" ? tabGroup.color : undefined,
+    collapsed: tabGroup.mode === "folder" ? tabGroup.collapsed : undefined,
     position: tabGroup.position
   };
 }

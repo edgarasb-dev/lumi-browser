@@ -1,6 +1,7 @@
 export const TAB_SCHEMA_VERSION = 1;
 
-export type TabGroupMode = "normal" | "glance" | "split";
+export type TabGroupMode = "normal" | "glance" | "split" | "folder";
+export type FolderColorId = "neutral" | "amber" | "blue" | "violet" | "emerald" | "rose";
 export type SplitDirection = "horizontal" | "vertical";
 
 export type NavigationEntry = {
@@ -52,6 +53,9 @@ export type PersistedTabGroupData = {
   glanceFrontTabUniqueId?: string;
   splitDirection?: SplitDirection;
   splitRatio?: number;
+  name?: string;
+  color?: FolderColorId;
+  collapsed?: boolean;
   position: number;
 };
 
@@ -77,6 +81,7 @@ export type TabData = Omit<PersistedTabData, "navHistory" | "navHistoryIndex"> &
   readerMode?: boolean;
   ephemeral?: boolean; // true for pinned-tab-associated tabs that shouldn't appear in the sidebar tab list
   badgeCount?: number | null;
+  hasUnseenUpdate?: boolean;
 };
 
 /**
@@ -92,7 +97,18 @@ export type TabGroupData = {
   glanceFrontTabId?: number;
   splitDirection?: SplitDirection;
   splitRatio?: number;
+  name?: string;
+  color?: FolderColorId;
+  collapsed?: boolean;
   position: number;
+};
+
+export type TidyResult = {
+  undoId: string | null;
+  summary: string;
+  groupedCount: number;
+  closedDuplicates: number;
+  closedBlankTabs: number;
 };
 
 // --- Persisted Window State (saved to disk, one per window) ---

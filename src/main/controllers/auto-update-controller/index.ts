@@ -1,7 +1,8 @@
 import { debugError, debugPrint } from "@/modules/output";
 import { TypedEventEmitter } from "@/modules/typed-event-emitter";
 import { sleep } from "@/modules/utils";
-import { getVersionUpdatedFrom, markUpdateStarted } from "@/saving/ephemeral";
+import { getVersionUpdatedFrom, markPreserveSessionForRestart, markUpdateStarted } from "@/saving/ephemeral";
+import { quitController } from "@/controllers/quit-controller";
 import { getSettingValueById, onSettingsCached, settingsEmitter } from "@/saving/settings";
 import { app } from "electron";
 import { autoUpdater, ProgressInfo, UpdateInfo, UpdateCheckResult } from "electron-updater";
@@ -439,6 +440,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
           expectedVersion: downloaded.version,
           onBeforeQuit: async () => {
             await markUpdateStarted(app.getVersion());
+            await markPreserveSessionForRestart();
+            await quitController.prepareForUpdateRestart();
           }
         });
         return true;
@@ -454,6 +457,8 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
     }
 
     await markUpdateStarted(app.getVersion());
+    await markPreserveSessionForRestart();
+    await quitController.prepareForUpdateRestart();
     autoUpdater.quitAndInstall();
     return true;
   }
@@ -502,6 +507,14 @@ export class AutoUpdateController extends TypedEventEmitter<AutoUpdateController
 
     settingsEmitter.on("settings-changed", () => {
       this.updateAutoUpdaterConfig();
+    });
+
+    // Ensure manual quit while an update is downloaded also marks session preservation
+    quitController.registerBeforeQuitPrep(async () => {
+      if (this.updateDownloaded) {
+        await markUpdateStarted(app.getVersion());
+        await markPreserveSessionForRestart();
+      }
     });
 
     // Run after App Ready

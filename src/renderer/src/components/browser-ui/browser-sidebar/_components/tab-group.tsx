@@ -1,10 +1,12 @@
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
+import { getTabUnreadCount } from "@/lib/unread-badge";
 import {
   XIcon,
   Volume2,
   VolumeX,
   Folder,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Columns2,
   Rows2,
@@ -16,7 +18,7 @@ import {
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { TabGroup as TabGroupType } from "@/components/providers/tabs-provider";
-import type { TabData } from "~/types/tabs";
+import type { FolderColorId, TabData, TabGroupMode } from "~/types/tabs";
 import {
   draggable,
   dropTargetForElements,
@@ -26,18 +28,41 @@ import { attachClosestEdge, extractClosestEdge, Edge } from "@atlaskit/pragmatic
 import { preserveOffsetOnSource } from "@atlaskit/pragmatic-drag-and-drop/element/preserve-offset-on-source";
 import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview";
 import { DropIndicator } from "@/components/browser-ui/browser-sidebar/_components/drop-indicator";
-import { isPinnedTabSource } from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
+import {
+  isFolderTabSource,
+  isPinnedTabSource,
+  isTabGroupSource
+} from "@/components/browser-ui/browser-sidebar/_components/drag-utils";
 import { TabPreviewCard } from "@/components/browser-ui/browser-sidebar/_components/tab-preview-card";
 
 /** Greater than 1 speeds up tab-group enter, exit, and layout motion. */
 const TAB_GROUP_MOTION_SPEED_MULTIPLIER = 2;
+
+const FOLDER_CARD_CLASSES: Record<FolderColorId, string> = {
+  neutral: "bg-black/[0.045] dark:bg-white/[0.06] border-black/[0.07] dark:border-white/[0.09]",
+  amber: "bg-amber-500/[0.11] dark:bg-amber-400/[0.11] border-amber-500/20 dark:border-amber-300/18",
+  blue: "bg-sky-500/[0.10] dark:bg-sky-400/[0.11] border-sky-500/20 dark:border-sky-300/18",
+  violet: "bg-violet-500/[0.10] dark:bg-violet-400/[0.11] border-violet-500/20 dark:border-violet-300/18",
+  emerald: "bg-emerald-500/[0.10] dark:bg-emerald-400/[0.11] border-emerald-500/20 dark:border-emerald-300/18",
+  rose: "bg-rose-500/[0.10] dark:bg-rose-400/[0.11] border-rose-500/20 dark:border-rose-300/18"
+};
 
 // --- Types --- //
 
 export type TabGroupSourceData = {
   type: "tab-group";
   tabGroupId: string;
+  mode: TabGroupMode;
   primaryTabId: number;
+  profileId: string;
+  spaceId: string;
+  position: number;
+};
+
+export type FolderTabSourceData = {
+  type: "folder-tab";
+  tabId: number;
+  folderGroupId: string;
   profileId: string;
   spaceId: string;
   position: number;
@@ -75,21 +100,38 @@ function renderTabGroupDragPreview({
   };
 }
 
+function getSourceSingleTabId(
+  sourceData: Record<string, unknown>
+): { tabId: number; profileId: string; spaceId: string } | null {
+  if (isFolderTabSource(sourceData)) {
+    return { tabId: sourceData.tabId, profileId: sourceData.profileId, spaceId: sourceData.spaceId };
+  }
+  if (isTabGroupSource(sourceData) && sourceData.mode === "normal") {
+    return { tabId: sourceData.primaryTabId, profileId: sourceData.profileId, spaceId: sourceData.spaceId };
+  }
+  return null;
+}
+
 // --- SidebarTab (memoized) --- //
 
 interface SidebarTabProps {
   tab: TabData;
   isFocused: boolean;
+  isSpaceLight: boolean;
+  inFolder?: boolean;
+  folderGroupId?: string;
+  moveTab: (tabId: number, newPosition: number) => void;
 }
 
 const SidebarTab = memo(
-  function SidebarTab({ tab, isFocused }: SidebarTabProps) {
+  function SidebarTab({ tab, isFocused, isSpaceLight, inFolder = false, folderGroupId, moveTab }: SidebarTabProps) {
     const [cachedFaviconUrl, setCachedFaviconUrl] = useState<string | null>(tab.faviconURL);
     const [isError, setIsError] = useState(false);
     const noFavicon = !cachedFaviconUrl || isError;
 
     const isMuted = tab.muted;
     const isPlayingAudio = tab.audible;
+    const showUnreadDot = !isFocused && (Boolean(tab.hasUnseenUpdate) || getTabUnreadCount(tab) !== null);
 
     useEffect(() => {
       if (tab.faviconURL) {
@@ -130,8 +172,7 @@ const SidebarTab = memo(
       (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!tab.id) return;
-        const newMutedState = !tab.muted;
-        lumi.tabs.setTabMuted(tab.id, newMutedState);
+        lumi.tabs.setTabMuted(tab.id, !tab.muted);
       },
       [tab.id, tab.muted]
     );
@@ -151,6 +192,7 @@ const SidebarTab = memo(
     const tabRef = useRef<HTMLDivElement>(null);
     const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [closestChildEdge, setClosestChildEdge] = useState<Edge | null>(null);
     const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleMouseEnter = useCallback(() => {
@@ -186,8 +228,72 @@ const SidebarTab = memo(
       }
     }, [isFocused]);
 
+    // Enable per-tab dragging & reordering when inside a Folder
+    useEffect(() => {
+      const el = tabRef.current;
+      if (!el || !inFolder || !folderGroupId) return () => {};
+
+      const cleanupDrag = draggable({
+        element: el,
+        getInitialData: (): FolderTabSourceData => ({
+          type: "folder-tab",
+          tabId: tab.id,
+          folderGroupId,
+          profileId: tab.profileId,
+          spaceId: tab.spaceId,
+          position: tab.position
+        }),
+        onGenerateDragPreview: ({ nativeSetDragImage, location }) => {
+          setCustomNativeDragPreview({
+            nativeSetDragImage,
+            getOffset: preserveOffsetOnSource({ element: el, input: location.current.input }),
+            render: ({ container }) => renderTabGroupDragPreview({ container, element: el, isSpaceLight })
+          });
+        }
+      });
+
+      const cleanupDrop = dropTargetForElements({
+        element: el,
+        getData: ({ input, element }) => attachClosestEdge({}, { input, element, allowedEdges: ["top", "bottom"] }),
+        canDrop: ({ source }) => {
+          const single = getSourceSingleTabId(source.data);
+          if (!single) return false;
+          return single.profileId === tab.profileId && single.tabId !== tab.id;
+        },
+        onDragEnter: ({ self }) => setClosestChildEdge(extractClosestEdge(self.data)),
+        onDrag: ({ self }) => setClosestChildEdge(extractClosestEdge(self.data)),
+        onDragLeave: () => setClosestChildEdge(null),
+        onDrop: ({ source, self }) => {
+          const edge = extractClosestEdge(self.data);
+          setClosestChildEdge(null);
+          const single = getSourceSingleTabId(source.data);
+          if (!single || !edge) return;
+
+          const newPos = edge === "top" ? tab.position - 0.5 : tab.position + 0.5;
+          if (isFolderTabSource(source.data) && source.data.folderGroupId === folderGroupId) {
+            moveTab(single.tabId, newPos);
+          } else {
+            void lumi.tabs.addTabToFolder(folderGroupId, single.tabId, newPos);
+          }
+        }
+      });
+
+      return () => {
+        cleanupDrag();
+        cleanupDrop();
+      };
+    }, [inFolder, folderGroupId, tab.id, tab.profileId, tab.spaceId, tab.position, isSpaceLight, moveTab]);
+
+    const showCloseAlways = inFolder && isFocused;
+
     return (
-      <>
+      <div className="relative">
+        {closestChildEdge === "top" && (
+          <div className="absolute top-0 left-0 right-0 -translate-y-1/2 z-elevated pointer-events-none">
+            <DropIndicator isSpaceLight={isSpaceLight} />
+          </div>
+        )}
+
         <motion.div
           ref={tabRef}
           onContextMenu={handleContextMenu}
@@ -205,18 +311,18 @@ const SidebarTab = memo(
           animate={{ scale: isPressed ? 0.99 : 1 }}
           transition={{ scale: { type: "spring", stiffness: 600, damping: 20 } }}
           className={cn(
-            "group/tab h-9 w-full rounded-xl overflow-hidden min-w-0",
-            "flex items-center gap-2 px-2.5",
+            "group/tab h-9 w-full overflow-hidden min-w-0",
+            inFolder ? "rounded-lg px-2" : "rounded-xl px-2.5",
+            "flex items-center gap-2",
             "transition-[background-color,box-shadow] duration-150",
             !isFocused && "hover:bg-black/[0.06] dark:hover:bg-white/[0.09]",
             isFocused &&
               "bg-white/92 dark:bg-white/[0.17] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] ring-1 ring-black/[0.06] dark:ring-white/[0.14]"
           )}
         >
-          {/* Left side: favicon + audio + title */}
+          {/* Left side: favicon + title (strictly uniform horizontal alignment) */}
           <div className="flex flex-row items-center flex-1 min-w-0">
-            {/* Favicon */}
-            <div className="size-4 shrink-0 mr-1">
+            <div className="size-4 shrink-0 mr-1.5">
               {!noFavicon && (
                 <img
                   src={craftActiveFaviconURL(tab.id, tab.faviconURL)}
@@ -229,37 +335,25 @@ const SidebarTab = memo(
               {noFavicon && <div className="size-full bg-gray-300 dark:bg-gray-300/30 rounded-sm" />}
             </div>
 
-            {/* Audio Indicator */}
-            <AnimatePresence initial={false}>
-              {(isPlayingAudio || isMuted) && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8, width: 0 }}
-                  animate={{ opacity: 1, scale: 1, width: "auto" }}
-                  exit={{ opacity: 0, scale: 0.8, width: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center overflow-hidden shrink-0"
-                  onClick={handleToggleMute}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <div className="size-5 flex items-center justify-center rounded-sm hover:bg-black/10 dark:hover:bg-white/10">
-                    <VolumeIcon className={cn("size-3.5", "text-black/50 dark:text-white/50")} />
-                  </div>
-                </motion.button>
-              )}
-            </AnimatePresence>
-
-            {/* Title */}
             <span
               className={cn(
-                "ml-1 truncate min-w-0 flex-1 text-sm font-medium",
+                "truncate min-w-0 flex-1 text-sm font-medium",
                 tab.asleep ? "text-black/50 dark:text-white/50" : "text-black/90 dark:text-white/90"
               )}
             >
               {tab.title}
             </span>
+          </div>
 
-            {/* Asleep indicator */}
+          {/* Right side: unread dot, asleep badge, audio toggle, close button */}
+          <div className="shrink-0 flex items-center gap-1 ml-1">
+            {showUnreadDot && (
+              <span
+                title="Updated in background"
+                className="size-1.5 rounded-full bg-black/75 dark:bg-white/85 shrink-0 group-hover/tab:hidden"
+              />
+            )}
+
             {tab.asleep && (
               <span
                 className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 shrink-0 group-hover/tab:hidden"
@@ -268,25 +362,52 @@ const SidebarTab = memo(
                 Zzz
               </span>
             )}
-          </div>
 
-          {/* Right side: close button */}
-          <div className="shrink-0 items-center hidden group-hover/tab:flex">
-            <button
-              className={cn(
-                "size-5.5 shrink-0 rounded-sm p-0.5",
-                "hover:bg-black/10 dark:hover:bg-white/10",
-                "active:bg-black/15 dark:active:bg-white/15",
-                "opacity-0 pointer-events-none transition-opacity",
-                "group-hover/tab:opacity-100 group-hover/tab:pointer-events-auto"
+            <AnimatePresence initial={false}>
+              {(isPlayingAudio || isMuted) && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  className="size-5 flex items-center justify-center rounded-sm hover:bg-black/10 dark:hover:bg-white/10 shrink-0"
+                  onClick={handleToggleMute}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title={isMuted ? "Unmute tab" : "Mute tab"}
+                >
+                  <VolumeIcon className="size-3.5 text-black/55 dark:text-white/60" />
+                </motion.button>
               )}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={handleCloseTab}
-            >
-              <XIcon className="size-4.5 text-black/60 dark:text-white/60" />
-            </button>
+            </AnimatePresence>
+
+            <div className={cn("shrink-0 items-center", showCloseAlways ? "flex" : "hidden group-hover/tab:flex")}>
+              <button
+                type="button"
+                className={cn(
+                  "size-5.5 shrink-0 rounded-sm p-0.5 flex items-center justify-center",
+                  "hover:bg-black/10 dark:hover:bg-white/10",
+                  "active:bg-black/15 dark:active:bg-white/15",
+                  showCloseAlways
+                    ? "opacity-75 hover:opacity-100"
+                    : "opacity-0 pointer-events-none transition-opacity group-hover/tab:opacity-100 group-hover/tab:pointer-events-auto"
+                )}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={handleCloseTab}
+                title="Close Tab"
+              >
+                <XIcon className="size-4 text-black/60 dark:text-white/60" />
+              </button>
+            </div>
           </div>
         </motion.div>
+
+        {closestChildEdge === "bottom" && (
+          <div className="absolute bottom-0 left-0 right-0 translate-y-1/2 z-elevated pointer-events-none">
+            <DropIndicator isSpaceLight={isSpaceLight} />
+          </div>
+        )}
 
         <TabPreviewCard
           tab={tab}
@@ -305,12 +426,18 @@ const SidebarTab = memo(
             if (tab.id) lumi.tabs.setTabMuted(tab.id, !tab.muted);
           }}
         />
-      </>
+      </div>
     );
   },
-  // The provider preserves tab object references for unchanged tabs.
   (prev, next) => {
-    return prev.isFocused === next.isFocused && prev.tab === next.tab;
+    return (
+      prev.isFocused === next.isFocused &&
+      prev.tab === next.tab &&
+      prev.isSpaceLight === next.isSpaceLight &&
+      prev.inFolder === next.inFolder &&
+      prev.folderGroupId === next.folderGroupId &&
+      prev.moveTab === next.moveTab
+    );
   }
 );
 
@@ -331,83 +458,188 @@ export const TabGroup = memo(
   function TabGroup({ tabGroup, isFocused, isSpaceLight, position, moveTab, unpinToTabList }: TabGroupProps) {
     const { tabs, focusedTab } = tabGroup;
     const ref = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
     const [closestEdge, setClosestEdge] = useState<Edge | null>(null);
-    const isMultiTabGroup = tabs.length > 1;
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isDropIntoFolder, setIsDropIntoFolder] = useState(false);
+
+    const isFolder = tabGroup.mode === "folder";
+    const isMultiTabGroup = !isFolder && tabs.length > 1;
+    const [localCollapsed, setLocalCollapsed] = useState(false);
+    const isCollapsed = isFolder ? Boolean(tabGroup.collapsed) : localCollapsed;
+
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [draftName, setDraftName] = useState(tabGroup.name || "Folder");
+    const renameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-      if (isFocused && isCollapsed) {
-        setIsCollapsed(false);
+      if (!isEditingName) {
+        setDraftName(tabGroup.name || "Folder");
       }
-    }, [isFocused, isCollapsed]);
+    }, [tabGroup.name, isEditingName]);
 
-    // Extract stable primitives for the drag-and-drop effect dependencies.
-    // Previously, tabGroup.tabs (a new array each render) was in the dep array,
-    // causing the effect to re-run on every tab data update.
+    useEffect(() => {
+      if (isEditingName) {
+        renameInputRef.current?.focus();
+        renameInputRef.current?.select();
+      }
+    }, [isEditingName]);
+
+    useEffect(() => {
+      if (!isFolder && isFocused && localCollapsed) {
+        setLocalCollapsed(false);
+      }
+    }, [isFolder, isFocused, localCollapsed]);
+
+    const commitRename = useCallback(() => {
+      setIsEditingName(false);
+      const trimmed = draftName.trim();
+      if (trimmed && trimmed !== (tabGroup.name || "Folder")) {
+        void lumi.tabs.renameFolder(tabGroup.id, trimmed);
+      } else {
+        setDraftName(tabGroup.name || "Folder");
+      }
+    }, [draftName, tabGroup.id, tabGroup.name]);
+
+    const toggleCollapse = useCallback(() => {
+      if (isEditingName) return;
+      if (isFolder) {
+        void lumi.tabs.setFolderCollapsed(tabGroup.id, !isCollapsed);
+      } else {
+        setLocalCollapsed((prev) => !prev);
+      }
+    }, [isEditingName, isFolder, isCollapsed, tabGroup.id]);
+
     const primaryTabId = tabs[0]?.id;
+    const firstPosition = tabs[0]?.position ?? position;
+    const lastPosition = tabs[tabs.length - 1]?.position ?? position;
+
+    // Folder header dedicated drop target: dropping single tabs onto the header always adds into the folder
+    useEffect(() => {
+      const headerEl = headerRef.current;
+      if (!headerEl || !isFolder) return () => {};
+
+      return dropTargetForElements({
+        element: headerEl,
+        canDrop: ({ source }) => {
+          const single = getSourceSingleTabId(source.data);
+          if (!single) return false;
+          if (single.profileId !== tabGroup.profileId) return false;
+          if (isFolderTabSource(source.data) && source.data.folderGroupId === tabGroup.id) return false;
+          return true;
+        },
+        onDragEnter: () => setIsDropIntoFolder(true),
+        onDragLeave: () => setIsDropIntoFolder(false),
+        onDrop: ({ source }) => {
+          setIsDropIntoFolder(false);
+          const single = getSourceSingleTabId(source.data);
+          if (!single) return;
+          void lumi.tabs.addTabToFolder(tabGroup.id, single.tabId);
+        }
+      });
+    }, [isFolder, tabGroup.id, tabGroup.profileId]);
 
     useEffect(() => {
       const el = ref.current;
       if (!el) return () => {};
 
-      function onChange({ self }: ElementDropTargetEventBasePayload) {
+      function onChange({ source, self, location }: ElementDropTargetEventBasePayload) {
+        // Defer to innermost child drop target (folder header or child SidebarTab) if active
+        if (location.current.dropTargets[0]?.element !== el) {
+          setClosestEdge(null);
+          return;
+        }
+
+        // For collapsed folders or folder edges, check if a single tab is hovering middle vs top/bottom
         const edge = extractClosestEdge(self.data);
+        if (isFolder && isCollapsed && getSourceSingleTabId(source.data)) {
+          const rect = el!.getBoundingClientRect();
+          const relY = (location.current.input.clientY - rect.top) / Math.max(1, rect.height);
+          if (relY > 0.24 && relY < 0.76) {
+            setClosestEdge(null);
+            setIsDropIntoFolder(true);
+            return;
+          }
+          setIsDropIntoFolder(false);
+        }
         setClosestEdge(edge);
       }
 
       function onDrop(args: ElementDropTargetEventBasePayload) {
-        const closestEdgeOfTarget: Edge | null = extractClosestEdge(args.self.data);
-        setClosestEdge(null);
-
-        const sourceData = args.source.data;
-
-        // Handle pinned tab drops — unpin to tab list at the drop position
-        if (isPinnedTabSource(sourceData)) {
-          let newPos: number;
-          if (closestEdgeOfTarget === "top") {
-            newPos = position - 0.5;
-          } else {
-            newPos = position + 0.5;
-          }
-          unpinToTabList(sourceData.pinnedTabId, newPos);
+        if (args.location.current.dropTargets[0]?.element !== el) {
+          setClosestEdge(null);
+          setIsDropIntoFolder(false);
           return;
         }
 
-        const tabGroupData = sourceData as TabGroupSourceData;
-        const sourceTabId = tabGroupData.primaryTabId;
+        const closestEdgeOfTarget: Edge | null = extractClosestEdge(args.self.data);
+        const wasDropIntoFolder = isDropIntoFolder;
+        setClosestEdge(null);
+        setIsDropIntoFolder(false);
 
-        let newPos: number | undefined = undefined;
+        const sourceData = args.source.data;
+        const single = getSourceSingleTabId(sourceData);
 
-        if (closestEdgeOfTarget === "top") {
-          newPos = position - 0.5;
-        } else if (closestEdgeOfTarget === "bottom") {
-          newPos = position + 0.5;
+        if (isFolder && isCollapsed && wasDropIntoFolder && single) {
+          void lumi.tabs.addTabToFolder(tabGroup.id, single.tabId);
+          return;
         }
 
-        if (tabGroupData.spaceId !== tabGroup.spaceId) {
-          if (tabGroupData.profileId !== tabGroup.profileId) {
-            // TODO: @MOVE_TABS_BETWEEN_PROFILES not supported yet
+        const newPos = closestEdgeOfTarget === "top" ? firstPosition - 0.5 : lastPosition + 0.5;
+
+        // Handle pinned tab drops — unpin to tab list at the drop position
+        if (isPinnedTabSource(sourceData)) {
+          void unpinToTabList(sourceData.pinnedTabId, newPos);
+          return;
+        }
+
+        // Pulling a tab out of a folder onto another group/loose row edge
+        if (isFolderTabSource(sourceData)) {
+          if (sourceData.folderGroupId === tabGroup.id) return;
+          if (sourceData.profileId !== tabGroup.profileId) return;
+          if (isFolder) {
+            void lumi.tabs.addTabToFolder(tabGroup.id, sourceData.tabId, newPos);
           } else {
-            lumi.tabs.moveTabToWindowSpace(sourceTabId, tabGroup.spaceId, newPos);
+            void lumi.tabs.removeTabFromFolder(sourceData.tabId, newPos);
           }
-        } else if (newPos !== undefined) {
+          return;
+        }
+
+        if (!isTabGroupSource(sourceData)) return;
+
+        // Dropping an entire folder or grouped unit
+        if (sourceData.mode === "folder" || sourceData.mode === "split" || sourceData.mode === "glance") {
+          if (sourceData.spaceId !== tabGroup.spaceId) {
+            if (sourceData.profileId === tabGroup.profileId) {
+              void lumi.tabs.moveTabGroupToSpace(sourceData.tabGroupId, tabGroup.spaceId, newPos);
+            }
+          } else {
+            void lumi.tabs.moveTabGroup(sourceData.tabGroupId, newPos);
+          }
+          return;
+        }
+
+        const sourceTabId = sourceData.primaryTabId;
+        if (sourceData.spaceId !== tabGroup.spaceId) {
+          if (sourceData.profileId === tabGroup.profileId) {
+            void lumi.tabs.moveTabToWindowSpace(sourceTabId, tabGroup.spaceId, newPos);
+          }
+        } else {
           moveTab(sourceTabId, newPos);
         }
       }
 
       const draggableCleanup = draggable({
         element: el,
-        getInitialData: () => {
-          const data: TabGroupSourceData = {
-            type: "tab-group",
-            tabGroupId: tabGroup.id,
-            primaryTabId: primaryTabId,
-            profileId: tabGroup.profileId,
-            spaceId: tabGroup.spaceId,
-            position: position
-          };
-          return data;
-        },
+        canDrag: () => !isEditingName,
+        getInitialData: (): TabGroupSourceData => ({
+          type: "tab-group",
+          tabGroupId: tabGroup.id,
+          mode: tabGroup.mode,
+          primaryTabId: primaryTabId,
+          profileId: tabGroup.profileId,
+          spaceId: tabGroup.spaceId,
+          position: firstPosition
+        }),
         onGenerateDragPreview: ({ nativeSetDragImage, location }) => {
           setCustomNativeDragPreview({
             nativeSetDragImage,
@@ -422,40 +654,31 @@ export const TabGroup = memo(
 
       const cleanupDropTarget = dropTargetForElements({
         element: el,
-        getData: ({ input, element }) => {
-          return attachClosestEdge(
-            {},
-            {
-              input,
-              element,
-              allowedEdges: ["top", "bottom"]
-            }
-          );
-        },
+        getData: ({ input, element }) => attachClosestEdge({}, { input, element, allowedEdges: ["top", "bottom"] }),
         canDrop: (args) => {
           const sourceData = args.source.data;
 
-          // Accept pinned tab drags (for unpinning)
           if (isPinnedTabSource(sourceData)) {
             return sourceData.profileId === tabGroup.profileId;
           }
 
-          const tabGroupData = sourceData as TabGroupSourceData;
-          if (tabGroupData.type !== "tab-group") {
-            return false;
+          if (isFolderTabSource(sourceData)) {
+            if (sourceData.folderGroupId === tabGroup.id) return false;
+            return sourceData.profileId === tabGroup.profileId;
           }
-          if (tabGroupData.tabGroupId === tabGroup.id) {
-            return false;
-          }
-          if (tabGroupData.profileId !== tabGroup.profileId) {
-            return false;
-          }
+
+          if (!isTabGroupSource(sourceData)) return false;
+          if (sourceData.tabGroupId === tabGroup.id) return false;
+          if (sourceData.profileId !== tabGroup.profileId) return false;
           return true;
         },
-        onDrop: onDrop,
+        onDrop,
         onDragEnter: onChange,
         onDrag: onChange,
-        onDragLeave: () => setClosestEdge(null)
+        onDragLeave: () => {
+          setClosestEdge(null);
+          setIsDropIntoFolder(false);
+        }
       });
 
       return () => {
@@ -466,12 +689,20 @@ export const TabGroup = memo(
       moveTab,
       unpinToTabList,
       tabGroup.id,
-      position,
+      tabGroup.mode,
+      firstPosition,
+      lastPosition,
       primaryTabId,
       tabGroup.spaceId,
       tabGroup.profileId,
-      isSpaceLight
+      isSpaceLight,
+      isFolder,
+      isCollapsed,
+      isEditingName,
+      isDropIntoFolder
     ]);
+
+    const folderCardClass = FOLDER_CARD_CLASSES[tabGroup.color ?? "neutral"];
 
     return (
       <motion.div
@@ -497,7 +728,14 @@ export const TabGroup = memo(
           opacity: { duration: 0.15 / TAB_GROUP_MOTION_SPEED_MULTIPLIER }
         }}
         style={{ overflow: "hidden" }}
-        className="relative flex flex-col gap-0.5"
+        className={cn(
+          "relative flex flex-col gap-0.5",
+          isFolder && [
+            "rounded-xl border p-1 transition-[background-color,border-color,box-shadow] duration-150",
+            folderCardClass,
+            isDropIntoFolder && "ring-2 ring-primary/65"
+          ]
+        )}
         ref={ref}
       >
         {closestEdge === "top" && (
@@ -505,15 +743,106 @@ export const TabGroup = memo(
             <DropIndicator isSpaceLight={isSpaceLight} />
           </div>
         )}
-        {isMultiTabGroup && (
+
+        {isFolder && (
+          <div
+            ref={headerRef}
+            role="button"
+            tabIndex={0}
+            onClick={toggleCollapse}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditingName(true);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              lumi.tabs.showFolderContextMenu(tabGroup.id);
+            }}
+            onKeyDown={(e) => {
+              if (!isEditingName && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                toggleCollapse();
+              }
+            }}
+            className={cn(
+              "group/header flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium cursor-pointer select-none",
+              "text-black/75 dark:text-white/80 hover:text-black dark:hover:text-white",
+              "transition-colors"
+            )}
+          >
+            <Folder className="size-3.5 shrink-0 opacity-75" />
+
+            {isEditingName ? (
+              <input
+                ref={renameInputRef}
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitRename();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setDraftName(tabGroup.name || "Folder");
+                    setIsEditingName(false);
+                  }
+                }}
+                className="min-w-0 flex-1 bg-transparent outline-none border-b border-black/30 dark:border-white/40 text-xs font-medium px-0.5"
+              />
+            ) : (
+              <span className="truncate font-semibold">{tabGroup.name || "Folder"}</span>
+            )}
+
+            {!isEditingName &&
+              (isCollapsed ? (
+                <ChevronDown className="size-3 shrink-0 opacity-60" />
+              ) : (
+                <ChevronUp className="size-3 shrink-0 opacity-60" />
+              ))}
+
+            {isCollapsed && !isEditingName && (
+              <div className="ml-auto flex items-center gap-1 shrink-0">
+                <div className="flex items-center -space-x-1">
+                  {tabs.slice(0, 3).map((t) => (
+                    <span
+                      key={t.id}
+                      className="size-3.5 rounded-[3px] overflow-hidden bg-black/15 dark:bg-white/15 ring-1 ring-black/15 dark:ring-white/20 flex items-center justify-center shrink-0"
+                    >
+                      {t.faviconURL ? (
+                        <img
+                          src={craftActiveFaviconURL(t.id, t.faviconURL)}
+                          alt=""
+                          className="size-3.5 object-contain"
+                          style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties}
+                        />
+                      ) : (
+                        <span className="size-1.5 rounded-full bg-black/35 dark:bg-white/40" />
+                      )}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-[11px] font-semibold tabular-nums text-black/55 dark:text-white/55">
+                  {tabs.length}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isFolder && isMultiTabGroup && (
           <div
             role="button"
             tabIndex={0}
-            onClick={() => setIsCollapsed((prev) => !prev)}
+            onClick={toggleCollapse}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                setIsCollapsed((prev) => !prev);
+                toggleCollapse();
               }
             }}
             className={cn(
@@ -534,9 +863,7 @@ export const TabGroup = memo(
             ) : (
               <Folder className="size-3.5 text-amber-500/80" />
             )}
-            <span className="truncate flex-1">
-              {tabGroup.mode === "split" ? "Split View" : tabGroup.mode === "glance" ? "Glance" : "Tab Group"}
-            </span>
+            <span className="truncate flex-1">{tabGroup.mode === "split" ? "Split View" : "Glance"}</span>
 
             {tabGroup.mode === "split" && (
               <div
@@ -612,24 +939,34 @@ export const TabGroup = memo(
             </span>
           </div>
         )}
+
         <AnimatePresence initial={false}>
-          {(!isCollapsed || !isMultiTabGroup) && (
+          {(!isCollapsed || (!isFolder && !isMultiTabGroup)) && (
             <motion.div
-              initial={isMultiTabGroup ? { opacity: 0, height: 0 } : false}
+              initial={isFolder || isMultiTabGroup ? { opacity: 0, height: 0 } : false}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.15 }}
               className={cn(
                 "flex flex-col gap-0.5",
-                isMultiTabGroup && "pl-2 border-l border-black/10 dark:border-white/10 ml-2"
+                !isFolder && isMultiTabGroup && "pl-2 border-l border-black/10 dark:border-white/10 ml-2"
               )}
             >
               {tabs.map((tab) => (
-                <SidebarTab key={tab.id} tab={tab} isFocused={isFocused && focusedTab?.id === tab.id} />
+                <SidebarTab
+                  key={tab.id}
+                  tab={tab}
+                  isFocused={isFocused && focusedTab?.id === tab.id}
+                  isSpaceLight={isSpaceLight}
+                  inFolder={isFolder}
+                  folderGroupId={isFolder ? tabGroup.id : undefined}
+                  moveTab={moveTab}
+                />
               ))}
             </motion.div>
           )}
         </AnimatePresence>
+
         {closestEdge === "bottom" && (
           <div className="absolute bottom-0 left-0 right-0 translate-y-1/2 z-elevated pointer-events-none">
             <DropIndicator isSpaceLight={isSpaceLight} />
@@ -638,7 +975,6 @@ export const TabGroup = memo(
       </motion.div>
     );
   },
-  // TabGroup references are stabilized by TabsProvider cache.
   (prev, next) => {
     return (
       prev.tabGroup === next.tabGroup &&
