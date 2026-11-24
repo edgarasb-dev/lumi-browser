@@ -549,6 +549,13 @@ export class Tab extends TypedEventEmitter<TabEvents> {
   private setupWebContentsListeners() {
     const webContents = this.webContents!;
 
+    const applyVisualZoomLimits = () => {
+      if (!webContents.isDestroyed()) {
+        void webContents.setVisualZoomLevelLimits(1, 5).catch(() => undefined);
+      }
+    };
+    applyVisualZoomLimits();
+
     webContents.on("page-title-updated", (_event, title) => {
       if (this.loadedProfile.profileData.ephemeral) return;
       if (!this.tabsController.isTabActive(this)) return;
@@ -563,7 +570,7 @@ export class Tab extends TypedEventEmitter<TabEvents> {
 
     // Set zoom level limits and apply per-origin zoom / Night Shade
     webContents.on("did-finish-load", () => {
-      webContents.setVisualZoomLevelLimits(1, 5);
+      applyVisualZoomLimits();
       this.recordBrowsingHistoryFromWebContents(webContents);
       void this.applySiteSettingsForCurrentUrl();
       if (this.visible) {
@@ -573,6 +580,7 @@ export class Tab extends TypedEventEmitter<TabEvents> {
 
     webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
       if (isMainFrame) {
+        applyVisualZoomLimits();
         this.smartDarkCssKey = null;
         if (!isInPlace && this.badgeCount !== null) {
           this.updateStateProperty("badgeCount", null);

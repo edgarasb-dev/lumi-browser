@@ -1,4 +1,4 @@
-import { session, WebContentsView } from "electron";
+import { session, WebContentsView, type WebContents } from "electron";
 import { Layer } from "@/controllers/windows-controller/layer-manager";
 import { createModalTo, focusPriorities, zIndexes } from "~/layers";
 import { sessionsController } from "@/controllers/sessions-controller";
@@ -41,12 +41,20 @@ export class SidePanelController {
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
+        scrollBounce: true,
         session: activeSession
       }
     });
     view.setBorderRadius(10);
 
     const wc = view.webContents;
+    const applyVisualZoomLimits = () => {
+      if (!wc.isDestroyed()) {
+        void wc.setVisualZoomLevelLimits(1, 5).catch(() => undefined);
+      }
+    };
+    applyVisualZoomLimits();
+
     const emitState = () => {
       if (this.isDestroyed || wc.isDestroyed() || this.parentWindow.destroyed) return;
       const state: CompanionWebState = {
@@ -61,6 +69,10 @@ export class SidePanelController {
 
     wc.on("did-start-loading", emitState);
     wc.on("did-stop-loading", emitState);
+    wc.on("did-start-navigation", (_event, _url, _isInPlace, isMainFrame) => {
+      if (isMainFrame) applyVisualZoomLimits();
+    });
+    wc.on("did-finish-load", applyVisualZoomLimits);
     wc.on("did-navigate", emitState);
     wc.on("did-navigate-in-page", emitState);
     wc.on("page-title-updated", emitState);
@@ -166,6 +178,21 @@ export class SidePanelController {
     if (!this.view || this.view.webContents.isDestroyed()) return false;
     this.view.webContents.reload();
     return true;
+  }
+
+  public getWebContents(): WebContents | null {
+    if (this.isDestroyed || !this.view || this.view.webContents.isDestroyed()) {
+      return null;
+    }
+    return this.view.webContents;
+  }
+
+  public isWebViewFocused(): boolean {
+    if (this.isDestroyed || !this.isVisible || this.currentMode !== "web") {
+      return false;
+    }
+    const wc = this.getWebContents();
+    return Boolean(wc && wc.isFocused());
   }
 
   public destroy(): void {

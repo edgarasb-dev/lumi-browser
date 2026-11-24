@@ -102,10 +102,10 @@ function FindInPageBar({
         onClick={onFindPrevious}
         disabled={!query || totalMatches === 0}
         className={cn(
-          "p-1 rounded-md text-white/70",
-          "hover:bg-white/10 hover:text-white",
-          "disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-white/70",
-          "transition-colors duration-150"
+          "p-1 rounded-md text-white/70 cursor-pointer",
+          "hover:bg-white/10 hover:text-white active:scale-90",
+          "disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-white/70 disabled:pointer-events-none",
+          "transition-all duration-150"
         )}
         title="Previous match (Shift+Enter)"
       >
@@ -116,10 +116,10 @@ function FindInPageBar({
         onClick={onFindNext}
         disabled={!query || totalMatches === 0}
         className={cn(
-          "p-1 rounded-md text-white/70",
-          "hover:bg-white/10 hover:text-white",
-          "disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-white/70",
-          "transition-colors duration-150"
+          "p-1 rounded-md text-white/70 cursor-pointer",
+          "hover:bg-white/10 hover:text-white active:scale-90",
+          "disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-white/70 disabled:pointer-events-none",
+          "transition-all duration-150"
         )}
         title="Next match (Enter)"
       >
@@ -129,9 +129,9 @@ function FindInPageBar({
       <button
         onClick={onClose}
         className={cn(
-          "p-1 rounded-md text-white/70",
-          "hover:bg-white/10 hover:text-white",
-          "transition-colors duration-150"
+          "p-1 rounded-md text-white/70 cursor-pointer",
+          "hover:bg-white/10 hover:text-white active:scale-90",
+          "transition-all duration-150"
         )}
         title="Close (Esc)"
       >

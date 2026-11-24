@@ -65,15 +65,28 @@ export function NavButton({
   onMouseDown?: () => void;
   onMouseUp?: () => void;
 }) {
+  const [isPressed, setIsPressed] = useState(false);
+
   return (
-    <button
+    <motion.button
       disabled={disabled}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      onMouseDown={onMouseDown}
-      onMouseUp={onMouseUp}
+      // motion's whileTap does not work reliably across PortalComponent documents,
+      // so manage press scale in React state.
+      onMouseDown={() => {
+        setIsPressed(true);
+        onMouseDown?.();
+      }}
+      onMouseUp={() => {
+        setIsPressed(false);
+        onMouseUp?.();
+      }}
+      onMouseLeave={() => setIsPressed(false)}
+      animate={{ scale: isPressed && !disabled ? 0.9 : 1 }}
+      transition={{ type: "spring", stiffness: 600, damping: 24 }}
       className={cn(
-        "size-7 flex items-center justify-center rounded-md remove-app-drag",
+        "size-7 flex items-center justify-center rounded-md remove-app-drag cursor-pointer",
         "bg-transparent hover:bg-black/10 dark:hover:bg-white/10",
         "text-black/80 dark:text-white/80",
         "disabled:opacity-30 disabled:pointer-events-none",
@@ -81,7 +94,7 @@ export function NavButton({
       )}
     >
       {icon}
-    </button>
+    </motion.button>
   );
 }
 
@@ -181,7 +194,16 @@ function ReloadButton({ disabled, onReload }: { disabled: boolean; onReload: () 
 
   return (
     <NavButton
-      icon={<RefreshCWIcon ref={iconRef} className="size-4.5 bg-transparent! cursor-default!" asChild />}
+      icon={
+        <motion.div
+          initial={{ opacity: 0, rotate: -45, scale: 0.85 }}
+          animate={{ opacity: 1, rotate: 0, scale: 1 }}
+          exit={{ opacity: 0, rotate: 45, scale: 0.85 }}
+          transition={{ duration: 0.16, ease: "easeOut" }}
+        >
+          <RefreshCWIcon ref={iconRef} className="size-4.5 bg-transparent! cursor-default!" asChild />
+        </motion.div>
+      }
       disabled={disabled}
       onClick={onReload}
       onMouseDown={handleMouseDown}
@@ -196,10 +218,10 @@ function StopLoadingButton({ onStop }: { onStop: () => void }) {
     <NavButton
       icon={
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0, rotate: -90, scale: 0.75 }}
+          animate={{ opacity: 1, rotate: 0, scale: 1 }}
+          exit={{ opacity: 0, rotate: 90, scale: 0.75 }}
+          transition={{ duration: 0.16, ease: "easeOut" }}
         >
           <XIcon className="size-4.5" />
         </motion.div>

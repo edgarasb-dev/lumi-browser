@@ -8,6 +8,7 @@ import { tryPatchPasskeys } from "./webauthn";
 import { tryPatchPrompts } from "./prompts";
 import { tryPatchPasswords } from "./passwords";
 import { tryPatchAppBadge } from "./app-badge";
+import { tryPatchTrackpadGestures } from "./gestures";
 
 // TYPE IMPORTS //
 import type { ProfileData } from "@/controllers/profiles-controller";
@@ -131,6 +132,7 @@ tryPatchPasskeys();
 tryPatchPrompts();
 tryPatchPasswords();
 tryPatchAppBadge();
+tryPatchTrackpadGestures();
 
 // INTERNAL FUNCTIONS //
 function getOSFromPlatform(platform: NodeJS.Platform) {

@@ -164,7 +164,9 @@ export function OmniboxSuggestionRow({
             className="pointer-events-none absolute inset-0 rounded-xl bg-primary/14 ring-1 ring-primary/28 dark:bg-primary/22 dark:ring-primary/35"
           />
         )}
-        <span
+        <motion.span
+          animate={{ scale: selected ? 1.08 : 1 }}
+          transition={{ type: "spring", stiffness: 480, damping: 28 }}
           className={cn(
             "relative z-10 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg",
             selected && hasLoadedFavicon
@@ -180,7 +182,7 @@ export function OmniboxSuggestionRow({
             faviconUrl={faviconUrl}
             setHasLoadedFavicon={setHasLoadedFavicon}
           />
-        </span>
+        </motion.span>
 
         <div className="relative z-10 min-w-0 flex-1">
           <div className="truncate font-sans text-[14px] font-medium leading-tight">
@@ -216,9 +218,9 @@ export function OmniboxSuggestionRow({
             </span>
             <span
               className={cn(
-                "flex size-6 items-center justify-center rounded-md transition-colors",
+                "flex size-6 items-center justify-center rounded-md transition-all duration-150",
                 selected
-                  ? "bg-primary text-primary-foreground shadow-xs"
+                  ? "bg-primary text-primary-foreground shadow-xs translate-x-0.5"
                   : "bg-black/6 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
               )}
             >

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.8] — 2026-11-25
+
+### Codename: Flare
+
+### Added
+
+- **Trackpad Navigation & Liquid Glass Edge Gestures**: Added top-level two-finger horizontal overscroll Back/Forward navigation (`src/preload/gestures/index.ts`, `navigation:get-gesture-state` / `navigation:gesture-navigate` IPC in `src/main/ipc/browser/navigation.ts`) with a closed-Shadow-DOM Liquid Glass chevron indicator that respects macOS `systemPreferences.isSwipeTrackingFromScrollEventsEnabled()`, `defaultPrevented`, `ctrlKey` pinch-to-zoom events, RTL/LTR scrollable ancestors, and CSS `overscroll-behavior-x`. Wired macOS 3-finger `'swipe'` and Windows/Linux `'app-command'` navigation in `BrowserWindow` targeting either the focused Companion Web View or the active tab with a shared `650ms` cooldown.
+- **Ambient Vibe & Micro-Interaction Motion System**: Added `src/renderer/src/css/animations.css` and `AudioVisualizerBars` (`src/renderer/src/components/ui/audio-visualizer.tsx`) with `@property` transitions for smooth Space color morphing, ambient aurora backdrops, `.lumi-glass-sheen` hover highlights, luminous loading hairlines, live 3-bar audio equalizers on audible tabs/media controls, beacon status rings, and `@media (prefers-reduced-motion: reduce)` fallbacks.
+
+### Improved
+
+- **Chrome, Start Page, Omnibox & Overlay Choreography**: Added spring-animated active-tab highlights (`TabGroup` / `TopbarLayout`), rotating folder/group chevrons with animated collapsed favicon stacks, animated `MediaMiniPlayer` enter/exit and artwork cross-fades, `SidePanel` entrance and Scratchpad Edit/Preview cross-fade, ambient Start Page aurora orbs with Sun/Moon theme icon morph and animated Recently Closed/Saved widgets, Omnibox row spring highlights, `PopoverContent` easing, `FocusTimerPill` beacon ring, Glance backdrop blur fade, and `TargetUrlIndicator` float-in.
+- **Early Pinch-to-Zoom Limits**: Applied `setVisualZoomLevelLimits(1, 5)` immediately on view setup and main-frame `did-start-navigation` in `Tab` and `SidePanelController`, and enabled `scrollBounce: true` on the Companion Web View.
+
+### Fixed
+
+- **Sidebar Space-Switching Swipe Alignment & Coverage**: Switched `SpacePagesCarousel` slide spacing from `mx-1` to `px-1 box-border` so slide scroll offsets stay aligned with `clientWidth` across Spaces, and added passive horizontal trackpad swipe handling on `SidebarInner` for gestures started outside the carousel.
+
+---
+
 ## [0.4.7] — 2026-11-23
 
 ### Codename: Flare

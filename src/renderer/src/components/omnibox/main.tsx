@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Search } from "lucide-react";
 import { requestOmniboxSuggestions } from "@/lib/omnibox-new";
 import { primeOpenTabsCache, primeQuickHistoryCache } from "@/lib/omnibox-new/suggestors";
@@ -361,7 +361,14 @@ export function OmniboxMain() {
               }}
             >
               <div className="flex shrink-0 items-center gap-3 border-b border-black/8 px-4 py-3.5 dark:border-white/8">
-                <Search className="ml-1 size-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                <Search
+                  className={cn(
+                    "ml-1 size-4 shrink-0 text-primary transition-transform duration-200",
+                    inputValue.length > 0 && "scale-110"
+                  )}
+                  strokeWidth={2.5}
+                  aria-hidden
+                />
                 <input
                   ref={inputRef}
                   type="text"
@@ -400,15 +407,31 @@ export function OmniboxMain() {
                   aria-controls="omnibox-suggestions"
                   aria-activedescendant={suggestions.length > 0 ? `omnibox-option-${selectedIndex}` : undefined}
                 />
-                {copiedBanner ? (
-                  <span className="lumi-glass-pill shrink-0 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                    Copied!
-                  </span>
-                ) : (
-                  <span className="lumi-glass-pill hidden shrink-0 px-2 py-0.5 text-[11px] font-medium text-muted-foreground sm:inline-flex">
-                    {openState.openIn === "new_tab" ? "New Tab" : "Current Tab"}
-                  </span>
-                )}
+                <AnimatePresence mode="wait" initial={false}>
+                  {copiedBanner ? (
+                    <motion.span
+                      key="copied-badge"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.88 }}
+                      transition={{ duration: 0.14 }}
+                      className="lumi-glass-pill shrink-0 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                    >
+                      Copied!
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key={openState.openIn}
+                      initial={{ opacity: 0, y: 2 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -2 }}
+                      transition={{ duration: 0.14 }}
+                      className="lumi-glass-pill hidden shrink-0 px-2 py-0.5 text-[11px] font-medium text-muted-foreground sm:inline-flex"
+                    >
+                      {openState.openIn === "new_tab" ? "New Tab" : "Current Tab"}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div

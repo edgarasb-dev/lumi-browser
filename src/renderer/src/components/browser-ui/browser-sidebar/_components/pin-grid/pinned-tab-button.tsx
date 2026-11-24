@@ -184,11 +184,15 @@ export function PinnedTabButton({
   return (
     <motion.div
       className="relative"
+      initial={{ opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
       // Only opt into layout projection while reorder/create animations run; keeping
       // `layout` enabled otherwise makes Motion measure every pin on unrelated updates
       // (e.g. active tab), which adds main-thread + compositor work on top of webview activation.
       layout={layoutAnimationsEnabled ? "position" : false}
       transition={{
+        opacity: { duration: 0.18 },
+        scale: { type: "spring", stiffness: 460, damping: 28 },
         layout: layoutAnimationsEnabled ? { type: "spring", stiffness: 500, damping: 35 } : { duration: 0 }
       }}
     >
@@ -229,11 +233,11 @@ export function PinnedTabButton({
         animate={{ scale: isPressed ? 0.99 : 1 }}
         transition={{ scale: { type: "spring", stiffness: 600, damping: 20 } }}
         className={cn(
-          "relative w-full overflow-hidden transform-gpu",
+          "group/pin lumi-glass-sheen relative w-full overflow-hidden transform-gpu",
           density === "compact" ? "h-10 rounded-lg" : density === "balanced" ? "h-11 rounded-xl" : "h-12 rounded-xl",
           "bg-black/10 hover:bg-black/15",
           "dark:bg-white/15 dark:hover:bg-white/20",
-          "transition-[background-color,border-color,opacity,height] duration-150",
+          "transition-[background-color,border-color,box-shadow,opacity,height] duration-150 hover:shadow-xs",
           "flex items-center justify-center",
           isActive && !hasColors && "border-2 border-white",
           isActive && hasColors && "pinned-tab-active-border",
@@ -247,7 +251,7 @@ export function PinnedTabButton({
           <div className={cn("size-full", "flex items-center justify-center")} style={activeOverlayStyle}>
             <div
               className={cn(
-                "relative flex items-center justify-center",
+                "relative flex items-center justify-center transition-transform duration-200 ease-out group-hover/pin:scale-110",
                 density === "compact" ? "size-4" : density === "balanced" ? "size-4.5" : "size-5"
               )}
             >

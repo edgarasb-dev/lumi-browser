@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Plus, X, Save, RotateCcw, History, Download, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -193,43 +193,47 @@ export function QuickLinks({ className = "" }: QuickLinksProps) {
       </div>
 
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
-        {quickLinks.map((link, idx) => (
-          <motion.div
-            key={link.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.035, type: "spring", stiffness: 380, damping: 28 }}
-            whileHover={{ y: -3, scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="group relative"
-          >
-            <button
-              type="button"
-              onClick={() => handleDeleteLink(link.id)}
-              className="absolute -right-1 -top-1 z-10 flex size-5 items-center justify-center rounded-full bg-zinc-900/80 text-white opacity-0 shadow-xs transition-opacity group-hover:opacity-100 hover:bg-destructive dark:bg-zinc-800"
-              aria-label={`Remove ${link.name}`}
+        <AnimatePresence mode="popLayout" initial={false}>
+          {quickLinks.map((link, idx) => (
+            <motion.div
+              key={link.id}
+              layout="position"
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.88 }}
+              transition={{ delay: idx * 0.03, type: "spring", stiffness: 400, damping: 28 }}
+              whileHover={{ y: -3, scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="group relative"
             >
-              <X className="size-3" />
-            </button>
-            <a
-              href={link.url}
-              className="lumi-glass-panel flex flex-col items-center justify-center gap-2 px-3 py-3.5 text-center no-underline transition-colors duration-150 hover:border-primary/40 hover:shadow-md"
-            >
-              <div className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-white/85 shadow-xs dark:bg-white/10">
-                {link.url.startsWith("lumi://history") ? (
-                  <History className="size-5 text-amber-500" />
-                ) : link.url.startsWith("lumi://downloads") ? (
-                  <Download className="size-5 text-primary" />
-                ) : link.url.startsWith("lumi://bangs") ? (
-                  <Sparkles className="size-5 text-violet-500" />
-                ) : (
-                  <WebsiteFavicon url={link.url} favicon={link.favicon} className="size-5 rounded-xs" />
-                )}
-              </div>
-              <div className="w-full truncate text-xs font-medium text-foreground">{link.name}</div>
-            </a>
-          </motion.div>
-        ))}
+              <button
+                type="button"
+                onClick={() => handleDeleteLink(link.id)}
+                className="absolute -right-1 -top-1 z-10 flex size-5 items-center justify-center rounded-full bg-zinc-900/80 text-white opacity-0 shadow-xs transition-all group-hover:opacity-100 hover:scale-110 hover:bg-destructive dark:bg-zinc-800 cursor-pointer"
+                aria-label={`Remove ${link.name}`}
+              >
+                <X className="size-3" />
+              </button>
+              <a
+                href={link.url}
+                className="lumi-glass-panel lumi-glass-sheen flex flex-col items-center justify-center gap-2 px-3 py-3.5 text-center no-underline transition-[border-color,box-shadow] duration-150 hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-white/85 shadow-xs transition-transform duration-200 group-hover:scale-105 dark:bg-white/10">
+                  {link.url.startsWith("lumi://history") ? (
+                    <History className="size-5 text-amber-500" />
+                  ) : link.url.startsWith("lumi://downloads") ? (
+                    <Download className="size-5 text-primary" />
+                  ) : link.url.startsWith("lumi://bangs") ? (
+                    <Sparkles className="size-5 text-violet-500" />
+                  ) : (
+                    <WebsiteFavicon url={link.url} favicon={link.favicon} className="size-5 rounded-xs" />
+                  )}
+                </div>
+                <div className="w-full truncate text-xs font-medium text-foreground">{link.name}</div>
+              </a>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

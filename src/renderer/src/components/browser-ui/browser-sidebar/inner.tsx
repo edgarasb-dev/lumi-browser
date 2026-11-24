@@ -2,7 +2,7 @@ import { AttachedDirection, useBrowserSidebar } from "./provider";
 import { SidebarWindowControlsMacOS } from "@/components/browser-ui/window-controls/macos";
 import { usePlatform } from "@/components/main/platform";
 import { AddressBar } from "./_components/address-bar";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { cn } from "@/lib/utils";
 import { NavigationControls, NavButton } from "@/components/browser-ui/browser-sidebar/_components/navigation-controls";
@@ -18,6 +18,26 @@ import { BottomDock } from "@/components/browser-ui/browser-sidebar/_components/
 import { MediaMiniPlayer } from "@/components/browser-ui/media-mini-player";
 import { useWindowDrag } from "@/hooks/use-window-drag";
 import { shouldIgnoreWindowDragTarget } from "@/lib/chrome-interactions";
+
+const SIDEBAR_WHEEL_IDLE_GAP_MS = 200;
+const SIDEBAR_WHEEL_SWITCH_THRESHOLD = 70;
+const SIDEBAR_WHEEL_COOLDOWN_MS = 420;
+const SIDEBAR_WHEEL_DRAIN_IDLE_MS = 160;
+const SIDEBAR_WHEEL_DRAIN_MAX_MS = 1200;
+
+function hasHorizontalScrollableAncestor(target: Element, boundary: HTMLElement): boolean {
+  let el: Element | null = target;
+  while (el && el !== boundary) {
+    if (el.scrollWidth > el.clientWidth + 1) {
+      const overflowX = window.getComputedStyle(el).overflowX;
+      if (overflowX === "auto" || overflowX === "scroll" || overflowX === "overlay") {
+        return true;
+      }
+    }
+    el = el.parentElement;
+  }
+  return false;
+}
 
 function SidebarIcon({ className }: { className?: string }) {
   return (
@@ -41,11 +61,112 @@ export function SidebarInner({ direction }: { direction: AttachedDirection }) {
   const { isAnimating, setVisible, mode, slotMachineEnabled, setSlotMachineEnabled } = useBrowserSidebar();
   const { platform } = usePlatform();
 
-  const { isCurrentSpaceLight } = useSpaces();
+  const { spaces, currentSpace, setCurrentSpace, isCurrentSpaceInternal, isCurrentSpaceLight } = useSpaces();
+  const sidebarRootRef = useRef<HTMLDivElement>(null);
+  const drainStateRef = useRef({
+    draining: false,
+    minUntil: 0,
+    hardMaxUntil: 0,
+    lastEventAt: 0
+  });
 
   const { handleMouseDown } = useWindowDrag({
     shouldIgnoreTarget: shouldIgnoreWindowDragTarget
   });
+
+  useEffect(() => {
+    const root = sidebarRootRef.current;
+    if (!root || isCurrentSpaceInternal || spaces.length <= 1 || !currentSpace) return;
+
+    let lastWheelAt = 0;
+    let accumX = 0;
+    let eventCount = 0;
+    let burstLockedOut = false;
+
+    const resetBurst = () => {
+      accumX = 0;
+      eventCount = 0;
+      burstLockedOut = false;
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.deltaMode !== 0) {
+        return;
+      }
+
+      if (event.target instanceof Element) {
+        if (
+          event.target.closest(
+            "[data-space-carousel], [data-slot='popover-content'], [role='dialog'], [role='menu'], input, textarea"
+          )
+        ) {
+          return;
+        }
+        if (hasHorizontalScrollableAncestor(event.target, root)) {
+          return;
+        }
+      }
+
+      const now = performance.now();
+      const drain = drainStateRef.current;
+      if (drain.draining) {
+        const pastHardMax = now >= drain.hardMaxUntil;
+        const pastMinAndIdle = now >= drain.minUntil && now - drain.lastEventAt > SIDEBAR_WHEEL_DRAIN_IDLE_MS;
+        if (pastHardMax || pastMinAndIdle) {
+          drain.draining = false;
+        } else {
+          drain.lastEventAt = now;
+          return;
+        }
+      }
+
+      if (now - lastWheelAt > SIDEBAR_WHEEL_IDLE_GAP_MS) {
+        resetBurst();
+      }
+      lastWheelAt = now;
+
+      if (burstLockedOut) return;
+
+      const absX = Math.abs(event.deltaX);
+      const absY = Math.abs(event.deltaY);
+      if (absX < 1 && absY < 1) return;
+
+      if (absY > absX * 0.75 || (eventCount === 0 && absX < 1.5)) {
+        burstLockedOut = true;
+        accumX = 0;
+        eventCount = 0;
+        return;
+      }
+
+      const clampedDx = Math.max(-50, Math.min(50, event.deltaX));
+      accumX += clampedDx;
+      eventCount += 1;
+
+      if (Math.abs(accumX) >= SIDEBAR_WHEEL_SWITCH_THRESHOLD && eventCount >= 2) {
+        const currentIndex = spaces.findIndex((s) => s.id === currentSpace.id);
+        const delta = accumX > 0 ? 1 : -1;
+        const nextIndex = currentIndex + delta;
+
+        accumX = 0;
+        eventCount = 0;
+        drainStateRef.current = {
+          draining: true,
+          minUntil: now + SIDEBAR_WHEEL_COOLDOWN_MS,
+          hardMaxUntil: now + SIDEBAR_WHEEL_DRAIN_MAX_MS,
+          lastEventAt: now
+        };
+
+        if (currentIndex !== -1 && nextIndex >= 0 && nextIndex < spaces.length) {
+          setCurrentSpace(spaces[nextIndex].id);
+        }
+      }
+    };
+
+    root.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      root.removeEventListener("wheel", onWheel);
+    };
+  }, [spaces, currentSpace, setCurrentSpace, isCurrentSpaceInternal]);
 
   const handleSetSlotMachine = useCallback(
     (enabled: boolean) => {
@@ -59,6 +180,7 @@ export function SidebarInner({ direction }: { direction: AttachedDirection }) {
 
   return (
     <div
+      ref={sidebarRootRef}
       onMouseDown={handleMouseDown}
       className={cn(spaceInjectedClasses, "h-full max-h-full flex flex-col overflow-hidden")}
     >

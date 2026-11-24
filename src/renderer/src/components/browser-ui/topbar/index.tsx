@@ -1,4 +1,6 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { AudioVisualizerBars } from "@/components/ui/audio-visualizer";
 import { useAdaptiveTopbar } from "@/components/browser-ui/adaptive-topbar";
 import { usePlatform } from "@/components/main/platform";
 import { useSpaces } from "@/components/providers/spaces-provider";
@@ -35,7 +37,6 @@ import {
   X,
   PanelLeft,
   PanelRight,
-  Volume2,
   VolumeX,
   Columns2,
   Rows2,
@@ -53,9 +54,10 @@ import type { TabData } from "~/types/tabs";
 interface TopbarTabProps {
   tab: TabData;
   isActive: boolean;
+  activeTabLayoutId: string;
 }
 
-function TopbarTab({ tab, isActive }: TopbarTabProps) {
+function TopbarTab({ tab, isActive, activeTabLayoutId }: TopbarTabProps) {
   const [isFaviconError, setIsFaviconError] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -113,8 +115,17 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
 
   return (
     <>
-      <div
+      <motion.div
         ref={tabRef}
+        layout="position"
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.92 }}
+        transition={{
+          layout: { type: "spring", stiffness: 480, damping: 34 },
+          duration: 0.16,
+          ease: "easeOut"
+        }}
         role="button"
         tabIndex={0}
         data-tab-id={tab.id}
@@ -129,16 +140,24 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
           }
         }}
         className={cn(
-          "group relative flex items-center gap-1.5 h-8 px-2.5 rounded-xl max-w-[210px] min-w-[110px] flex-1 remove-app-drag",
-          "text-xs select-none transition-all duration-150 cursor-pointer",
+          "group relative flex items-center gap-1.5 h-8 px-2.5 rounded-xl max-w-[210px] min-w-[110px] flex-1 remove-app-drag overflow-hidden",
+          "text-xs select-none transition-[color,background-color] duration-150 cursor-pointer active:scale-[0.985]",
           isActive
-            ? "bg-white/90 dark:bg-white/[0.18] text-black/90 dark:text-white/95 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] border border-black/[0.06] dark:border-white/[0.14] font-medium backdrop-blur-md"
-            : "bg-black/[0.045] dark:bg-white/[0.05] hover:bg-black/[0.09] dark:hover:bg-white/[0.11] text-black/70 dark:text-white/75 border border-transparent"
+            ? "text-black/90 dark:text-white/95 font-medium"
+            : "bg-black/[0.045] dark:bg-white/[0.05] hover:bg-black/[0.09] dark:hover:bg-white/[0.11] text-black/70 dark:text-white/75"
         )}
         title={tab.title}
       >
+        {isActive && (
+          <motion.div
+            layoutId={activeTabLayoutId}
+            transition={{ type: "spring", stiffness: 520, damping: 36 }}
+            className="pointer-events-none absolute inset-0 z-0 rounded-xl bg-white/90 dark:bg-white/[0.18] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] border border-black/[0.06] dark:border-white/[0.14] backdrop-blur-md"
+          />
+        )}
+
         {/* Favicon */}
-        <div className="size-3.5 shrink-0">
+        <div className="relative z-10 size-3.5 shrink-0">
           {!noFavicon && (
             <img
               src={craftActiveFaviconURL(tab.id, tab.faviconURL)}
@@ -151,7 +170,7 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
         </div>
 
         {/* Title */}
-        <span className={cn("truncate min-w-0 flex-1 font-medium", tab.asleep && "opacity-60")}>
+        <span className={cn("relative z-10 truncate min-w-0 flex-1 font-medium", tab.asleep && "opacity-60")}>
           {tab.title || "New Tab"}
         </span>
 
@@ -159,16 +178,20 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
         {(tab.audible || tab.muted) && (
           <button
             onClick={handleToggleMute}
-            className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 text-black/60 dark:text-white/60 shrink-0"
+            className="relative z-10 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 text-black/60 dark:text-white/60 shrink-0 cursor-pointer"
             title={tab.muted ? "Unmute tab" : "Mute tab"}
           >
-            {tab.muted ? <VolumeX className="size-3 text-red-500" /> : <Volume2 className="size-3 text-primary" />}
+            {tab.muted ? (
+              <VolumeX className="size-3 text-red-500" />
+            ) : (
+              <AudioVisualizerBars active={tab.audible} className="h-2.5" />
+            )}
           </button>
         )}
 
         {/* Sleeping indicator */}
         {tab.asleep && (
-          <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1 rounded shrink-0">
+          <span className="relative z-10 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1 rounded shrink-0">
             Zzz
           </span>
         )}
@@ -177,14 +200,14 @@ function TopbarTab({ tab, isActive }: TopbarTabProps) {
         <button
           onClick={handleClose}
           className={cn(
-            "size-4 rounded flex items-center justify-center shrink-0",
-            "opacity-0 group-hover:opacity-100 hover:bg-black/15 dark:hover:bg-white/20 text-black/60 dark:text-white/60 hover:text-black/90 dark:hover:text-white/90 transition-opacity"
+            "relative z-10 size-4 rounded flex items-center justify-center shrink-0",
+            "opacity-0 group-hover:opacity-100 hover:bg-black/15 dark:hover:bg-white/20 text-black/60 dark:text-white/60 hover:text-black/90 dark:hover:text-white/90 transition-opacity cursor-pointer"
           )}
           title="Close tab"
         >
           <X className="size-3" />
         </button>
-      </div>
+      </motion.div>
 
       <TabPreviewCard
         tab={tab}
@@ -250,7 +273,7 @@ function TopbarPinnedTab({
         title={tooltipTitle}
         style={activeBorderStyle}
         className={cn(
-          "relative size-8 rounded-xl overflow-hidden flex items-center justify-center cursor-pointer",
+          "lumi-glass-sheen relative size-8 rounded-xl overflow-hidden flex items-center justify-center cursor-pointer",
           "transition-[background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.96]",
           isActive
             ? cn(
@@ -282,6 +305,7 @@ function TopbarPinnedTab({
 
 export function TopbarLayout() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const topbarTabLayoutId = useId();
   const { setContentTopOffset } = useAdaptiveTopbar();
   const { platform } = usePlatform();
   const { currentSpace, isCurrentSpaceLight, isProfileEphemeral } = useSpaces();
@@ -437,19 +461,26 @@ export function TopbarLayout() {
             <div className="h-4 w-px bg-black/12 dark:bg-white/15 shrink-0 mx-0.5" />
           )}
 
-          {tabs.map((tab) => (
-            <TopbarTab key={tab.id} tab={tab} isActive={focusedTab?.id === tab.id} />
-          ))}
+          <AnimatePresence initial={false}>
+            {tabs.map((tab) => (
+              <TopbarTab
+                key={tab.id}
+                tab={tab}
+                isActive={focusedTab?.id === tab.id}
+                activeTabLayoutId={topbarTabLayoutId}
+              />
+            ))}
+          </AnimatePresence>
 
           <button
             onClick={handleNewTab}
             className={cn(
-              "size-7 rounded-lg flex items-center justify-center shrink-0 remove-app-drag",
-              "text-black/60 dark:text-white/60 hover:text-black/90 dark:hover:text-white/90 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              "group size-7 rounded-lg flex items-center justify-center shrink-0 remove-app-drag cursor-pointer",
+              "text-black/60 dark:text-white/60 hover:text-black/90 dark:hover:text-white/90 hover:bg-black/10 dark:hover:bg-white/10 active:scale-90 transition-all duration-150"
             )}
             title="New Tab"
           >
-            <Plus className="size-4" />
+            <Plus className="size-4 transition-transform duration-200 group-hover:rotate-90" />
           </button>
         </div>
 

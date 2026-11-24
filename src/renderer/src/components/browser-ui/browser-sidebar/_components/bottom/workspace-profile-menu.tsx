@@ -171,11 +171,11 @@ export function WorkspaceProfileMenu({ className }: { className?: string } = {})
           }
           className={cn(
             "relative size-7 rounded-full shrink-0 inline-flex items-center justify-center cursor-pointer select-none",
-            "text-[10.5px] font-semibold tracking-tight transition-all duration-150 active:scale-[0.95]",
+            "text-[10.5px] font-semibold tracking-tight transition-all duration-200 hover:scale-105 active:scale-[0.94]",
             "border border-black/10 dark:border-white/15 shadow-xs",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 dark:focus-visible:ring-white/25",
             open
-              ? "ring-2 ring-black/20 dark:ring-white/25 brightness-110"
+              ? "ring-2 ring-black/20 dark:ring-white/25 brightness-110 scale-105"
               : "hover:brightness-110 opacity-90 hover:opacity-100"
           )}
           style={avatarGradient ? { backgroundImage: avatarGradient } : undefined}

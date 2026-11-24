@@ -272,7 +272,12 @@ export function SidePanel() {
       </div>
 
       {/* Side Panel Liquid Glass Container */}
-      <aside className="lumi-glass-panel flex min-w-0 flex-1 flex-col overflow-hidden bg-background/85 text-foreground shadow-xl backdrop-blur-2xl">
+      <motion.aside
+        initial={{ opacity: 0, x: 16, scale: 0.99 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 440, damping: 34 }}
+        className="lumi-glass-panel flex min-w-0 flex-1 flex-col overflow-hidden bg-background/85 text-foreground shadow-xl backdrop-blur-2xl"
+      >
         {/* Top Segmented Switcher */}
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-black/8 px-3 py-2 dark:border-white/10">
           <div className="flex flex-1 items-center gap-1 rounded-xl border border-black/8 bg-black/4 p-0.5 dark:border-white/10 dark:bg-white/5">
@@ -328,7 +333,13 @@ export function SidePanel() {
         </div>
 
         {activeMode === "scratchpad" ? (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <motion.div
+            key="side-panel-scratchpad"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
             <div className="flex shrink-0 items-center justify-between gap-1 border-b border-black/6 px-3 py-1.5 dark:border-white/8">
               <div className="flex items-center gap-1">
                 <Button
@@ -381,24 +392,44 @@ export function SidePanel() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
-              {previewMode ? (
-                <div className="space-y-1">
-                  {renderInteractiveMarkdown(notes, handleToggleChecklistLine, (url) => {
-                    void lumi.tabs.newTab(url, true);
-                  })}
-                </div>
-              ) : (
-                <textarea
-                  value={notes}
-                  onChange={(e) => persistNotes(e.target.value)}
-                  placeholder={`# ${currentSpace?.name ?? "Space"} Notes\n\n- [ ] Capture research links\n- [ ] Draft key takeaways...`}
-                  className="h-full w-full resize-none bg-transparent text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none"
-                />
-              )}
+              <AnimatePresence mode="wait" initial={false}>
+                {previewMode ? (
+                  <motion.div
+                    key="scratchpad-preview"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.14, ease: "easeOut" }}
+                    className="space-y-1"
+                  >
+                    {renderInteractiveMarkdown(notes, handleToggleChecklistLine, (url) => {
+                      void lumi.tabs.newTab(url, true);
+                    })}
+                  </motion.div>
+                ) : (
+                  <motion.textarea
+                    key="scratchpad-editor"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.14, ease: "easeOut" }}
+                    value={notes}
+                    onChange={(e) => persistNotes(e.target.value)}
+                    placeholder={`# ${currentSpace?.name ?? "Space"} Notes\n\n- [ ] Capture research links\n- [ ] Draft key takeaways...`}
+                    className="h-full w-full resize-none bg-transparent text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  />
+                )}
+              </AnimatePresence>
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <motion.div
+            key="side-panel-web"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
             <form
               onSubmit={handleNavigateSubmit}
               className="flex shrink-0 items-center gap-1 border-b border-black/6 px-2.5 py-1.5 dark:border-white/8"
@@ -498,9 +529,9 @@ export function SidePanel() {
               ref={webHostRef}
               className="m-2 flex-1 overflow-hidden rounded-xl border border-black/8 bg-white/40 dark:border-white/10 dark:bg-black/25"
             />
-          </div>
+          </motion.div>
         )}
-      </aside>
+      </motion.aside>
     </div>
   );
 }

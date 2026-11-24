@@ -276,13 +276,38 @@ export function NewTabPage() {
       className="relative flex min-h-screen flex-col justify-between overflow-x-hidden px-4 py-5 font-sans text-foreground transition-colors duration-300 select-none md:px-8 md:py-7"
       style={{ backgroundImage: backgroundStyle }}
     >
+      {/* Living Atmospheric Studio Orbs */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div
+          className="lumi-newtab-orb-a absolute -left-24 -top-24 size-[38rem] rounded-full opacity-40 blur-3xl"
+          style={{
+            background: activeSpace?.bgStartColor
+              ? `radial-gradient(circle, ${activeSpace.bgStartColor}42 0%, transparent 70%)`
+              : "radial-gradient(circle, rgba(59, 130, 246, 0.24) 0%, transparent 70%)"
+          }}
+        />
+        <div
+          className="lumi-newtab-orb-b absolute -bottom-28 -right-24 size-[36rem] rounded-full opacity-35 blur-3xl"
+          style={{
+            background: activeSpace?.bgEndColor
+              ? `radial-gradient(circle, ${activeSpace.bgEndColor}3d 0%, transparent 70%)`
+              : "radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, transparent 70%)"
+          }}
+        />
+      </div>
+
       {/* Top Bar Controls */}
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
+      <motion.div
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: "easeOut" }}
+        className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-between gap-3"
+      >
         <div className="flex items-center gap-2">
           {activeSpace && (
-            <div className="lumi-glass-pill flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-foreground">
+            <div className="lumi-glass-pill lumi-glass-sheen flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-foreground">
               <span
-                className="size-2.5 rounded-full shadow-xs"
+                className="lumi-soft-breathe size-2.5 rounded-full shadow-xs"
                 style={{
                   backgroundImage: `linear-gradient(135deg, ${activeSpace.bgStartColor}, ${activeSpace.bgEndColor})`
                 }}
@@ -296,7 +321,7 @@ export function NewTabPage() {
           <Popover>
             <PopoverTrigger
               type="button"
-              className="lumi-glass-pill inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium text-foreground transition hover:bg-black/5 dark:hover:bg-white/10"
+              className="lumi-glass-pill lumi-glass-sheen inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium text-foreground transition hover:bg-black/5 active:scale-96 dark:hover:bg-white/10"
             >
               <SlidersHorizontal className="size-3.5 text-primary" />
               Customize
@@ -317,14 +342,22 @@ export function NewTabPage() {
                         onClick={() => selectWallpaper(wp.id)}
                         title={wp.name}
                         className={cn(
-                          "relative flex h-9 w-full items-center justify-center rounded-xl border transition-all",
+                          "relative flex h-9 w-full items-center justify-center rounded-xl border transition-all cursor-pointer active:scale-94",
                           isSelected
                             ? "border-primary ring-2 ring-primary/30"
                             : "border-black/15 hover:scale-105 dark:border-white/20"
                         )}
                         style={{ background: wp.swatch }}
                       >
-                        {isSelected && <Check className="size-4 text-white drop-shadow" />}
+                        {isSelected && (
+                          <motion.span
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 520, damping: 24 }}
+                          >
+                            <Check className="size-4 text-white drop-shadow" />
+                          </motion.span>
+                        )}
                       </button>
                     );
                   })}
@@ -357,32 +390,45 @@ export function NewTabPage() {
             onClick={toggleTheme}
             variant="ghost"
             size="icon"
-            className="lumi-glass-pill size-8"
+            className="lumi-glass-pill lumi-glass-sheen size-8 active:scale-92 transition-transform"
             aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
           >
-            {resolvedTheme === "dark" ? (
-              <Sun className="size-4 text-amber-400" />
-            ) : (
-              <Moon className="size-4 text-zinc-700" />
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={resolvedTheme === "dark" ? "sun" : "moon"}
+                initial={{ opacity: 0, rotate: -35, scale: 0.72 }}
+                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                exit={{ opacity: 0, rotate: 35, scale: 0.72 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="flex items-center justify-center"
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun className="size-4 text-amber-400" />
+                ) : (
+                  <Moon className="size-4 text-zinc-700" />
+                )}
+              </motion.span>
+            </AnimatePresence>
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Centered Hero + Omnibox Search */}
-      <div className="mx-auto my-auto flex w-full max-w-3xl flex-col items-center gap-7 py-6">
+      <div className="relative z-10 mx-auto my-auto flex w-full max-w-3xl flex-col items-center gap-7 py-6">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
           className="flex flex-col items-center text-center"
         >
           {widgetPrefs.clock ? (
             <NewTabClock />
           ) : (
-            <img
+            <motion.img
               src="/assets/logo.svg"
               alt="Lumi Browser"
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
               className="size-20 rounded-2xl object-contain drop-shadow-[0_12px_32px_rgba(37,99,235,0.28)]"
             />
           )}
@@ -391,19 +437,24 @@ export function NewTabPage() {
         {/* Unified Omnibox-New Search Bar */}
         <motion.div
           ref={containerRef}
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: 0.05 }}
+          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 360, damping: 30, delay: 0.05 }}
           className="relative w-full max-w-2xl"
         >
           <div
             className={cn(
-              "lumi-glass-panel flex items-center gap-3 px-4 py-3 transition-shadow",
+              "lumi-glass-panel lumi-glass-sheen flex items-center gap-3 px-4 py-3 transition-shadow duration-200",
               showSuggestions && suggestions.length > 0 && "rounded-b-none border-b-0 shadow-xl",
-              "focus-within:ring-2 focus-within:ring-primary/35"
+              "focus-within:ring-2 focus-within:ring-primary/35 focus-within:shadow-[0_14px_36px_-14px_rgba(37,99,235,0.28)]"
             )}
           >
-            <Search className="size-5 shrink-0 text-primary" />
+            <Search
+              className={cn(
+                "size-5 shrink-0 text-primary transition-transform duration-200",
+                searchQuery.length > 0 && "scale-110"
+              )}
+            />
             <input
               ref={inputRef}
               type="text"
@@ -420,11 +471,19 @@ export function NewTabPage() {
               autoComplete="off"
               autoFocus
             />
-            {copiedNotice && (
-              <span className="lumi-glass-pill shrink-0 bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                {copiedNotice}
-              </span>
-            )}
+            <AnimatePresence>
+              {copiedNotice && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.88, x: 6 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.88, x: 6 }}
+                  transition={{ duration: 0.15 }}
+                  className="lumi-glass-pill shrink-0 bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+                >
+                  {copiedNotice}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
 
           <AnimatePresence>
@@ -457,13 +516,18 @@ export function NewTabPage() {
       </div>
 
       {/* Bottom Hint */}
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-center pt-2 text-[11px] text-muted-foreground">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-center pt-2 text-[11px] text-muted-foreground"
+      >
         <span>Press </span>
         <kbd className="lumi-kbd mx-1 text-[10px]">⌘L</kbd>
         <span> for Command Palette · </span>
         <kbd className="lumi-kbd mx-1 text-[10px]">⌘⇧Z</kbd>
         <span> for Focus Mode</span>
-      </div>
+      </motion.div>
     </div>
   );
 }

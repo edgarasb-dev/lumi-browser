@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { PageLayoutParams } from "~/lumi/types";
 import { cn } from "@/lib/utils";
 import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
@@ -274,22 +275,29 @@ function BrowserContent() {
         />
       )}
 
-      {isGlanceGroup && activeTabGroup && (
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label="Dismiss Glance overlay"
-          onClick={() => lumi.tabs.dismissGlance(activeTabGroup.id, false)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              lumi.tabs.dismissGlance(activeTabGroup.id, false);
-            }
-          }}
-          className="absolute inset-0 bg-black/25 cursor-pointer z-elevated"
-          title="Click outside Glance to dismiss"
-        />
-      )}
+      <AnimatePresence>
+        {isGlanceGroup && activeTabGroup && (
+          <motion.div
+            key="glance-backdrop"
+            role="button"
+            tabIndex={0}
+            aria-label="Dismiss Glance overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            onClick={() => lumi.tabs.dismissGlance(activeTabGroup.id, false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                lumi.tabs.dismissGlance(activeTabGroup.id, false);
+              }
+            }}
+            className="absolute inset-0 bg-black/28 backdrop-blur-[2px] cursor-pointer z-elevated"
+            title="Click outside Glance to dismiss"
+          />
+        )}
+      </AnimatePresence>
 
       {isSplitGroup && activeTabGroup && (
         <div

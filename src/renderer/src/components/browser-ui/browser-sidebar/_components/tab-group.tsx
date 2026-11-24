@@ -2,12 +2,9 @@ import { cn, craftActiveFaviconURL } from "@/lib/utils";
 import { getTabUnreadCount } from "@/lib/unread-badge";
 import {
   XIcon,
-  Volume2,
   VolumeX,
   Folder,
   ChevronDown,
-  ChevronUp,
-  ChevronRight,
   Columns2,
   Rows2,
   Layers,
@@ -17,6 +14,7 @@ import {
 } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { AudioVisualizerBars } from "@/components/ui/audio-visualizer";
 import type { TabGroup as TabGroupType } from "@/components/providers/tabs-provider";
 import type { FolderColorId, TabData, TabGroupMode } from "~/types/tabs";
 import {
@@ -120,11 +118,20 @@ interface SidebarTabProps {
   isSpaceLight: boolean;
   inFolder?: boolean;
   folderGroupId?: string;
+  activeTabLayoutId?: string;
   moveTab: (tabId: number, newPosition: number) => void;
 }
 
 const SidebarTab = memo(
-  function SidebarTab({ tab, isFocused, isSpaceLight, inFolder = false, folderGroupId, moveTab }: SidebarTabProps) {
+  function SidebarTab({
+    tab,
+    isFocused,
+    isSpaceLight,
+    inFolder = false,
+    folderGroupId,
+    activeTabLayoutId,
+    moveTab
+  }: SidebarTabProps) {
     const [cachedFaviconUrl, setCachedFaviconUrl] = useState<string | null>(tab.faviconURL);
     const [isError, setIsError] = useState(false);
     const noFavicon = !cachedFaviconUrl || isError;
@@ -185,8 +192,6 @@ const SidebarTab = memo(
       },
       [tab.id]
     );
-
-    const VolumeIcon = isMuted ? VolumeX : Volume2;
 
     const [isPressed, setIsPressed] = useState(false);
     const tabRef = useRef<HTMLDivElement>(null);
@@ -311,17 +316,27 @@ const SidebarTab = memo(
           animate={{ scale: isPressed ? 0.99 : 1 }}
           transition={{ scale: { type: "spring", stiffness: 600, damping: 20 } }}
           className={cn(
-            "group/tab h-9 w-full overflow-hidden min-w-0",
+            "group/tab relative h-9 w-full overflow-hidden min-w-0",
             inFolder ? "rounded-lg px-2" : "rounded-xl px-2.5",
             "flex items-center gap-2",
             "transition-[background-color,box-shadow] duration-150",
-            !isFocused && "hover:bg-black/[0.06] dark:hover:bg-white/[0.09]",
-            isFocused &&
-              "bg-white/92 dark:bg-white/[0.17] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] ring-1 ring-black/[0.06] dark:ring-white/[0.14]"
+            !isFocused && "hover:bg-black/[0.06] dark:hover:bg-white/[0.09]"
           )}
         >
+          {isFocused && (
+            <motion.div
+              layoutId={activeTabLayoutId ?? `sidebar-active-tab-${tab.spaceId}`}
+              transition={{ type: "spring", stiffness: 520, damping: 36 }}
+              className={cn(
+                "pointer-events-none absolute inset-0 z-0",
+                inFolder ? "rounded-lg" : "rounded-xl",
+                "bg-white/92 dark:bg-white/[0.17] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] ring-1 ring-black/[0.06] dark:ring-white/[0.14]"
+              )}
+            />
+          )}
+
           {/* Left side: favicon + title (strictly uniform horizontal alignment) */}
-          <div className="flex flex-row items-center flex-1 min-w-0">
+          <div className="relative z-10 flex flex-row items-center flex-1 min-w-0">
             <div className="size-4 shrink-0 mr-1.5">
               {!noFavicon && (
                 <img
@@ -346,11 +361,11 @@ const SidebarTab = memo(
           </div>
 
           {/* Right side: unread dot, asleep badge, audio toggle, close button */}
-          <div className="shrink-0 flex items-center gap-1 ml-1">
+          <div className="relative z-10 shrink-0 flex items-center gap-1 ml-1">
             {showUnreadDot && (
               <span
                 title="Updated in background"
-                className="size-1.5 rounded-full bg-black/75 dark:bg-white/85 shrink-0 group-hover/tab:hidden"
+                className="lumi-soft-breathe size-1.5 rounded-full bg-primary dark:bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.65)] shrink-0 group-hover/tab:hidden"
               />
             )}
 
@@ -366,18 +381,21 @@ const SidebarTab = memo(
             <AnimatePresence initial={false}>
               {(isPlayingAudio || isMuted) && (
                 <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
+                  initial={{ opacity: 0, scale: 0.78 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  whileTap={{ scale: 0.95 }}
+                  exit={{ opacity: 0, scale: 0.78 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 28 }}
                   type="button"
-                  className="size-5 flex items-center justify-center rounded-sm hover:bg-black/10 dark:hover:bg-white/10 shrink-0"
+                  className="size-5 flex items-center justify-center rounded-sm hover:bg-black/10 dark:hover:bg-white/10 active:scale-90 transition-transform shrink-0 cursor-pointer"
                   onClick={handleToggleMute}
                   onMouseDown={(e) => e.stopPropagation()}
                   title={isMuted ? "Unmute tab" : "Mute tab"}
                 >
-                  <VolumeIcon className="size-3.5 text-black/55 dark:text-white/60" />
+                  {isMuted ? (
+                    <VolumeX className="size-3.5 text-black/55 dark:text-white/60" />
+                  ) : (
+                    <AudioVisualizerBars active={isPlayingAudio} />
+                  )}
                 </motion.button>
               )}
             </AnimatePresence>
@@ -388,10 +406,10 @@ const SidebarTab = memo(
                 className={cn(
                   "size-5.5 shrink-0 rounded-sm p-0.5 flex items-center justify-center",
                   "hover:bg-black/10 dark:hover:bg-white/10",
-                  "active:bg-black/15 dark:active:bg-white/15",
+                  "active:bg-black/15 dark:active:bg-white/15 active:scale-90",
                   showCloseAlways
-                    ? "opacity-75 hover:opacity-100"
-                    : "opacity-0 pointer-events-none transition-opacity group-hover/tab:opacity-100 group-hover/tab:pointer-events-auto"
+                    ? "opacity-75 hover:opacity-100 transition-[opacity,transform] duration-150"
+                    : "opacity-0 scale-90 pointer-events-none transition-[opacity,transform] duration-150 group-hover/tab:opacity-100 group-hover/tab:scale-100 group-hover/tab:pointer-events-auto"
                 )}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={handleCloseTab}
@@ -401,6 +419,20 @@ const SidebarTab = memo(
               </button>
             </div>
           </div>
+
+          <AnimatePresence>
+            {isFocused && tab.isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="pointer-events-none absolute inset-x-2 bottom-0 z-10 h-[1.5px] overflow-hidden rounded-full"
+              >
+                <div className="lumi-loading-sheen h-full w-1/2 rounded-full bg-linear-to-r from-transparent via-primary/80 to-transparent dark:via-white/80" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {closestChildEdge === "bottom" && (
@@ -436,6 +468,7 @@ const SidebarTab = memo(
       prev.isSpaceLight === next.isSpaceLight &&
       prev.inFolder === next.inFolder &&
       prev.folderGroupId === next.folderGroupId &&
+      prev.activeTabLayoutId === next.activeTabLayoutId &&
       prev.moveTab === next.moveTab
     );
   }
@@ -450,12 +483,21 @@ interface TabGroupProps {
   isSpaceLight: boolean;
   position: number;
   groupCount: number;
+  activeTabLayoutId?: string;
   moveTab: (tabId: number, newPosition: number) => void;
   unpinToTabList: (pinnedTabId: string, position?: number) => Promise<boolean>;
 }
 
 export const TabGroup = memo(
-  function TabGroup({ tabGroup, isFocused, isSpaceLight, position, moveTab, unpinToTabList }: TabGroupProps) {
+  function TabGroup({
+    tabGroup,
+    isFocused,
+    isSpaceLight,
+    position,
+    activeTabLayoutId,
+    moveTab,
+    unpinToTabList
+  }: TabGroupProps) {
     const { tabs, focusedTab } = tabGroup;
     const ref = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
@@ -768,10 +810,16 @@ export const TabGroup = memo(
             className={cn(
               "group/header flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium cursor-pointer select-none",
               "text-black/75 dark:text-white/80 hover:text-black dark:hover:text-white",
-              "transition-colors"
+              "hover:bg-black/[0.045] dark:hover:bg-white/[0.06] transition-colors"
             )}
           >
-            <Folder className="size-3.5 shrink-0 opacity-75" />
+            <motion.span
+              animate={{ scale: isCollapsed ? 0.94 : 1 }}
+              transition={{ type: "spring", stiffness: 460, damping: 28 }}
+              className="inline-flex shrink-0 items-center"
+            >
+              <Folder className="size-3.5 opacity-75" />
+            </motion.span>
 
             {isEditingName ? (
               <input
@@ -798,39 +846,50 @@ export const TabGroup = memo(
               <span className="truncate font-semibold">{tabGroup.name || "Folder"}</span>
             )}
 
-            {!isEditingName &&
-              (isCollapsed ? (
-                <ChevronDown className="size-3 shrink-0 opacity-60" />
-              ) : (
-                <ChevronUp className="size-3 shrink-0 opacity-60" />
-              ))}
-
-            {isCollapsed && !isEditingName && (
-              <div className="ml-auto flex items-center gap-1 shrink-0">
-                <div className="flex items-center -space-x-1">
-                  {tabs.slice(0, 3).map((t) => (
-                    <span
-                      key={t.id}
-                      className="size-3.5 rounded-[3px] overflow-hidden bg-black/15 dark:bg-white/15 ring-1 ring-black/15 dark:ring-white/20 flex items-center justify-center shrink-0"
-                    >
-                      {t.faviconURL ? (
-                        <img
-                          src={craftActiveFaviconURL(t.id, t.faviconURL)}
-                          alt=""
-                          className="size-3.5 object-contain"
-                          style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties}
-                        />
-                      ) : (
-                        <span className="size-1.5 rounded-full bg-black/35 dark:bg-white/40" />
-                      )}
-                    </span>
-                  ))}
-                </div>
-                <span className="text-[11px] font-semibold tabular-nums text-black/55 dark:text-white/55">
-                  {tabs.length}
-                </span>
-              </div>
+            {!isEditingName && (
+              <motion.span
+                animate={{ rotate: isCollapsed ? -90 : 0 }}
+                transition={{ type: "spring", stiffness: 460, damping: 30 }}
+                className="inline-flex shrink-0 items-center justify-center opacity-60"
+              >
+                <ChevronDown className="size-3" />
+              </motion.span>
             )}
+
+            <AnimatePresence initial={false}>
+              {isCollapsed && !isEditingName && (
+                <motion.div
+                  initial={{ opacity: 0, x: 6, scale: 0.9 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 4, scale: 0.9 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
+                  className="ml-auto flex items-center gap-1 shrink-0"
+                >
+                  <div className="flex items-center -space-x-1">
+                    {tabs.slice(0, 3).map((t) => (
+                      <span
+                        key={t.id}
+                        className="size-3.5 rounded-[3px] overflow-hidden bg-black/15 dark:bg-white/15 ring-1 ring-black/15 dark:ring-white/20 flex items-center justify-center shrink-0"
+                      >
+                        {t.faviconURL ? (
+                          <img
+                            src={craftActiveFaviconURL(t.id, t.faviconURL)}
+                            alt=""
+                            className="size-3.5 object-contain"
+                            style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties}
+                          />
+                        ) : (
+                          <span className="size-1.5 rounded-full bg-black/35 dark:bg-white/40" />
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-semibold tabular-nums text-black/55 dark:text-white/55">
+                    {tabs.length}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
@@ -851,7 +910,13 @@ export const TabGroup = memo(
               "hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
             )}
           >
-            {isCollapsed ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            <motion.span
+              animate={{ rotate: isCollapsed ? -90 : 0 }}
+              transition={{ type: "spring", stiffness: 460, damping: 30 }}
+              className="inline-flex shrink-0 items-center justify-center"
+            >
+              <ChevronDown className="size-3.5" />
+            </motion.span>
             {tabGroup.mode === "split" ? (
               tabGroup.splitDirection === "vertical" ? (
                 <Rows2 className="size-3.5 text-sky-500/90" />
@@ -944,9 +1009,10 @@ export const TabGroup = memo(
           {(!isCollapsed || (!isFolder && !isMultiTabGroup)) && (
             <motion.div
               initial={isFolder || isMultiTabGroup ? { opacity: 0, height: 0 } : false}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.15 }}
+              animate={{ opacity: 1, height: "auto", transitionEnd: { overflow: "visible" } }}
+              exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              style={{ overflow: "hidden" }}
               className={cn(
                 "flex flex-col gap-0.5",
                 !isFolder && isMultiTabGroup && "pl-2 border-l border-black/10 dark:border-white/10 ml-2"
@@ -960,6 +1026,7 @@ export const TabGroup = memo(
                   isSpaceLight={isSpaceLight}
                   inFolder={isFolder}
                   folderGroupId={isFolder ? tabGroup.id : undefined}
+                  activeTabLayoutId={activeTabLayoutId}
                   moveTab={moveTab}
                 />
               ))}
@@ -983,6 +1050,7 @@ export const TabGroup = memo(
       prev.isSpaceLight === next.isSpaceLight &&
       prev.position === next.position &&
       prev.groupCount === next.groupCount &&
+      prev.activeTabLayoutId === next.activeTabLayoutId &&
       prev.moveTab === next.moveTab &&
       prev.unpinToTabList === next.unpinToTabList
     );

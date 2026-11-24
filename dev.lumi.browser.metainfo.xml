@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.8" date="2026-11-25">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.8</url>
+      <description>
+        <p>Add trackpad two-finger Back/Forward overscroll navigation with a Liquid Glass edge indicator, macOS 3-finger swipe and app-command support, early pinch-to-zoom limits, fixed sidebar Space-switching swipe alignment and full-sidebar gesture coverage, and ambient CSS/spring animations across browser chrome, Start Page, Omnibox, Side Panel, and media controls.</p>
+      </description>
+    </release>
     <release version="0.4.7" date="2026-11-23">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.7</url>
       <description>

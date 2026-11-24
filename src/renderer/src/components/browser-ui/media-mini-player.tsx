@@ -14,6 +14,7 @@ import {
 import { useTabsGroups } from "@/components/providers/tabs-provider";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/portal/popover";
+import { AudioVisualizerBars } from "@/components/ui/audio-visualizer";
 import { cn, craftActiveFaviconURL } from "@/lib/utils";
 import type { MediaControlAction, MediaTabInfo } from "~/types/media";
 
@@ -85,20 +86,26 @@ function MediaThumbnail({ item }: { item: MediaTabInfo }) {
   }
 
   return (
-    <img
-      key={activeCandidate.key}
-      src={activeCandidate.src}
-      alt=""
-      referrerPolicy={activeCandidate.kind === "artwork" ? "no-referrer" : undefined}
-      className={activeCandidate.kind === "artwork" ? "size-full object-cover" : "size-5 rounded-xs object-contain"}
-      style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties}
-      onLoad={(e) => {
-        if (e.currentTarget.naturalWidth === 0) {
-          advanceCandidate();
-        }
-      }}
-      onError={advanceCandidate}
-    />
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.img
+        key={activeCandidate.key}
+        src={activeCandidate.src}
+        alt=""
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.16, ease: "easeOut" }}
+        referrerPolicy={activeCandidate.kind === "artwork" ? "no-referrer" : undefined}
+        className={activeCandidate.kind === "artwork" ? "size-full object-cover" : "size-5 rounded-xs object-contain"}
+        style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties}
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth === 0) {
+            advanceCandidate();
+          }
+        }}
+        onError={advanceCandidate}
+      />
+    </AnimatePresence>
   );
 }
 
@@ -124,8 +131,11 @@ function MediaPlayerCard({
         </button>
 
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold text-black/90 dark:text-white/95 truncate">
-            {item.mediaTitle || item.title}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-xs font-semibold text-black/90 dark:text-white/95 truncate">
+              {item.mediaTitle || item.title}
+            </span>
+            <AudioVisualizerBars active={!item.paused} muted={item.muted} className="h-2.5" />
           </div>
           <div className="text-[10px] text-black/55 dark:text-white/55 truncate">{subtitle}</div>
         </div>
@@ -133,7 +143,7 @@ function MediaPlayerCard({
         <button
           type="button"
           onClick={() => lumi.tabs.switchToTab(item.tabId)}
-          className="size-6 rounded-md flex items-center justify-center text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 shrink-0 cursor-pointer"
+          className="size-6 rounded-md flex items-center justify-center text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 active:scale-90 transition shrink-0 cursor-pointer"
           title="Switch to tab"
         >
           <ExternalLink className="size-3" />
@@ -145,7 +155,7 @@ function MediaPlayerCard({
         <button
           type="button"
           onClick={() => onControl(item.tabId, "seek-back")}
-          className="size-7 rounded-lg flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/12 cursor-pointer"
+          className="size-7 rounded-lg flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/12 transition active:scale-90 active:-translate-x-0.5 cursor-pointer"
           title="Rewind 10s"
         >
           <RotateCcw className="size-3.5" />
@@ -154,16 +164,27 @@ function MediaPlayerCard({
         <button
           type="button"
           onClick={() => onControl(item.tabId, "toggle-play")}
-          className="h-7 px-3 rounded-lg bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 flex items-center justify-center cursor-pointer transition-transform active:scale-95"
+          className="h-7 px-3 rounded-lg bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 flex items-center justify-center cursor-pointer transition-transform active:scale-92"
           title={item.paused ? "Play" : "Pause"}
         >
-          {item.paused ? <Play className="size-3.5 fill-current" /> : <Pause className="size-3.5 fill-current" />}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={item.paused ? "paused" : "playing"}
+              initial={{ opacity: 0, scale: 0.72 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.72 }}
+              transition={{ duration: 0.12 }}
+              className="flex items-center justify-center"
+            >
+              {item.paused ? <Play className="size-3.5 fill-current" /> : <Pause className="size-3.5 fill-current" />}
+            </motion.span>
+          </AnimatePresence>
         </button>
 
         <button
           type="button"
           onClick={() => onControl(item.tabId, "seek-forward")}
-          className="size-7 rounded-lg flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/12 cursor-pointer"
+          className="size-7 rounded-lg flex items-center justify-center text-black/70 dark:text-white/75 hover:bg-black/10 dark:hover:bg-white/12 transition active:scale-90 active:translate-x-0.5 cursor-pointer"
           title="Forward 10s"
         >
           <RotateCw className="size-3.5" />
@@ -239,21 +260,21 @@ export const MediaMiniPlayer = memo(function MediaMiniPlayer({
   }, []);
 
   const active = mediaTabs[0];
-  if (!active) return null;
-
   const spaceClasses = cn(isCurrentSpaceLight ? "" : "dark");
 
   if (variant === "topbar") {
+    if (!active) return null;
+
     return (
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger
           className={cn(
-            "h-7 px-2 rounded-lg flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-colors",
+            "h-7 px-2 rounded-lg flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-[background-color,transform] duration-150 active:scale-95",
             "bg-primary/15 text-primary border border-primary/25 hover:bg-primary/22"
           )}
           title={active.mediaTitle || active.title}
         >
-          <Music2 className="size-3.5 animate-pulse" />
+          <AudioVisualizerBars active={!active.paused} muted={active.muted} barClassName="bg-primary" />
           <span className="max-w-24 truncate hidden md:inline">{active.mediaTitle || active.title}</span>
         </PopoverTrigger>
         <PopoverContent variant="translucent" className="w-72 p-3" positionerClassName={spaceClasses}>
@@ -264,18 +285,26 @@ export const MediaMiniPlayer = memo(function MediaMiniPlayer({
   }
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-        animate={{ opacity: 1, height: "auto", marginTop: 6 }}
-        exit={{ opacity: 0, height: 0, marginTop: 0 }}
-        transition={{ duration: 0.2 }}
-        className="shrink-0 overflow-hidden mb-1.5 remove-app-drag"
-      >
-        <div className="rounded-xl p-2.5 bg-white/55 dark:bg-white/[0.08] border border-black/[0.08] dark:border-white/[0.12] backdrop-blur-xl shadow-xs">
-          <MediaPlayerCard item={active} onControl={handleControl} />
-        </div>
-      </motion.div>
+    <AnimatePresence initial={false}>
+      {active && (
+        <motion.div
+          key="sidebar-media-mini-player"
+          initial={{ opacity: 0, height: 0, marginTop: 0, scale: 0.96, y: 6 }}
+          animate={{ opacity: 1, height: "auto", marginTop: 6, scale: 1, y: 0 }}
+          exit={{ opacity: 0, height: 0, marginTop: 0, scale: 0.96, y: 6 }}
+          transition={{
+            height: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+            opacity: { duration: 0.18 },
+            scale: { type: "spring", stiffness: 460, damping: 32 },
+            y: { type: "spring", stiffness: 460, damping: 32 }
+          }}
+          className="shrink-0 overflow-hidden mb-1.5 remove-app-drag"
+        >
+          <div className="lumi-glass-sheen rounded-xl p-2.5 bg-white/55 dark:bg-white/[0.08] border border-black/[0.08] dark:border-white/[0.12] backdrop-blur-xl shadow-xs">
+            <MediaPlayerCard item={active} onControl={handleControl} />
+          </div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 });

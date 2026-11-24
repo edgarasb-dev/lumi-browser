@@ -2,7 +2,7 @@ import { Space } from "~/lumi/interfaces/sessions/spaces";
 import { cn } from "@/lib/utils";
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { SpaceIcon } from "@/lib/phosphor-icons";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { TabGroupSourceData } from "@/components/browser-ui/browser-sidebar/_components/tab-group";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { AnimatePresence, motion } from "motion/react";
@@ -24,9 +24,10 @@ type SpaceButtonProps = {
   compact: boolean;
   size: DockButtonSize;
   totalSpaces: number;
+  activeLayoutId: string;
 };
 
-function SpaceButton({ space, isActive, compact, size, totalSpaces }: SpaceButtonProps) {
+function SpaceButton({ space, isActive, compact, size, totalSpaces, activeLayoutId }: SpaceButtonProps) {
   const { setCurrentSpace } = useSpaces();
 
   const ref = useRef<HTMLButtonElement>(null);
@@ -123,8 +124,13 @@ function SpaceButton({ space, isActive, compact, size, totalSpaces }: SpaceButto
         onMouseLeave={() => setIsHovered(false)}
         title={`${space.name} (Right-click to customize)`}
         className={cn(
+          "relative",
           showIcon
-            ? cn(getDockButtonClassName(size, { active: isButtonActive }), !isActive && "opacity-65 hover:opacity-100")
+            ? cn(
+                getDockButtonClassName(size, { active: isThemeOpen || dragging }),
+                isActive && totalSpaces > 1 && "text-black dark:text-white",
+                !isActive && "opacity-65 hover:opacity-100"
+              )
             : cn(
                 "group relative shrink-0 inline-flex items-center justify-center cursor-pointer select-none transition-all duration-150",
                 size === "xs" ? "rounded-md" : "rounded-lg",
@@ -134,6 +140,17 @@ function SpaceButton({ space, isActive, compact, size, totalSpaces }: SpaceButto
               )
         )}
       >
+        {isButtonActive && isActive && !isThemeOpen && !dragging && (
+          <motion.span
+            layoutId={activeLayoutId}
+            transition={{ type: "spring", stiffness: 500, damping: 34 }}
+            className={cn(
+              "pointer-events-none absolute inset-0",
+              size === "xs" ? "rounded-md" : "rounded-lg",
+              "bg-black/[0.1] dark:bg-white/[0.16]"
+            )}
+          />
+        )}
         <AnimatePresence mode="wait" initial={false}>
           {showIcon ? (
             <motion.div
@@ -142,7 +159,7 @@ function SpaceButton({ space, isActive, compact, size, totalSpaces }: SpaceButto
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.5 }}
               transition={{ duration: 0.15 }}
-              className="flex items-center justify-center"
+              className="relative z-10 flex items-center justify-center"
             >
               <SpaceIcon
                 id={space.icon}
@@ -243,6 +260,7 @@ export function SpaceSwitcher({
 } = {}) {
   const { spaces, currentSpace, isCurrentSpaceInternal } = useSpaces();
   const containerRef = useRef<HTMLDivElement>(null);
+  const activeLayoutId = useId();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const hasSpaces = spaces.length > 0;
 
@@ -301,6 +319,7 @@ export function SpaceSwitcher({
             compact={compact}
             size={size}
             totalSpaces={spaces.length}
+            activeLayoutId={activeLayoutId}
           />
         ))}
       </div>

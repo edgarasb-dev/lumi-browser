@@ -10,6 +10,7 @@ import { SidePanelController } from "@/controllers/windows-controller/utils/brow
 import { initializePortalComponentWindows } from "@/controllers/windows-controller/utils/browser/portal-component-windows";
 import { sendMessageToListenersWithWebContents } from "@/ipc/listeners-manager";
 import { fireWindowStateChanged } from "@/ipc/browser/interface";
+import { performGestureNavigation, type GestureNavigationDirection } from "@/ipc/browser/navigation";
 import { tabsController } from "@/controllers/tabs-controller";
 import { sessionsController } from "@/controllers/sessions-controller";
 import { spacesController } from "@/controllers/spaces-controller";
@@ -208,6 +209,26 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
 
     // Persistent Split Side Panel //
     this.sidePanel = new SidePanelController(this);
+
+    // macOS 3-finger swipe navigation (from Electron electron_ns_window.mm:
+    // physical swipe right emits "right" -> back, physical swipe left emits "left" -> forward)
+    browserWindow.on("swipe", (_event, direction) => {
+      if (direction === "right") {
+        this.navigateActiveContent("back");
+      } else if (direction === "left") {
+        this.navigateActiveContent("forward");
+      }
+    });
+
+    // Windows / Linux hardware back/forward navigation commands
+    browserWindow.on("app-command", (_event, command) => {
+      if (command === "browser-backward") {
+        this.navigateActiveContent("back");
+      } else if (command === "browser-forward") {
+        this.navigateActiveContent("forward");
+      }
+    });
+
     browserWindow.on("focus", () => {
       if (!this.omnibox?.isVisible()) {
         return;
@@ -256,6 +277,20 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public sendMessageToCoreWebContents(channel: string, ...args: any[]) {
     return sendMessageToListenersWithWebContents(this.coreWebContents, channel, ...args);
+  }
+
+  private navigateActiveContent(direction: GestureNavigationDirection): void {
+    if (this.destroyed || this.browserWindow.isDestroyed()) return;
+
+    if (this.sidePanel.isWebViewFocused()) {
+      performGestureNavigation(this.sidePanel.getWebContents(), direction);
+      return;
+    }
+
+    if (!this.currentSpaceId) return;
+    const focusedTab = tabsController.getFocusedTab(this.id, this.currentSpaceId);
+    if (!focusedTab?.webContents) return;
+    performGestureNavigation(focusedTab.webContents, direction);
   }
 
   // macOS Traffic Lights Handling //

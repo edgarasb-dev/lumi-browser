@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Check, History, RotateCcw, StickyNote } from "lucide-react";
 import type { RecentlyClosedTabData } from "~/types/tabs";
 import { WebsiteFavicon } from "@/components/main/website-favicon";
@@ -131,11 +131,14 @@ export function NewTabWidgetsGrid({ prefs, spaceId, spaceName }: NewTabWidgetsGr
           ) : (
             <div className="space-y-1.5">
               {recentTabs.map((item) => (
-                <button
+                <motion.button
                   key={item.tabData.uniqueId}
                   type="button"
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ type: "spring", stiffness: 460, damping: 32 }}
                   onClick={() => handleRestoreTab(item)}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/8"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/8 cursor-pointer"
                 >
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-white/80 shadow-xs dark:bg-white/10">
                     <WebsiteFavicon
@@ -153,7 +156,7 @@ export function NewTabWidgetsGrid({ prefs, spaceId, spaceName }: NewTabWidgetsGr
                   <span className="shrink-0 text-[11px] text-muted-foreground">
                     {formatRelativeTime(item.closedAt)}
                   </span>
-                </button>
+                </motion.button>
               ))}
             </div>
           )}
@@ -167,11 +170,19 @@ export function NewTabWidgetsGrid({ prefs, spaceId, spaceName }: NewTabWidgetsGr
               <StickyNote className="size-3.5 text-primary" />
               {spaceName ? `${spaceName} Scratchpad` : "Space Scratchpad"}
             </div>
-            {savedNotice && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                <Check className="size-3" /> Saved
-              </span>
-            )}
+            <AnimatePresence>
+              {savedNotice && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.9, y: 2 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -2 }}
+                  transition={{ duration: 0.14 }}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400"
+                >
+                  <Check className="size-3" /> Saved
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
 
           <textarea

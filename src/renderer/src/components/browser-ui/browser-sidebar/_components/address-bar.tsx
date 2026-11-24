@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Lock, SearchIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { memo, useCallback, useRef, type MouseEvent } from "react";
-import { useAddressUrl, useFocusedTabId } from "@/components/providers/tabs-provider";
+import { useAddressUrl, useFocusedTabId, useFocusedTabLoading } from "@/components/providers/tabs-provider";
 import { simplifyUrl } from "@/lib/url";
 import { PinnedBrowserActions } from "./pinned-browser-actions";
 import { useBrowserSidebar } from "@/components/browser-ui/browser-sidebar/provider";
@@ -17,6 +18,7 @@ export const AddressBar = memo(function AddressBar() {
   const containerRef = useRef<HTMLDivElement>(null);
   const addressUrl = useAddressUrl();
   const focusedTabId = useFocusedTabId();
+  const isLoading = useFocusedTabLoading();
   const { hasSidebar } = useBrowserSidebar();
   const { windowType } = useSpaces();
 
@@ -79,25 +81,59 @@ export const AddressBar = memo(function AddressBar() {
       onMouseDown={handleMouseDown}
       onClick={handleClick}
       className={cn(
-        "group/address w-full min-w-0 h-9 rounded-xl select-none",
+        "group/address relative lumi-glass-sheen w-full min-w-0 h-9 rounded-xl select-none",
         "bg-white/55 dark:bg-white/[0.11] backdrop-blur-md",
         "border border-black/[0.08] dark:border-white/[0.14]",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
-        !isPopupWindow && "hover:bg-white/75 dark:hover:bg-white/[0.16]",
-        "transition-[background-color,border-color] duration-150",
+        !isPopupWindow &&
+          "hover:bg-white/75 dark:hover:bg-white/[0.16] hover:border-black/[0.14] dark:hover:border-white/[0.22] hover:shadow-[0_4px_14px_-6px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.58)]",
+        "transition-[background-color,border-color,box-shadow] duration-200",
         "flex items-center gap-1.5 overflow-hidden cursor-default",
         hasSidebar ? "px-2" : "px-2.5",
         isPlaceholder ? "text-black/50 dark:text-white/50" : "text-black/85 dark:text-white/90"
       )}
     >
-      {isPlaceholder ? (
-        <SearchIcon strokeWidth={2} className="size-3.5 shrink-0 opacity-75" />
-      ) : isHttps && !hasSidebar ? (
-        <Lock className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
-      ) : null}
+      <AnimatePresence mode="wait" initial={false}>
+        {isPlaceholder ? (
+          <motion.span
+            key="search"
+            initial={{ opacity: 0, scale: 0.75 }}
+            animate={{ opacity: 0.75, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.75 }}
+            transition={{ duration: 0.14 }}
+            className="flex shrink-0 items-center"
+          >
+            <SearchIcon strokeWidth={2} className="size-3.5" />
+          </motion.span>
+        ) : isHttps && !hasSidebar ? (
+          <motion.span
+            key="lock"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.7 }}
+            transition={{ type: "spring", stiffness: 520, damping: 28 }}
+            className="flex shrink-0 items-center"
+          >
+            <Lock className="size-3 text-emerald-600 dark:text-emerald-400" />
+          </motion.span>
+        ) : null}
+      </AnimatePresence>
       <p className={cn("text-[13px] font-medium min-w-0 flex-1 truncate")}>
         {isPlaceholder ? "Search or Enter URL..." : simplifiedUrl}
       </p>
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="pointer-events-none absolute inset-x-2 bottom-0 h-[1.5px] overflow-hidden rounded-full"
+          >
+            <div className="lumi-loading-sheen h-full w-1/2 rounded-full bg-linear-to-r from-transparent via-primary/85 to-transparent dark:via-white/85" />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="ml-auto flex items-center gap-0.5 shrink-0 remove-app-drag address-bar-actions">
         <ReaderButton />
         <PasswordToolbarButton />

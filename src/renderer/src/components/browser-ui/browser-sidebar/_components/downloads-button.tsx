@@ -207,16 +207,23 @@ export function DownloadsButton({ size = "default", className }: { size?: DockBu
         {hasActiveDownloads && <ProgressRing progress={overallProgress} />}
         <DownloadIcon
           strokeWidth={DOCK_ICON_STROKE_WIDTH}
-          className={cn(sizeClasses.icon, "transition-colors", hasActiveDownloads && "text-sky-500")}
+          className={cn(
+            sizeClasses.icon,
+            "transition-transform duration-200",
+            hasActiveDownloads && "text-sky-500 animate-bounce [animation-duration:1.8s]"
+          )}
         />
         {!hasActiveDownloads && hasUnseenCompletedDownload && (
           <span
             aria-label="New completed download"
             className={cn(
-              "absolute size-1.5 rounded-full bg-amber-400 ring-1 ring-black/20 dark:ring-black/50",
-              size === "xs" ? "top-0.5 right-0.5" : "top-1 right-1"
+              "absolute flex size-2 items-center justify-center",
+              size === "xs" ? "top-0.5 right-0.5" : "top-0.5 right-0.5"
             )}
-          />
+          >
+            <span className="lumi-beacon-ring absolute inset-0 rounded-full bg-amber-400" />
+            <span className="relative size-1.5 rounded-full bg-amber-400 ring-1 ring-black/20 dark:ring-black/50" />
+          </span>
         )}
       </PopoverTrigger>
 

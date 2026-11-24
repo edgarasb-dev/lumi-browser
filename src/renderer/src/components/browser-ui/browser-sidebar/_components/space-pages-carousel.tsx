@@ -1,7 +1,7 @@
 import { useSpaces } from "@/components/providers/spaces-provider";
 import { useTabsGroups } from "@/components/providers/tabs-provider";
 import { usePinnedTabs } from "@/components/providers/pinned-tabs-provider";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef } from "react";
 import { SidebarScrollArea } from "./sidebar-scroll-area";
 import { NewTabButton } from "./new-tab-button";
 import { TidyButton } from "./tidy-button";
@@ -34,6 +34,7 @@ const SpaceContentPage = memo(function SpaceContentPage({
   const { isProfileEphemeral } = useSpaces();
   const isSpaceLight = useMemo(() => hex_is_light(space.bgStartColor || "#000000"), [space.bgStartColor]);
   const shouldShowPinnedTabs = !isProfileEphemeral(space.profileId);
+  const activeTabLayoutId = useId();
 
   // Ephemeral tabs (pinned-tab-associated) are already filtered out by the
   // tabs provider, so getTabGroups returns only visible tab groups.
@@ -88,7 +89,7 @@ const SpaceContentPage = memo(function SpaceContentPage({
     <div
       className={cn(
         "w-full flex flex-col min-h-0 h-full",
-        withinCarousel && "min-w-full shrink-0 snap-start snap-always mx-1"
+        withinCarousel && "min-w-full shrink-0 snap-start snap-always px-1 box-border"
       )}
     >
       {!slotMachineEnabled && shouldShowPinnedTabs && <PinGrid profileId={space.profileId} />}
@@ -106,6 +107,7 @@ const SpaceContentPage = memo(function SpaceContentPage({
                 isSpaceLight={isSpaceLight}
                 position={tabGroup.position}
                 groupCount={sortedTabGroups.length}
+                activeTabLayoutId={activeTabLayoutId}
                 moveTab={moveTab}
                 unpinToTabList={unpinToTabList}
               />
@@ -313,6 +315,7 @@ export function SpacePagesCarousel() {
   return (
     <div
       ref={scrollContainerRef}
+      data-space-carousel=""
       className={cn(
         "flex-1 min-h-0",
         "flex overflow-x-auto overflow-y-hidden",
@@ -325,7 +328,9 @@ export function SpacePagesCarousel() {
       {spaces.map((space, index) => {
         const shouldMount = Math.abs(index - currentIndex) <= 1;
         if (!shouldMount) {
-          return <div key={space.id} className="w-full min-w-full shrink-0 snap-start snap-always mx-1 h-full" />;
+          return (
+            <div key={space.id} className="w-full min-w-full shrink-0 snap-start snap-always px-1 box-border h-full" />
+          );
         }
         return (
           <SpaceContentPage key={space.id} space={space} moveTab={moveTab} slotMachineEnabled={slotMachineEnabled} />

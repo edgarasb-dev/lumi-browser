@@ -181,10 +181,10 @@ function ActiveTargetUrlPortal({
         <UnmountDetector key="presence-unmount-detector" onUnmount={onHideCompleted} />
         {url && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12, ease: "easeInOut" }}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.14, ease: "easeOut" }}
             className={cn(
               "flex h-full w-full items-end justify-start gap-1.5",
               "pointer-events-none select-none",

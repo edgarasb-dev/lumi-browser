@@ -4,6 +4,7 @@ import { SpaceIcon } from "@/lib/phosphor-icons";
 import { cn } from "@/lib/utils";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { Check, ChevronUp, OrbitIcon, Palette } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Space } from "~/lumi/interfaces/sessions/spaces";
 import { isFolderTabSource, isTabGroupSource } from "../drag-utils";
@@ -220,15 +221,26 @@ export function SpaceDropdownSwitcher({ className }: { className?: string } = {}
           title={`${currentSpace.name} (Right-click to customize)`}
           className={cn(
             "inline-flex h-7 max-w-full min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 cursor-pointer select-none",
-            "text-black/85 dark:text-white/90 transition-colors duration-150",
+            "text-black/85 dark:text-white/90 transition-[background-color,transform] duration-150 active:scale-[0.97]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 dark:focus-visible:ring-white/25",
             open || draggingOverTrigger
               ? "bg-black/[0.08] dark:bg-white/[0.12]"
               : "hover:bg-black/[0.06] dark:hover:bg-white/[0.08]"
           )}
         >
-          <SpaceIcon id={currentSpace.icon} strokeWidth={2} className="size-3.5 shrink-0 opacity-80" />
-          <span className="truncate text-[12.5px] font-medium tracking-[-0.01em]">{currentSpace.name}</span>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={currentSpace.id}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.14, ease: "easeOut" }}
+              className="inline-flex min-w-0 items-center gap-1.5"
+            >
+              <SpaceIcon id={currentSpace.icon} strokeWidth={2} className="size-3.5 shrink-0 opacity-80" />
+              <span className="truncate text-[12.5px] font-medium tracking-[-0.01em]">{currentSpace.name}</span>
+            </motion.span>
+          </AnimatePresence>
           <ChevronUp
             className={cn("size-3 shrink-0 opacity-60 transition-transform duration-150", open && "rotate-180")}
           />

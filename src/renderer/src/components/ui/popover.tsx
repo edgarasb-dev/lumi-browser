@@ -70,9 +70,9 @@ function PopoverContent({
             "z-50 w-72",
             "text-popover-foreground",
             "origin-(--transform-origin)",
-            "transition-[transform,scale,opacity] duration-150",
-            "data-ending-style:scale-90 data-ending-style:opacity-0",
-            "data-starting-style:scale-90 data-starting-style:opacity-0",
+            "transition-[transform,scale,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+            "data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:translate-y-1",
+            "data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:translate-y-1",
             "dark:-outline-offset-1",
             // Rounded corners
             variant === "default" && "rounded-xl",

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
+import { motion } from "motion/react";
 import { useToast } from "@/components/providers/minimal-toast-provider";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,8 @@ interface TidyButtonProps {
 
 export function TidyButton({ spaceId, disabled = false }: TidyButtonProps) {
   const [isRunning, setIsRunning] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
   const { showToast } = useToast();
 
   const handleTidy = async () => {
@@ -28,9 +31,18 @@ export function TidyButton({ spaceId, disabled = false }: TidyButtonProps) {
   return (
     <div className="flex items-center gap-2 px-1 pt-0.5 pb-1 select-none">
       <div className="h-px flex-1 bg-black/[0.08] dark:bg-white/[0.1]" />
-      <button
+      <motion.button
         type="button"
         onClick={() => void handleTidy()}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseDown={() => setIsPressed(true)}
+        onMouseUp={() => setIsPressed(false)}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          setIsPressed(false);
+        }}
+        animate={{ scale: isPressed ? 0.94 : 1 }}
+        transition={{ type: "spring", stiffness: 550, damping: 24 }}
         disabled={disabled || isRunning}
         title="Tidy loose tabs into folders & remove duplicates"
         className={cn(
@@ -40,9 +52,18 @@ export function TidyButton({ spaceId, disabled = false }: TidyButtonProps) {
           "disabled:opacity-35 disabled:pointer-events-none"
         )}
       >
-        <Sparkles className={cn("size-3", isRunning && "animate-pulse")} />
+        <motion.span
+          animate={{
+            rotate: isRunning ? 180 : isHovered ? 18 : 0,
+            scale: isRunning ? 1.15 : isHovered ? 1.1 : 1
+          }}
+          transition={{ type: "spring", stiffness: 420, damping: 20 }}
+          className="inline-flex items-center justify-center"
+        >
+          <Sparkles className={cn("size-3", isRunning && "animate-pulse text-primary")} />
+        </motion.span>
         <span>Tidy</span>
-      </button>
+      </motion.button>
     </div>
   );
 }
