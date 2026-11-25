@@ -43,6 +43,12 @@
   </requires>
 
   <releases>
+    <release version="0.4.9" date="2026-11-25">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.9</url>
+      <description>
+        <p>Fix an invisible bottom-right window-drag barrier caused by attaching .lumi-ambient-aurora pseudo-elements to the .app-drag root container (restoring mouse clicks and video fullscreen buttons on macOS), and eliminate continuous idle GPU/backdrop-blur churn by making Space aurora glows static, removing heavy New Tab orb blurs and infinite UI loops, and restoring 30fps sidebar bounds interpolation.</p>
+      </description>
+    </release>
     <release version="0.4.8" date="2026-11-25">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.8</url>
       <description>

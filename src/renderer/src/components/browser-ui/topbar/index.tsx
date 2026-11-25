@@ -152,7 +152,7 @@ function TopbarTab({ tab, isActive, activeTabLayoutId }: TopbarTabProps) {
           <motion.div
             layoutId={activeTabLayoutId}
             transition={{ type: "spring", stiffness: 520, damping: 36 }}
-            className="pointer-events-none absolute inset-0 z-0 rounded-xl bg-white/90 dark:bg-white/[0.18] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] border border-black/[0.06] dark:border-white/[0.14] backdrop-blur-md"
+            className="pointer-events-none absolute inset-0 z-0 rounded-xl bg-white/90 dark:bg-white/[0.18] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.45)] border border-black/[0.06] dark:border-white/[0.14]"
           />
         )}
 

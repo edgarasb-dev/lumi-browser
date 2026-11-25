@@ -293,15 +293,19 @@ function InternalBrowserUI({ type }: { type: BrowserUIType }) {
             {isMainWindow && <AutoNewTab />}
             <div
               className={cn(
-                "lumi-ambient-aurora w-screen h-screen overflow-hidden",
+                "w-screen h-screen overflow-hidden",
                 "bg-linear-to-br from-space-background-start/65 to-space-background-end/65",
                 "transition-colors duration-500",
                 "flex flex-col",
                 "app-drag"
               )}
             >
+              <div
+                aria-hidden="true"
+                className="lumi-ambient-aurora pointer-events-none fixed inset-0 z-0 overflow-hidden"
+              />
               {isTopbarMode && isMainWindow ? (
-                <div className="w-full h-full flex flex-col">
+                <div className="relative z-10 w-full h-full flex flex-col">
                   <LoadingIndicator />
                   {!isZenMode && <TopbarLayout />}
                   <div className="relative flex-1 min-h-0 flex p-2.5 remove-app-drag">
@@ -318,7 +322,7 @@ function InternalBrowserUI({ type }: { type: BrowserUIType }) {
                   </div>
                 </div>
               ) : (
-                <ResizablePanelGroupWithProvider direction="horizontal" className="flex-1 flex flex-col!">
+                <ResizablePanelGroupWithProvider direction="horizontal" className="relative z-10 flex-1 flex flex-col!">
                   <AdaptiveTopbar />
                   <div
                     className={cn(

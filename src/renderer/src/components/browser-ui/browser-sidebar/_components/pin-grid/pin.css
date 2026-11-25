@@ -1,13 +1,3 @@
-@keyframes lumi-pin-halo-pulse {
-  0%,
-  100% {
-    opacity: 0.78;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 .pinned-tab-active-border {
   position: relative;
   box-shadow:
@@ -27,12 +17,6 @@
     linear-gradient(#fff 0 0);
   mask-composite: xor;
   mask-composite: exclude;
+  opacity: 0.92;
   pointer-events: none;
-  animation: lumi-pin-halo-pulse 2.8s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pinned-tab-active-border::before {
-    animation: none;
-  }
 }

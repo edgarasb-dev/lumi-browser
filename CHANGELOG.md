@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.9] — 2026-11-25
+
+### Codename: Flare
+
+### Fixed
+
+- **macOS Page Hit-Testing & Video Fullscreen Barrier**: Detached `.lumi-ambient-aurora` from the `.app-drag` root container into a dedicated `pointer-events-none` background layer in `BrowserUI` (`src/renderer/src/components/browser-ui/main.tsx`) and removed `position: relative` from `.lumi-ambient-aurora`, preventing its bottom-right `::after` pseudo-element from creating an invisible `-webkit-app-region: drag` barrier over the bottom-right area of web pages (including YouTube's fullscreen button and page controls).
+
+### Improved
+
+- **Idle GPU/Compositor & Resize Efficiency**: Removed continuous infinite keyframe loops and heavy orb blur passes across `.lumi-ambient-aurora`, Start Page studio orbs/logo (`src/renderer/src/components/new-tab/main.tsx`), `.lumi-pin-halo-pulse`, and `.lumi-soft-breathe` (keeping static Space-tinted radial glows with smooth Space-switch color transitions and finite `.lumi-beacon-ring` pulses), removed redundant `backdrop-blur-md` on the sliding active Topbar tab pill, and restored `SidebarInterpolation` `MS_PER_TICK` to `1000 / 30` to halve live webpage viewport reflows during sidebar transitions.
+
+---
+
 ## [0.4.8] — 2026-11-25
 
 ### Codename: Flare

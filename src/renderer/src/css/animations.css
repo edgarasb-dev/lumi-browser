@@ -19,39 +19,8 @@
     --space-background-end 450ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes lumi-aurora-drift-a {
-  0% {
-    transform: translate3d(-4%, -3%, 0) scale(1);
-    opacity: 0.34;
-  }
-  50% {
-    transform: translate3d(5%, 3%, 0) scale(1.08);
-    opacity: 0.48;
-  }
-  100% {
-    transform: translate3d(-2%, 5%, 0) scale(0.97);
-    opacity: 0.36;
-  }
-}
-
-@keyframes lumi-aurora-drift-b {
-  0% {
-    transform: translate3d(4%, 4%, 0) scale(1.03);
-    opacity: 0.28;
-  }
-  50% {
-    transform: translate3d(-5%, -2%, 0) scale(0.96);
-    opacity: 0.42;
-  }
-  100% {
-    transform: translate3d(2%, -5%, 0) scale(1.06);
-    opacity: 0.3;
-  }
-}
-
-/* Living Space-tinted atmospheric glow behind browser chrome and New Tab */
+/* Static Space-tinted atmospheric glow behind browser chrome (avoids continuous GPU/backdrop-blur churn) */
 .lumi-ambient-aurora {
-  position: relative;
   overflow: hidden;
   isolation: isolate;
 }
@@ -62,7 +31,6 @@
   position: absolute;
   pointer-events: none;
   border-radius: 9999px;
-  will-change: transform, opacity;
   z-index: -1;
 }
 
@@ -71,12 +39,12 @@
   height: 58vmax;
   top: -24vmax;
   left: -14vmax;
+  opacity: 0.4;
   background: radial-gradient(
     circle at center,
     color-mix(in oklch, var(--space-background-start) 52%, transparent) 0%,
     transparent 68%
   );
-  animation: lumi-aurora-drift-a 19s ease-in-out infinite alternate;
 }
 
 .lumi-ambient-aurora::after {
@@ -84,23 +52,18 @@
   height: 52vmax;
   bottom: -24vmax;
   right: -12vmax;
+  opacity: 0.34;
   background: radial-gradient(
     circle at center,
     color-mix(in oklch, var(--space-background-end) 48%, transparent) 0%,
     transparent 68%
   );
-  animation: lumi-aurora-drift-b 23s ease-in-out infinite alternate;
 }
 
 /* Soft studio aurora orbs for New Tab backdrop */
-.lumi-newtab-orb-a {
-  will-change: transform, opacity;
-  animation: lumi-aurora-drift-a 16s ease-in-out infinite alternate;
-}
-
+.lumi-newtab-orb-a,
 .lumi-newtab-orb-b {
-  will-change: transform, opacity;
-  animation: lumi-aurora-drift-b 21s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 
 /* Subtle diagonal glass refraction sweep on hover */
@@ -170,24 +133,11 @@
 }
 
 .lumi-beacon-ring {
-  animation: lumi-beacon-ring 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-}
-
-/* Gentle breathing pulse for active playing / status pills */
-@keyframes lumi-soft-breathe {
-  0%,
-  100% {
-    opacity: 0.78;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.06);
-  }
+  animation: lumi-beacon-ring 1.8s cubic-bezier(0.16, 1, 0.3, 1) 3 forwards;
 }
 
 .lumi-soft-breathe {
-  animation: lumi-soft-breathe 2.6s ease-in-out infinite;
+  opacity: 0.92;
 }
 
 /* Luminous bottom hairline shimmer while active page is loading */
@@ -211,13 +161,8 @@
     transition: none !important;
   }
 
-  .lumi-ambient-aurora::before,
-  .lumi-ambient-aurora::after,
-  .lumi-newtab-orb-a,
-  .lumi-newtab-orb-b,
   .lumi-eq-bar,
   .lumi-beacon-ring,
-  .lumi-soft-breathe,
   .lumi-loading-sheen {
     animation: none !important;
   }

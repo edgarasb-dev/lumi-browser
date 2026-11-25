@@ -276,10 +276,10 @@ export function NewTabPage() {
       className="relative flex min-h-screen flex-col justify-between overflow-x-hidden px-4 py-5 font-sans text-foreground transition-colors duration-300 select-none md:px-8 md:py-7"
       style={{ backgroundImage: backgroundStyle }}
     >
-      {/* Living Atmospheric Studio Orbs */}
+      {/* Soft Studio Ambient Glow Orbs */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
         <div
-          className="lumi-newtab-orb-a absolute -left-24 -top-24 size-[38rem] rounded-full opacity-40 blur-3xl"
+          className="lumi-newtab-orb-a absolute -left-24 -top-24 size-[38rem] rounded-full opacity-50"
           style={{
             background: activeSpace?.bgStartColor
               ? `radial-gradient(circle, ${activeSpace.bgStartColor}42 0%, transparent 70%)`
@@ -287,7 +287,7 @@ export function NewTabPage() {
           }}
         />
         <div
-          className="lumi-newtab-orb-b absolute -bottom-28 -right-24 size-[36rem] rounded-full opacity-35 blur-3xl"
+          className="lumi-newtab-orb-b absolute -bottom-28 -right-24 size-[36rem] rounded-full opacity-45"
           style={{
             background: activeSpace?.bgEndColor
               ? `radial-gradient(circle, ${activeSpace.bgEndColor}3d 0%, transparent 70%)`
@@ -427,8 +427,9 @@ export function NewTabPage() {
             <motion.img
               src="/assets/logo.svg"
               alt="Lumi Browser"
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+              initial={{ opacity: 0, y: -6, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 360, damping: 26 }}
               className="size-20 rounded-2xl object-contain drop-shadow-[0_12px_32px_rgba(37,99,235,0.28)]"
             />
           )}

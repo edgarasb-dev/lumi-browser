@@ -8,7 +8,7 @@ import { evaluateSidebarAnimationEasing } from "~/lumi/sidebar-animation";
  * fall out of sync. Sample more coarsely so Chromium gets more time to settle
  * between resizes while sidebar chrome still animates smoothly on top.
  */
-const MS_PER_TICK = 1000 / 60;
+const MS_PER_TICK = 1000 / 30;
 
 /**
  * Drives a numeric value from `from` to `to` over `duration` ms using
