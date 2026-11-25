@@ -1,6 +1,7 @@
 import { PersistedTabData, PersistedTabGroupData } from "~/types/tabs";
 import { tabPersistenceManager } from "@/saving/tabs";
 import { consumePreserveSessionForRestart } from "@/saving/ephemeral";
+import { restorePinnedTabsForPersistedWindows } from "./pinned-session";
 import { onSettingsCached } from "@/saving/settings";
 import { tabsController } from "@/controllers/tabs-controller";
 import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
@@ -145,12 +146,16 @@ async function createTabsFromPersistedData(tabDatas: PersistedTabData[]): Promis
 
   await restoreTabGroups(persistedGroups, uniqueIdToTabId);
 
+  const restoredPinnedWindowSpaces = await restorePinnedTabsForPersistedWindows(createdTabs);
+
   // Mark the most recently active restored tab (preferring regular tabs over ephemeral ones)
-  // active in each window/space so restored windows wake their visible tab instead of staying blank.
+  // active in each window/space so restored windows wake their visible tab instead of staying blank,
+  // skipping any window/space where an active pinned tab was already restored.
   const bestTabByWindowSpace = new Map<string, Tab>();
   for (const tab of createdTabs) {
     if (tab.isDestroyed) continue;
     const key = `${tab.getWindow().id}-${tab.spaceId}`;
+    if (restoredPinnedWindowSpaces.has(key)) continue;
     const currentBest = bestTabByWindowSpace.get(key);
     if (!currentBest || isPreferredRestoredTab(tab, currentBest)) {
       bestTabByWindowSpace.set(key, tab);

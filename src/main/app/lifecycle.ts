@@ -2,7 +2,7 @@ import { app } from "electron";
 import { handleOpenUrl } from "@/app/urls";
 import { hasCompletedOnboarding } from "@/saving/onboarding";
 import { windowsController } from "@/controllers/windows-controller";
-import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
+import { openBrowserWindowOnActivate } from "@/saving/tabs/pinned-session";
 
 export function setupAppLifecycle() {
   app.on("window-all-closed", () => {
@@ -24,7 +24,7 @@ export function setupAppLifecycle() {
       if (!activated) {
         const completed = await hasCompletedOnboarding();
         if (completed) {
-          browserWindowsController.create();
+          await openBrowserWindowOnActivate();
         }
       }
     });

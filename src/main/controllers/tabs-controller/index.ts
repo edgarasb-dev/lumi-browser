@@ -8,6 +8,7 @@ import { windowTabsChanged, windowTabContentChanged } from "@/ipc/browser/tabs";
 import { shouldArchiveTab, shouldSleepTab, tabPersistenceManager } from "@/saving/tabs";
 import { getSettingValueById } from "@/saving/settings";
 import { serializeTab, serializeTabGroup } from "@/saving/tabs/serialization";
+import { snapshotPinnedTabsForQuit } from "@/saving/tabs/pinned-session";
 import { recentlyClosedManager } from "./recently-closed-manager";
 import { GlanceTabGroup } from "./tab-groups/glance";
 import { SplitTabGroup } from "./tab-groups/split";
@@ -211,6 +212,8 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
         y: bounds.y
       });
     }
+
+    await snapshotPinnedTabsForQuit();
 
     const groupSaves: Promise<void>[] = [];
     for (const group of this.tabGroups.values()) {
@@ -974,6 +977,22 @@ class TabsController extends TypedEventEmitter<TabsControllerEvents> {
   public getActiveTab(windowId: number, spaceId: string): Tab | TabGroup | undefined {
     const windowSpaceReference = `${windowId}-${spaceId}` as WindowSpaceReference;
     return this.spaceActiveTabMap.get(windowSpaceReference);
+  }
+
+  /**
+   * Get all active tab or group entries keyed by space ID for a window.
+   */
+  public getActiveTabEntriesForWindow(windowId: number): Array<{ spaceId: string; activeItem: Tab | TabGroup }> {
+    const prefix = `${windowId}-`;
+    const result: Array<{ spaceId: string; activeItem: Tab | TabGroup }> = [];
+    for (const [key, activeItem] of this.spaceActiveTabMap.entries()) {
+      if (!key.startsWith(prefix)) continue;
+      const spaceId = key.slice(prefix.length);
+      if (spaceId) {
+        result.push({ spaceId, activeItem });
+      }
+    }
+    return result;
   }
 
   /**

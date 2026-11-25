@@ -16,6 +16,8 @@ import { sessionsController } from "@/controllers/sessions-controller";
 import { spacesController } from "@/controllers/spaces-controller";
 import { tabPersistenceManager } from "@/saving/tabs";
 import { quitController } from "@/controllers/quit-controller";
+import { browserWindowsController } from "@/controllers/windows-controller/interfaces/browser";
+import { recordLastNormalWindowClosedPinnedSession } from "@/saving/tabs/pinned-session";
 import { hex_is_light } from "@/modules/utils";
 import { relocateTabsFromClosingWindow } from "@/controllers/tabs-controller/tab-sync";
 import { createModalTo, focusPriorities, zIndexes } from "~/layers";
@@ -59,6 +61,7 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
   public coreWebContents: WebContents[];
   public omnibox: Omnibox | null;
   public sidePanel: SidePanelController;
+  public lastKnownBounds: { width: number; height: number; x?: number; y?: number } | undefined;
   private destroyPortalComponentWindows: (() => void) | null = null;
 
   constructor(type: BrowserWindowType, options: BrowserWindowCreationOptions = {}) {
@@ -162,9 +165,25 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
       if (type === "popup") {
         return;
       }
+      if (!browserWindow.isDestroyed()) {
+        const currentBounds = browserWindow.getBounds();
+        this.lastKnownBounds = {
+          width: currentBounds.width,
+          height: currentBounds.height,
+          x: currentBounds.x,
+          y: currentBounds.y
+        };
+      }
       if (boundsDebounceTimer) clearTimeout(boundsDebounceTimer);
       boundsDebounceTimer = setTimeout(() => {
+        if (browserWindow.isDestroyed()) return;
         const bounds = browserWindow.getBounds();
+        this.lastKnownBounds = {
+          width: bounds.width,
+          height: bounds.height,
+          x: bounds.x,
+          y: bounds.y
+        };
         tabPersistenceManager.markWindowStateDirty(`w-${this.id}`, {
           width: bounds.width,
           height: bounds.height,
@@ -461,6 +480,16 @@ export class BrowserWindow extends BaseWindow<BrowserWindowEvents> {
     if (this.sidebarInterpolation) {
       this.sidebarInterpolation.stop();
       this.sidebarInterpolation = null;
+    }
+
+    const shouldCaptureLastClosedPinnedState =
+      this.browserWindowType === "normal" &&
+      !quitController.isQuitting &&
+      !browserWindowsController
+        .getWindows()
+        .some((win) => win.id !== this.id && !win.destroyed && win.browserWindowType === "normal");
+    if (shouldCaptureLastClosedPinnedState) {
+      recordLastNormalWindowClosedPinnedSession(this);
     }
 
     const closingWindowTabs = tabsController.getTabsInWindow(this.id);

@@ -43,6 +43,18 @@
   </requires>
 
   <releases>
+    <release version="0.4.10" date="2026-11-25">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.10</url>
+      <description>
+        <p>Restore active pinned tabs when reopening Lumi after quit, restart, zero-regular-tab sessions, or closing the last browser window on a pinned tab (while preserving regular-tab restore when closing on an unpinned tab).</p>
+      </description>
+    </release>
+    <release version="0.4.10" date="2026-11-25">
+      <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.10</url>
+      <description>
+        <p>Restore and reopen onto the active pinned tab after closing or quitting Lumi (across sessions with regular tabs, pinned-only spaces, multi-space setups, and macOS last-window close/Dock reopen) instead of opening a non-pinned tab or Start Page.</p>
+      </description>
+    </release>
     <release version="0.4.9" date="2026-11-25">
       <url type="details">https://github.com/edgarasb-dev/lumi-browser/releases/tag/v0.4.9</url>
       <description>

@@ -21,6 +21,7 @@ import {
 import { pinTabToSpace } from "@/controllers/pinned-tabs-controller/actions";
 import { getCurrentShortcut } from "@/modules/shortcuts";
 import { waitForInitialWindowStartup } from "@/app/onboarding";
+import { waitForWindowInit } from "@/saving/tabs/pinned-session";
 import { setWindowSpace } from "@/ipc/session/spaces";
 
 // IPC Handlers //
@@ -100,6 +101,7 @@ ipcMain.handle("tabs:get-data", async (event) => {
   const window = browserWindowsController.getWindowFromWebContents(webContents);
   if (!window) return null;
 
+  await waitForWindowInit(window.id);
   return getWindowTabsData(window);
 });
 

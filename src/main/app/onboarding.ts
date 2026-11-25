@@ -3,6 +3,7 @@ import { debugPrint } from "@/modules/output";
 import { hasCompletedOnboarding } from "@/saving/onboarding";
 import { onboarding } from "@/controllers/windows-controller/interfaces/onboarding";
 import { restoreSession as createInitialWindow } from "@/saving/tabs/restore";
+import { restoreUnconsumedPinnedTabSession } from "@/saving/tabs/pinned-session";
 import { flushPendingUrls, discardPendingUrls } from "@/app/urls";
 
 let initialStartupPromise: Promise<void> = Promise.resolve();
@@ -35,6 +36,7 @@ export function runOnboardingOrInitialWindow() {
         discardPendingUrls();
       } else {
         await createInitialWindow();
+        await restoreUnconsumedPinnedTabSession();
         debugPrint("INITIALIZATION", "show browser window");
         // Now that the restored window(s) exist, open any URLs that were
         // received during startup as new tabs in the restored window instead

@@ -1,5 +1,6 @@
 import { loadedProfilesController } from "@/controllers/loaded-profiles-controller";
 import { tabPersistenceManager } from "@/saving/tabs";
+import { flushPinnedTabSessionSaves } from "@/saving/tabs/pinned-session";
 import { closeDatabase } from "@/saving/db";
 import { closeFaviconsDatabase } from "@/modules/favicons";
 import { contentBlocker } from "@/modules/content-blocker";
@@ -68,8 +69,16 @@ export function beforeQuit(): boolean | Promise<boolean> {
       return true;
     });
 
+  const flushPinnedSessionPromise = flushPinnedTabSessionSaves()
+    .then(() => true)
+    .catch((err) => {
+      console.error("[beforeQuit] Failed to flush pinned tab session:", err);
+      return true;
+    });
+
   return Promise.all([
     flushTabsPromise,
+    flushPinnedSessionPromise,
     flushSessionsDataPromise,
     closeFaviconsPromise,
     flushContentBlockerPromise
