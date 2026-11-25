@@ -17,16 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.4.10] — 2026-11-25
-
-### Codename: Flare
-
-### Fixed
-
-- **Reopen Active Pinned Tabs After Browser Close or Quit**: Added `src/main/saving/tabs/pinned-session.ts` (`getDatastore("pinned-tab-session")`) to persist active pinned-tab state per window and Space (`pinnedTabId`, last URL with `defaultUrl` fallback, title, favicon, `lastActiveAt`, active-Space flag, anchor regular-tab IDs, and window bounds) on quit (`snapshotPinnedTabsForQuit()` / `beforeQuit()`) and on last normal window close (`recordLastNormalWindowClosedPinnedSession()` in `BrowserWindow.destroy()` using `lastKnownBounds`). Updated `restoreSession()` (`restorePinnedTabsForPersistedWindows()`), `onboarding.ts` (`restoreUnconsumedPinnedTabSession()`), `lifecycle.ts` (`openBrowserWindowOnActivate()`), and `tabs:get-data` (`waitForWindowInit()`) so reopening Lumi restores and wakes the active pinned tab cleanly (`ephemeral: true`, without duplicating it into the regular tab list or spawning a spurious `lumi://new-tab` Start Page) instead of switching back to a non-pinned tab.
-
----
-
 ## [0.4.9] — 2026-11-25
 
 ### Codename: Flare
